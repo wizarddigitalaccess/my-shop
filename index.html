@@ -8,7 +8,7 @@
 body {
   margin: 0;
   font-family: Arial;
-  background: #f5f6fa;
+  background: #f5f5f5;
 }
 
 /* HEADER */
@@ -94,8 +94,31 @@ body {
 }
 </style>
 
-</head>
+<script>
+  onst firebaseConfig = {
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50",
+  appId: "1:339533161156:web:74aa251c11f9ff87d91f91",
+};
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// 🔐 REAL PROTECTION
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    // Not logged in → go to login
+    window.location.href = "login.html";
+  }
+});
+
+  if (localStorage.getItem("loggedIn") !== "true") {
+    window.location.href = "login.html";
+  }
+</script>
+
+</head>
 <body>
 
 <div class="header">
@@ -109,35 +132,35 @@ body {
 <div class="grid">
 
 <div class="card">
-<div class="icon">📘</div>
+<div class="icon">❤️</div>
 <h3>Europe Facebook</h3>
 <p class="stock">● Available</p>
-<div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Europe%20Facebook" class="buy">Buy</a>
+<div class="price">₦12,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
 </div>
 
 <div class="card">
-<div class="icon">📘</div>
+<div class="icon">❤️</div>
 <h3>Asia Facebook</h3>
 <p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Europe%20Facebook" class="buy">Buy</a>
+<div class="price">₦10,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
 </div>
 
 <div class="card">
-<div class="icon">📘</div>
+<div class="icon">❤️</div>
 <h3>USA Facebook</h3>
 <p class="stock">● Available</p>
 <div class="price">₦18,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Europe%20Facebook" class="buy">Buy</a>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
 </div>
 
 <div class="card">
 <div class="icon">📘</div>
 <h3>Old Africa Facebook</h3>
 <p class="stock">● Available</p>
-<div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Europe%20Facebook" class="buy">Buy</a>
+<div class="price">₦8,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20old%20africa%20facebook" class="buy">Buy</a>
 </div>
 
 </div>
@@ -148,12 +171,53 @@ body {
 <h2>Social Media</h2>
 <div class="grid">
 
-<div class="card"><div class="icon">📸</div><h3>Instagram</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">🐦</div><h3>Twitter</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">📌</div><h3>Pinterest</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">▶️</div><h3>YouTube</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">🎬</div><h3>Netflix</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">💘</div><h3>Facebook Dating</h3><a href="#" class="buy">Buy</a></div>
+<div class="card">
+<div class="icon">📸</div>
+<h3>Instagram</h3>
+<p class="stock">● Available</p>
+<div class="price">₦10,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Instagram%20account" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🐦</div>
+<h3>Twitter</h3>
+<p class="stock">● Available</p>
+<div class="price">₦15,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Twitter%20account" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">📌</div>
+<h3>Pinterest</h3>
+<p class="stock">● Available</p>
+<div class="price">₦8,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Pinterest%20account" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">▶️</div>
+<h3>YouTube</h3>
+<p class="stock">● Available</p>
+<div class="price">₦8,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20YouTube%20account" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🎬</div>
+<h3>Netflix</h3>
+<p class="stock">● Available</p>
+<div class="price">₦8,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Netflix" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">💘</div>
+<h3>Facebook Dating</h3>
+<p class="stock">● Available</p>
+<div class="price">₦30,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Facebook%20Dating" class="buy">Buy</a>
+</div>
 
 </div>
 </div>
@@ -163,14 +227,109 @@ body {
 <h2>Services</h2>
 <div class="grid">
 
-<div class="card"><div class="icon">🔐</div><h3>Nord VPN</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">🎵</div><h3>TikTok</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">📶</div><h3>eSIM</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">📞</div><h3>USA Number</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">🌍</div><h3>All Countries Number</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">🎁</div><h3>Send Gift</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">✔️</div><h3>Verified Telegram</h3><a href="#" class="buy">Buy</a></div>
-<div class="card"><div class="icon">💬</div><h3>Telegram Ready</h3><a href="#" class="buy">Buy</a></div>
+<div class="card">
+<div class="icon">🔐</div>
+<h3>VPN</h3>
+<p class="stock">● Available</p>
+<div class="price">₦8,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20VPN" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🎵</div>
+<h3>TikTok</h3>
+<p class="stock">● Available</p>
+<div class="price">₦12,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20TikTok" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">📶</div>
+<h3>eSIM</h3>
+<p class="stock">● Available</p>
+<div class="price">₦50,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20eSIM" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">📶</div>
+<h3>Renew eSIM</h3>
+<p class="stock">● Available</p>
+<div class="price">₦30,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20renew%20eSIM" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">💬</div>
+<h3>TextPlus</h3>
+<p class="stock">● Available</p>
+<div class="price">₦4,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20TextPlus" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🦜</div>
+<h3>Talkatone</h3>
+<p class="stock">● Available</p>
+<div class="price">₦5,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Talkatone" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">👀</div>
+<h3>Google Voice</h3>
+<p class="stock">● Available</p>
+<div class="price">₦10,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Google%20Voice" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">📞</div>
+<h3>USA Number</h3>
+<p class="stock">● Available</p>
+<div class="price">₦5,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20USA%20Number" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🌍</div>
+<h3>All Countries Number</h3>
+<p class="stock">● Available</p>
+<div class="price">₦5,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Number" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🎁</div>
+<h3>Send Gift</h3>
+<p class="stock">● Available</p>
+<div class="price">₦70,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20send%20gifts" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">✔️</div>
+<h3>Verified Telegram</h3>
+<p class="stock">● Available</p>
+<div class="price">₦15,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Verified%20Telegram" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">🎆</div>
+<h3>Boost Social Media Account</h3>
+<p class="stock">● Available</p>
+<div class="price">₦5,000 per 1k followers</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20boost%20account" class="buy">Buy</a>
+</div>
+
+<div class="card">
+<div class="icon">💬</div>
+<h3>Telegram Ready to use</h3>
+<p class="stock">● Available</p>
+<div class="price">₦8,000</div>
+<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Telegram" class="buy">Buy</a>
+</div>
 
 </div>
 </div>
