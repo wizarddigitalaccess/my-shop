@@ -94,8 +94,11 @@ body {
 }
 </style>
 
-<script>
-  onst firebaseConfig = {
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50",
@@ -105,21 +108,22 @@ body {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🔐 REAL PROTECTION
+// 🔐 BLOCK ACCESS UNTIL VERIFIED
 onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    // Not logged in → go to login
+  if (user) {
+    document.body.style.display = "block"; // show site
+  } else {
     window.location.href = "login.html";
   }
 });
-
-  if (localStorage.getItem("loggedIn") !== "true") {
-    window.location.href = "login.html";
-  }
 </script>
 
 </head>
 <body>
+
+<body style="display:none;">
+  
+</body>
 
 <div class="header">
   <h1>Wizard Digital Access</h1>
@@ -343,4 +347,17 @@ onAuthStateChanged(auth, (user) => {
 </div>
 
 </body>
+<button onclick="logout()">Logout</button>
+
+<script type="module">
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+window.logout = function () {
+  const auth = getAuth();
+  signOut(auth).then(() => {
+    window.location.href = "login.html";
+  });
+};
+</script>
+
 </html>
