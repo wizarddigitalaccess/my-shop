@@ -20,7 +20,7 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  padding-bottom: 70px; /* space for nav */
+  padding-bottom: 70px;
 }
 
 .card {
@@ -41,6 +41,14 @@ h2 {
   border-radius: 8px;
 }
 
+input {
+  width: 100%;
+  margin-top: 5px;
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+}
+
 button {
   width: 100%;
   padding: 10px;
@@ -52,7 +60,7 @@ button {
   cursor: pointer;
 }
 
-/* NAV BAR */
+/* NAV */
 .nav {
   position: fixed;
   bottom: 0;
@@ -109,7 +117,7 @@ button {
 </div>
 </div>
 
-<!-- 🔻 NAVIGATION -->
+<!-- NAV -->
 <div class="nav">
   <a href="index.html"><i data-feather="home"></i></a>
   <a href="profile.html" class="active"><i data-feather="user"></i></a>
@@ -118,13 +126,13 @@ button {
 </div>
 
 <script>
-  feather.replace();
+feather.replace();
 </script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -136,29 +144,52 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 Check login
+let currentUser;
+
+// 🔐 Load user
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
   }
 
-  document.getElementById("email").innerText = user.email;
-  document.getElementById("uid").innerText = user.uid;
+  currentUser = user;
 
-  const docRef = doc(db, "users", user.uid);
-  const docSnap = await getDoc(docRef);
+  document.getElementById("email").value = user.email;
 
-  if (docSnap.exists()) {
-    const data = docSnap.data();
-    document.getElementById("name").innerText = data.name || "No name";
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const data = snap.data();
+
+    document.getElementById("name").value = data.name || "";
     document.getElementById("wallet").innerText = data.wallet || 0;
-  } else {
-    document.getElementById("name").innerText = "No profile found";
   }
 });
 
-// logout
+// 💾 SAVE PROFILE
+window.saveProfile = async function () {
+  const name = document.getElementById("name").value;
+  const newPassword = document.getElementById("newPassword").value;
+
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      name: name
+    });
+
+    if (newPassword.length >= 6) {
+      await updatePassword(currentUser, newPassword);
+    }
+
+    alert("Profile updated successfully ✔️");
+
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+// 🚪 LOGOUT
 window.logout = function () {
   signOut(auth).then(() => {
     window.location.href = "auth.html";
