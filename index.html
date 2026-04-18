@@ -9,6 +9,7 @@ body {
   margin: 0;
   font-family: Arial;
   background: #f5f5f5;
+  display: none; /* 🔒 hidden until login confirmed */
 }
 
 /* HEADER */
@@ -24,7 +25,7 @@ body {
   font-size: 22px;
 }
 
-/* CATEGORY TITLE */
+/* SECTION */
 .section {
   padding: 15px;
 }
@@ -33,14 +34,14 @@ body {
   color: #333;
 }
 
-/* PRODUCT GRID */
+/* GRID */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
 
-/* PRODUCT CARD */
+/* CARD */
 .card {
   background: white;
   border-radius: 15px;
@@ -75,7 +76,7 @@ body {
   text-decoration: none;
 }
 
-/* BOTTOM NAV */
+/* NAV */
 .nav {
   position: fixed;
   bottom: 0;
@@ -92,38 +93,23 @@ body {
   color: gray;
   font-size: 12px;
 }
+
+.logout {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: red;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
 </style>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50",
-  appId: "1:339533161156:web:74aa251c11f9ff87d91f91",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// 🔐 BLOCK ACCESS UNTIL VERIFIED
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    document.body.style.display = "block"; // show site
-  } else {
-    window.location.href = "login.html";
-  }
-});
-</script>
-
 </head>
+
 <body>
 
-<body style="display:none;">
-  
-</body>
+<button class="logout" onclick="logout()">Logout</button>
 
 <div class="header">
   <h1>Wizard Digital Access</h1>
@@ -140,7 +126,7 @@ onAuthStateChanged(auth, (user) => {
 <h3>Europe Facebook</h3>
 <p class="stock">● Available</p>
 <div class="price">₦12,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
+<a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
 <div class="card">
@@ -148,191 +134,7 @@ onAuthStateChanged(auth, (user) => {
 <h3>Asia Facebook</h3>
 <p class="stock">● Available</p>
 <div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">❤️</div>
-<h3>USA Facebook</h3>
-<p class="stock">● Available</p>
-<div class="price">₦18,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📘</div>
-<h3>Old Africa Facebook</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20old%20africa%20facebook" class="buy">Buy</a>
-</div>
-
-</div>
-</div>
-
-<!-- SOCIAL MEDIA -->
-<div class="section">
-<h2>Social Media</h2>
-<div class="grid">
-
-<div class="card">
-<div class="icon">📸</div>
-<h3>Instagram</h3>
-<p class="stock">● Available</p>
-<div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Instagram%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🐦</div>
-<h3>Twitter</h3>
-<p class="stock">● Available</p>
-<div class="price">₦15,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Twitter%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📌</div>
-<h3>Pinterest</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Pinterest%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">▶️</div>
-<h3>YouTube</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20YouTube%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎬</div>
-<h3>Netflix</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Netflix" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">💘</div>
-<h3>Facebook Dating</h3>
-<p class="stock">● Available</p>
-<div class="price">₦30,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Facebook%20Dating" class="buy">Buy</a>
-</div>
-
-</div>
-</div>
-
-<!-- SERVICES -->
-<div class="section">
-<h2>Services</h2>
-<div class="grid">
-
-<div class="card">
-<div class="icon">🔐</div>
-<h3>VPN</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20VPN" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎵</div>
-<h3>TikTok</h3>
-<p class="stock">● Available</p>
-<div class="price">₦12,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20TikTok" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📶</div>
-<h3>eSIM</h3>
-<p class="stock">● Available</p>
-<div class="price">₦50,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20eSIM" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📶</div>
-<h3>Renew eSIM</h3>
-<p class="stock">● Available</p>
-<div class="price">₦30,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20renew%20eSIM" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">💬</div>
-<h3>TextPlus</h3>
-<p class="stock">● Available</p>
-<div class="price">₦4,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20TextPlus" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🦜</div>
-<h3>Talkatone</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Talkatone" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">👀</div>
-<h3>Google Voice</h3>
-<p class="stock">● Available</p>
-<div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Google%20Voice" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📞</div>
-<h3>USA Number</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20USA%20Number" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🌍</div>
-<h3>All Countries Number</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Number" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎁</div>
-<h3>Send Gift</h3>
-<p class="stock">● Available</p>
-<div class="price">₦70,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20send%20gifts" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">✔️</div>
-<h3>Verified Telegram</h3>
-<p class="stock">● Available</p>
-<div class="price">₦15,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Verified%20Telegram" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎆</div>
-<h3>Boost Social Media Account</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000 per 1k followers</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20boost%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">💬</div>
-<h3>Telegram Ready to use</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Telegram" class="buy">Buy</a>
+<a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
 </div>
@@ -346,18 +148,37 @@ onAuthStateChanged(auth, (user) => {
 <a href="#">Wallet</a>
 </div>
 
-</body>
-<button onclick="logout()">Logout</button>
-
+<!-- FIREBASE AUTH -->
 <script type="module">
-import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50",
+  appId: "1:339533161156:web:74aa251c11f9ff87d91f91",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// 🔐 PROTECT PAGE
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.body.style.display = "block"; // show site
+  } else {
+    window.location.href = "login.html";
+  }
+});
+
+// LOGOUT
 window.logout = function () {
-  const auth = getAuth();
   signOut(auth).then(() => {
     window.location.href = "login.html";
   });
 };
 </script>
 
+</body>
 </html>
