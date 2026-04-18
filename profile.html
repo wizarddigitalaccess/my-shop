@@ -82,16 +82,31 @@ button {
 <body>
 
 <div class="container">
-  <div class="card">
-    <h2>My Profile</h2>
+<div class="card">
+  <h2>My Profile</h2>
 
-    <div class="info">Name: <span id="name">Loading...</span></div>
-    <div class="info">Email: <span id="email">Loading...</span></div>
-    <div class="info">Wallet: ₦<span id="wallet">0</span></div>
-    <div class="info">User ID: <span id="uid">Loading...</span></div>
-
-    <button onclick="logout()">Logout</button>
+  <div class="info">
+    Name:
+    <input id="name" placeholder="Enter your name">
   </div>
+
+  <div class="info">
+    Email:
+    <input id="email" disabled>
+  </div>
+
+  <div class="info">
+    Wallet: ₦<span id="wallet">0</span>
+  </div>
+
+  <div class="info">
+    New Password:
+    <input id="newPassword" type="password" placeholder="Change password">
+  </div>
+
+  <button onclick="saveProfile()">Save Changes</button>
+  <button onclick="logout()">Logout</button>
+</div>
 </div>
 
 <!-- 🔻 NAVIGATION -->
