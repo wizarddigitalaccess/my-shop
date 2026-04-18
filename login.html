@@ -62,6 +62,11 @@ window.login = function () {
   let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
 
+<p style="margin-top:15px; color:white;">
+  Don’t have an account? 
+  <a href="signup.html" style="color:lightblue;">Sign up here</a>
+</p>
+
   signInWithEmailAndPassword(auth, email, password)
     .then(() => {
       window.location.href = "index.html";
