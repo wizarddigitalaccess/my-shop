@@ -46,6 +46,7 @@ h2 {
   background: #0f172a;
   margin-top: 10px;
   border-radius: 8px;
+  font-size: 14px;
 }
 </style>
 </head>
@@ -61,7 +62,7 @@ h2 {
 
   <!-- ADD WALLET -->
   <div class="card">
-    <h3>Add Wallet Credit</h3>
+    <h3>Credit User Wallet</h3>
 
     <input id="uid" placeholder="User UID">
     <input id="amount" type="number" placeholder="Amount">
@@ -69,7 +70,7 @@ h2 {
     <button onclick="addMoney()">Credit Wallet</button>
   </div>
 
-  <!-- USERS LIST -->
+  <!-- USERS -->
   <div class="card">
     <h3>Users</h3>
     <div id="users">Loading...</div>
@@ -79,18 +80,20 @@ h2 {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-  getAuth, 
-  onAuthStateChanged 
+
+import {
+  getAuth,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-import { 
-  getFirestore, 
-  collection, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  increment 
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  increment,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -103,9 +106,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 ADMIN ONLY
+// 🔐 ADMIN SECURITY
 const ADMIN_EMAIL = "wizarddigitalaccess@gmail.com";
 
+// 🔒 AUTH CHECK
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
@@ -121,7 +125,7 @@ onAuthStateChanged(auth, (user) => {
   loadUsers();
 });
 
-// 👤 LOAD USERS
+// 👥 LOAD USERS
 async function loadUsers() {
   const usersDiv = document.getElementById("users");
   usersDiv.innerHTML = "";
@@ -134,7 +138,7 @@ async function loadUsers() {
     usersDiv.innerHTML += `
       <div class="user">
         <b>${data.name || "No Name"}</b><br>
-        Email: ${data.email}<br>
+        Email: ${data.email || "No Email"}<br>
         Wallet: ₦${data.wallet || 0}<br>
         UID: ${docItem.id}
       </div>
@@ -142,24 +146,44 @@ async function loadUsers() {
   });
 }
 
-// 💰 ADD MONEY
+// 💰 CREDIT WALLET + SAVE TRANSACTION
 window.addMoney = async function () {
-  const uid = document.getElementById("uid").value;
+  const uid = document.getElementById("uid").value.trim();
   const amount = Number(document.getElementById("amount").value);
 
-  if (!uid || !amount) {
-    alert("Fill all fields");
+  if (!uid || isNaN(amount) || amount <= 0) {
+    alert("Enter valid UID and amount");
     return;
   }
 
-  const userRef = doc(db, "users", uid);
+  try {
+    const userRef = doc(db, "users", uid);
 
-  await updateDoc(userRef, {
-    wallet: increment(amount)
-  });
+    // 🔹 Update wallet
+    await updateDoc(userRef, {
+      wallet: increment(amount)
+    });
 
-  alert("Wallet updated ✔️");
-  loadUsers();
+    // 🔹 Save transaction (for future history)
+    await addDoc(collection(db, "transactions"), {
+      uid: uid,
+      amount: amount,
+      type: "credit",
+      status: "completed",
+      createdAt: new Date()
+    });
+
+    alert("Wallet credited successfully ✔️");
+
+    // reset fields
+    document.getElementById("uid").value = "";
+    document.getElementById("amount").value = "";
+
+    loadUsers();
+
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
 };
 </script>
 
