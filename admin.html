@@ -2,9 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wallet</title>
-
-<script src="https://unpkg.com/feather-icons"></script>
+<title>Admin Panel</title>
 
 <style>
 body {
@@ -16,7 +14,6 @@ body {
 
 .container {
   padding: 20px;
-  padding-bottom: 90px;
 }
 
 .card {
@@ -26,61 +23,29 @@ body {
   margin-bottom: 15px;
 }
 
-h2, h3 {
-  margin-top: 0;
-}
-
-.balance {
-  font-size: 28px;
-  font-weight: bold;
-}
-
-input {
+input, button {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
-  border-radius: 8px;
   border: none;
+  border-radius: 8px;
 }
 
 button {
-  width: 100%;
-  padding: 10px;
   background: purple;
   color: white;
-  border: none;
-  border-radius: 8px;
-  margin-top: 10px;
   cursor: pointer;
 }
 
-.small {
-  font-size: 12px;
-  opacity: 0.8;
+h2 {
+  margin-top: 0;
 }
 
-/* NAV */
-.nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
-}
-
-.nav a {
-  color: gray;
-}
-
-.nav a.active {
-  color: purple;
-}
-
-.nav a svg {
-  width: 22px;
-  height: 22px;
+.user {
+  padding: 10px;
+  background: #0f172a;
+  margin-top: 10px;
+  border-radius: 8px;
 }
 </style>
 </head>
@@ -89,54 +54,31 @@ button {
 
 <div class="container">
 
-  <!-- WALLET BALANCE -->
   <div class="card">
-    <h2>Wallet Balance</h2>
-    <div class="balance">₦<span id="balance">Loading...</span></div>
-    <p class="small">Balance updates instantly after admin approval</p>
+    <h2>Admin Panel</h2>
+    <p>Manage users & wallet</p>
   </div>
 
-  <!-- FUND WALLET -->
+  <!-- ADD WALLET -->
   <div class="card">
-    <h3>Fund Wallet</h3>
+    <h3>Add Wallet Credit</h3>
 
-    <p class="small">Transfer to the account below, then submit amount</p>
+    <input id="uid" placeholder="User UID">
+    <input id="amount" type="number" placeholder="Amount">
 
-    <p><b>Bank:</b> Moniepoint MFB</p>
-    <p><b>Account Name:</b> Abraham Samuel</p>
-    <p><b>Account Number:</b> 6048761014</p>
-
-    <input id="amount" type="number" placeholder="Enter amount you paid">
-
-    <button onclick="submitPayment()">I Have Paid</button>
-
-    <p class="small">⚠️ Your wallet will be credited after admin confirms payment</p>
+    <button onclick="addMoney()">Credit Wallet</button>
   </div>
 
-  <!-- HISTORY (READY FOR NEXT STEP) -->
+  <!-- USERS LIST -->
   <div class="card">
-    <h3>Transaction History</h3>
-    <p class="small">No transactions yet</p>
+    <h3>Users</h3>
+    <div id="users">Loading...</div>
   </div>
 
 </div>
 
-<!-- NAV -->
-<div class="nav">
-  <a href="index.html"><i data-feather="home"></i></a>
-  <a href="profile.html"><i data-feather="user"></i></a>
-  <a href="wallet.html" class="active"><i data-feather="credit-card"></i></a>
-  <a href="#"><i data-feather="phone"></i></a>
-</div>
-
-<script>
-feather.replace();
-</script>
-
-<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
 import { 
   getAuth, 
   onAuthStateChanged 
@@ -144,10 +86,11 @@ import {
 
 import { 
   getFirestore, 
+  collection, 
+  getDocs, 
   doc, 
-  onSnapshot,
-  addDoc,
-  collection
+  updateDoc, 
+  increment 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -160,56 +103,72 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let listenerAttached = false;
+// ✅ YOUR ADMIN EMAIL (UPDATED)
+const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// 🔐 AUTH CHECK + REALTIME WALLET
+// 🔐 SECURITY CHECK
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
   }
 
-  if (listenerAttached) return;
-  listenerAttached = true;
+  if (user.email !== ADMIN_EMAIL) {
+    alert("Access denied!");
+    window.location.href = "index.html";
+    return;
+  }
 
-  const walletRef = doc(db, "users", user.uid);
-
-  onSnapshot(walletRef, (snap) => {
-    if (!snap.exists()) {
-      document.getElementById("balance").innerText = "0";
-      return;
-    }
-
-    const data = snap.data();
-    document.getElementById("balance").innerText = data.wallet ?? 0;
-  });
+  loadUsers();
 });
 
-// 💳 SUBMIT PAYMENT REQUEST
-window.submitPayment = async function () {
-  const user = auth.currentUser;
+// 👤 LOAD USERS
+async function loadUsers() {
+  const usersDiv = document.getElementById("users");
+  usersDiv.innerHTML = "";
+
+  const snap = await getDocs(collection(db, "users"));
+
+  snap.forEach((docItem) => {
+    const data = docItem.data();
+
+    usersDiv.innerHTML += `
+      <div class="user">
+        <b>${data.name || "No Name"}</b><br>
+        Email: ${data.email || "No Email"}<br>
+        Wallet: ₦${data.wallet || 0}<br>
+        UID: ${docItem.id}
+      </div>
+    `;
+  });
+}
+
+// 💰 ADD MONEY
+window.addMoney = async function () {
+  const uid = document.getElementById("uid").value;
   const amount = Number(document.getElementById("amount").value);
 
-  if (!amount || amount <= 0) {
-    alert("Enter valid amount");
+  if (!uid || !amount) {
+    alert("Fill all fields");
     return;
   }
 
   try {
-    await addDoc(collection(db, "transactions"), {
-      uid: user.uid,
-      amount: amount,
-      type: "deposit",
-      status: "pending",
-      createdAt: new Date()
+    const userRef = doc(db, "users", uid);
+
+    await updateDoc(userRef, {
+      wallet: increment(amount)
     });
 
-    alert("Payment submitted. Waiting for admin approval.");
+    alert("Wallet updated successfully ✔️");
 
+    document.getElementById("uid").value = "";
     document.getElementById("amount").value = "";
 
+    loadUsers();
+
   } catch (err) {
-    alert(err.message);
+    alert("Error: " + err.message);
   }
 };
 </script>
