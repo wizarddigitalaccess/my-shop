@@ -14,13 +14,13 @@ body {
   color: white;
 }
 
-/* CENTER CARD */
+/* CENTER */
 .container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  padding-bottom: 70px;
+  min-height: 100vh;
+  padding-bottom: 80px;
 }
 
 .card {
@@ -69,7 +69,6 @@ button {
   display: flex;
   justify-content: space-around;
   padding: 12px 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
 }
 
 .nav a {
@@ -91,6 +90,7 @@ button {
 
 <div class="container">
 <div class="card">
+
   <h2>My Profile</h2>
 
   <div class="info">
@@ -114,6 +114,7 @@ button {
 
   <button onclick="saveProfile()">Save Changes</button>
   <button onclick="logout()">Logout</button>
+
 </div>
 </div>
 
@@ -121,19 +122,30 @@ button {
 <div class="nav">
   <a href="index.html"><i data-feather="home"></i></a>
   <a href="profile.html" class="active"><i data-feather="user"></i></a>
-  <a href="#"><i data-feather="phone"></i></a>
-  <a href="#"><i data-feather="credit-card"></i></a>
   <a href="wallet.html"><i data-feather="credit-card"></i></a>
+  <a href="#"><i data-feather="phone"></i></a>
 </div>
 
 <script>
 feather.replace();
 </script>
 
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signOut, 
+  updatePassword 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  doc, 
+  onSnapshot, 
+  updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -147,8 +159,8 @@ const db = getFirestore(app);
 
 let currentUser;
 
-// 🔐 Load user
-onAuthStateChanged(auth, async (user) => {
+// 🔐 AUTH CHECK + REALTIME PROFILE
+onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
@@ -158,16 +170,15 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById("email").value = user.email;
 
-  const ref = doc(db, "users", user.uid);
-import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  // REAL-TIME FIRESTORE SYNC
+  onSnapshot(doc(db, "users", user.uid), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
 
-onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-  if (docSnap.exists()) {
-    const data = docSnap.data();
-
-    document.getElementById("name").value = data.name || "";
-    document.getElementById("wallet").innerText = data.wallet ?? 0;
-  }
+      document.getElementById("name").value = data.name || "";
+      document.getElementById("wallet").innerText = data.wallet ?? 0;
+    }
+  });
 });
 
 // 💾 SAVE PROFILE
@@ -184,7 +195,7 @@ window.saveProfile = async function () {
       await updatePassword(currentUser, newPassword);
     }
 
-    alert("Profile updated successfully ✔️");
+    alert("Profile updated ✔️");
 
   } catch (err) {
     alert(err.message);
