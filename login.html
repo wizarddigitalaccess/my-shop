@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Login</title>
+
   <style>
     body {
       font-family: Arial;
@@ -10,11 +11,13 @@
       text-align: center;
       padding-top: 100px;
     }
+
     input {
       padding: 10px;
       margin: 10px;
       width: 200px;
     }
+
     button {
       padding: 10px 20px;
       background: purple;
@@ -34,6 +37,12 @@
 
 <button onclick="login()">Enter Site</button>
 
+<!-- ✅ SIGNUP LINK (CORRECT PLACE) -->
+<p style="margin-top:15px;">
+  Don’t have an account?
+  <a href="signup.html" style="color:lightblue;">Sign up here</a>
+</p>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -50,24 +59,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// ✅ If already logged in, go to index
+// If already logged in → go to shop
 onAuthStateChanged(auth, (user) => {
   if (user) {
     window.location.href = "index.html";
   }
 });
 
-// ✅ LOGIN FUNCTION
+// LOGIN FUNCTION
 window.login = function () {
   let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
-
-<button onclick="login()">Enter Site</button>
-
-<p style="margin-top:15px; color:white;">
-  Don’t have an account? 
-  <a href="signup.html" style="color:lightblue;">Sign up here</a>
-</p>
 
   signInWithEmailAndPassword(auth, email, password)
     .then(() => {
