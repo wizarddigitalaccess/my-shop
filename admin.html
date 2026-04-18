@@ -79,7 +79,19 @@ h2 {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getAuth, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  increment 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -88,9 +100,29 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔥 LOAD USERS
+// 🔐 ONLY ADMIN EMAIL ALLOWED
+const ADMIN_EMAIL = "wizarddigitalaccess@gmail.com";
+
+// SECURITY CHECK
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "auth.html";
+    return;
+  }
+
+  if (user.email !== ADMIN_EMAIL) {
+    alert("Access denied!");
+    window.location.href = "index.html";
+    return;
+  }
+
+  loadUsers();
+});
+
+// LOAD USERS
 async function loadUsers() {
   const usersDiv = document.getElementById("users");
   usersDiv.innerHTML = "";
@@ -111,7 +143,7 @@ async function loadUsers() {
   });
 }
 
-// 💰 ADD MONEY TO WALLET
+// ADD MONEY
 window.addMoney = async function () {
   const uid = document.getElementById("uid").value;
   const amount = Number(document.getElementById("amount").value);
@@ -130,8 +162,6 @@ window.addMoney = async function () {
   alert("Wallet updated ✔️");
   loadUsers();
 };
-
-loadUsers();
 </script>
 
 </body>
