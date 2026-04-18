@@ -93,6 +93,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+const ADMIN_EMAIL = "etee77366@gmail.com";
+
 let isLogin = true;
 
 window.toggleMode = function () {
@@ -115,16 +117,36 @@ window.handleAuth = async function () {
   try {
     if (isLogin) {
       await signInWithEmailAndPassword(auth, email, password);
-      window.location.href = "index.html";
+
+      // 🔥 ADMIN CHECK
+      if (email === ADMIN_EMAIL) {
+        window.location.href = "admin.html";
+      } else {
+        window.location.href = "index.html";
+      }
+
     } else {
       await createUserWithEmailAndPassword(auth, email, password);
+
       msg.innerText = "Account created! Redirecting...";
+
       setTimeout(() => {
         window.location.href = "index.html";
       }, 1000);
     }
+
   } catch (error) {
-    msg.innerText = "Error: " + error.message;
+
+    // cleaner messages instead of Firebase raw errors
+    if (error.code === "auth/user-not-found") {
+      msg.innerText = "User not found. Please sign up.";
+    } else if (error.code === "auth/wrong-password") {
+      msg.innerText = "Wrong password.";
+    } else if (error.code === "auth/email-already-in-use") {
+      msg.innerText = "Account exists. Switch to login.";
+    } else {
+      msg.innerText = "Error: " + error.message;
+    }
   }
 };
 </script>
