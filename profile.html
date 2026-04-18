@@ -159,13 +159,14 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById("email").value = user.email;
 
   const ref = doc(db, "users", user.uid);
-  const snap = await getDoc(ref);
+import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  if (snap.exists()) {
-    const data = snap.data();
+onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+  if (docSnap.exists()) {
+    const data = docSnap.data();
 
     document.getElementById("name").value = data.name || "";
-    document.getElementById("wallet").innerText = data.wallet || 0;
+    document.getElementById("wallet").innerText = data.wallet ?? 0;
   }
 });
 
