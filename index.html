@@ -168,14 +168,14 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     document.body.style.display = "block"; // show site
   } else {
-    window.location.href = "login.html";
+    window.location.href = "auth.html";
   }
 });
 
 // LOGOUT
 window.logout = function () {
   signOut(auth).then(() => {
-    window.location.href = "login.html";
+    window.location.href = "index.html";
   });
 };
 </script>
