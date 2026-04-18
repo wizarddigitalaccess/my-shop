@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+
+<script src="https://unpkg.com/feather-icons"></script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wizard Digital Access</title>
 
@@ -142,10 +145,10 @@ body {
 
 <!-- NAV -->
 <div class="nav">
-<a href="index.html">Home</a>
-<a href="profile.html">Profile</a>
-<a href="#">Contact</a>
-<a href="#">Wallet</a>
+  <a href="index.html"><i data-feather="home"></i></a>
+  <a href="profile.html"><i data-feather="user"></i></a>
+  <a href="#"><i data-feather="phone"></i></a>
+  <a href="#"><i data-feather="credit-card"></i></a>
 </div>
 
 <!-- FIREBASE AUTH -->
@@ -178,6 +181,10 @@ window.logout = function () {
     window.location.href = "index.html";
   });
 };
+</script>
+
+<script>
+  feather.replace();
 </script>
 
 </body>
