@@ -1,33 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-<<<<<<< HEAD
-  <title>Login</title>
-
-  <style>
-    body {
-      font-family: Arial;
-      background: #0b1a2b;
-      color: white;
-      text-align: center;
-      padding-top: 100px;
-    }
-
-    input {
-      padding: 10px;
-      margin: 10px;
-      width: 200px;
-    }
-
-    button {
-      padding: 10px 20px;
-      background: purple;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
-=======
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wizard Access</title>
 
@@ -82,43 +55,24 @@ button {
   color: #ffcc00;
 }
 </style>
->>>>>>> 141c3b2daab9197a28787773e3b089e00799d0c3
 </head>
 
 <body>
 
-<<<<<<< HEAD
-<h2>Login to Continue</h2>
-
-<input type="email" id="email" placeholder="Enter your email"><br>
-<input type="password" id="password" placeholder="Enter password"><br>
-
-<button onclick="login()">Enter Site</button>
-
-<!-- ✅ SIGNUP LINK (CORRECT PLACE) -->
-<p style="margin-top:15px;">
-  Don’t have an account?
-  <a href="signup.html" style="color:lightblue;">Sign up here</a>
-</p>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-=======
 <div class="box">
-<h2 id="title">Login</h2>
+  <h2 id="title">Login</h2>
 
-<input id="name" placeholder="Full Name" style="display:none;">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+  <input id="name" placeholder="Full Name" style="display:none;">
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
 
-<button onclick="handleAuth()">Continue</button>
+  <button onclick="handleAuth()">Continue</button>
 
-<div class="toggle" onclick="toggleMode()">
-  Don't have an account? Sign up
-</div>
+  <div class="toggle" onclick="toggleMode()">
+    Don't have an account? Sign up
+  </div>
 
-<div class="msg" id="msg"></div>
+  <div class="msg" id="msg"></div>
 </div>
 
 <script type="module">
@@ -126,50 +80,21 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  fetchSignInMethodsForEmail
+  createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
->>>>>>> 141c3b2daab9197a28787773e3b089e00799d0c3
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50",
-<<<<<<< HEAD
-  storageBucket: "wizard-shop-52a50.firebasestorage.app",
-  messagingSenderId: "339533161156",
-  appId: "1:339533161156:web:74aa251c11f9ff87d91f91",
-=======
->>>>>>> 141c3b2daab9197a28787773e3b089e00799d0c3
+  appId: "1:339533161156:web:74aa251c11f9ff87d91f91"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-<<<<<<< HEAD
-// If already logged in → go to shop
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    window.location.href = "index.html";
-  }
-});
-
-// LOGIN FUNCTION
-window.login = function () {
-  let email = document.getElementById("email").value;
-  let password = document.getElementById("password").value;
-
-  signInWithEmailAndPassword(auth, email, password)
-    .then(() => {
-      window.location.href = "index.html";
-    })
-    .catch((error) => {
-      alert(error.message);
-    });
-=======
 let isLogin = true;
 
-// toggle UI
 window.toggleMode = function () {
   isLogin = !isLogin;
 
@@ -182,7 +107,6 @@ window.toggleMode = function () {
   document.getElementById("msg").innerText = "";
 };
 
-// MAIN AUTH FUNCTION
 window.handleAuth = async function () {
   let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
@@ -200,22 +124,10 @@ window.handleAuth = async function () {
       }, 1000);
     }
   } catch (error) {
-    // 🚫 NO POPUPS — clean message only
-    if (error.code === "auth/email-already-in-use") {
-      msg.innerText = "Account exists. Switching to login...";
-      isLogin = true;
-      toggleMode();
-    } else {
-      msg.innerText = "Error: " + error.message;
-    }
+    msg.innerText = "Error: " + error.message;
   }
->>>>>>> 141c3b2daab9197a28787773e3b089e00799d0c3
 };
 </script>
 
 </body>
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> 141c3b2daab9197a28787773e3b089e00799d0c3
