@@ -35,6 +35,14 @@ h2, h3 {
   font-weight: bold;
 }
 
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+}
+
 button {
   width: 100%;
   padding: 10px;
@@ -85,24 +93,27 @@ button {
   <div class="card">
     <h2>Wallet Balance</h2>
     <div class="balance">₦<span id="balance">Loading...</span></div>
-    <p class="small">Real-time balance synced with your account</p>
+    <p class="small">Balance updates instantly after admin approval</p>
   </div>
 
   <!-- FUND WALLET -->
   <div class="card">
     <h3>Fund Wallet</h3>
-    <p class="small">Send payment and wait for admin approval</p>
 
-    <p><b>Bank:</b> Opay / PalmPay</p>
-    <p><b>Account Name:</b> YOUR BUSINESS NAME</p>
-    <p><b>Account Number:</b> 1234567890</p>
+    <p class="small">Transfer to the account below, then submit amount</p>
 
-    <button onclick="alert('After payment, contact admin for crediting your wallet')">
-      I Have Paid
-    </button>
+    <p><b>Bank:</b> Moniepoint MFB</p>
+    <p><b>Account Name:</b> Abraham Samuel</p>
+    <p><b>Account Number:</b> 6048761014</p>
+
+    <input id="amount" type="number" placeholder="Enter amount you paid">
+
+    <button onclick="submitPayment()">I Have Paid</button>
+
+    <p class="small">⚠️ Your wallet will be credited after admin confirms payment</p>
   </div>
 
-  <!-- HISTORY (READY FOR FUTURE) -->
+  <!-- HISTORY (READY FOR NEXT STEP) -->
   <div class="card">
     <h3>Transaction History</h3>
     <p class="small">No transactions yet</p>
@@ -122,11 +133,22 @@ button {
 feather.replace();
 </script>
 
-<!-- FIREBASE WALLET SYSTEM v2 -->
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+import { 
+  getAuth, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  doc, 
+  onSnapshot,
+  addDoc,
+  collection
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -140,14 +162,13 @@ const db = getFirestore(app);
 
 let listenerAttached = false;
 
-// AUTH CHECK
+// 🔐 AUTH CHECK + REALTIME WALLET
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
   }
 
-  // Prevent duplicate listeners
   if (listenerAttached) return;
   listenerAttached = true;
 
@@ -163,6 +184,34 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById("balance").innerText = data.wallet ?? 0;
   });
 });
+
+// 💳 SUBMIT PAYMENT REQUEST
+window.submitPayment = async function () {
+  const user = auth.currentUser;
+  const amount = Number(document.getElementById("amount").value);
+
+  if (!amount || amount <= 0) {
+    alert("Enter valid amount");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "transactions"), {
+      uid: user.uid,
+      amount: amount,
+      type: "deposit",
+      status: "pending",
+      createdAt: new Date()
+    });
+
+    alert("Payment submitted. Waiting for admin approval.");
+
+    document.getElementById("amount").value = "";
+
+  } catch (err) {
+    alert(err.message);
+  }
+};
 </script>
 
 </body>
