@@ -2,8 +2,6 @@
 <html>
 <head>
 
-<script src="https://unpkg.com/feather-icons"></script>
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wizard Digital Access</title>
 
@@ -12,7 +10,7 @@ body {
   margin: 0;
   font-family: Arial;
   background: #f5f5f5;
-  display: none; /* 🔒 hidden until login confirmed */
+  display: none; /* hidden until auth check */
 }
 
 /* HEADER */
@@ -70,7 +68,7 @@ body {
   margin: 10px 0;
 }
 
-.buy {
+.buy, .send {
   display: inline-block;
   background: purple;
   color: white;
@@ -87,32 +85,29 @@ body {
   background: white;
   display: flex;
   justify-content: space-around;
-  padding: 10px;
+  padding: 12px 0;
   box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
 }
 
 .nav a {
-  text-decoration: none;
   color: gray;
-  font-size: 12px;
 }
 
-.logout {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background: red;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
+.nav a.active {
+  color: purple;
+}
+
+.nav a svg {
+  width: 22px;
+  height: 22px;
 }
 </style>
+
+<script src="https://unpkg.com/feather-icons"></script>
+
 </head>
 
 <body>
-
-<button class="logout" onclick="logout()">Logout</button>
 
 <div class="header">
   <h1>Wizard Digital Access</h1>
@@ -140,22 +135,6 @@ body {
 <a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
-<div class="card">
-<div class="icon">❤️</div>
-<h3>USA Facebook</h3>
-<p class="stock">● Available</p>
-<div class="price">₦18,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20this%20product" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📘</div>
-<h3>Old Africa Facebook</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20old%20africa%20facebook" class="buy">Buy</a>
-</div>
-
 </div>
 </div>
 
@@ -167,49 +146,15 @@ body {
 <div class="card">
 <div class="icon">📸</div>
 <h3>Instagram</h3>
-<p class="stock">● Available</p>
 <div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Instagram%20account" class="buy">Buy</a>
+<a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
 <div class="card">
 <div class="icon">🐦</div>
 <h3>Twitter</h3>
-<p class="stock">● Available</p>
 <div class="price">₦15,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Twitter%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📌</div>
-<h3>Pinterest</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Pinterest%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">▶️</div>
-<h3>YouTube</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20YouTube%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎬</div>
-<h3>Netflix</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Netflix" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">💘</div>
-<h3>Facebook Dating</h3>
-<p class="stock">● Available</p>
-<div class="price">₦30,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Facebook%20Dating" class="buy">Buy</a>
+<a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
 </div>
@@ -223,122 +168,32 @@ body {
 <div class="card">
 <div class="icon">🔐</div>
 <h3>VPN</h3>
-<p class="stock">● Available</p>
 <div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20VPN" class="buy">Buy</a>
+<a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
 <div class="card">
 <div class="icon">🎵</div>
 <h3>TikTok</h3>
-<p class="stock">● Available</p>
 <div class="price">₦12,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20TikTok" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📶</div>
-<h3>eSIM</h3>
-<p class="stock">● Available</p>
-<div class="price">₦50,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20eSIM" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📶</div>
-<h3>Renew eSIM</h3>
-<p class="stock">● Available</p>
-<div class="price">₦30,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20renew%20eSIM" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">💬</div>
-<h3>TextPlus</h3>
-<p class="stock">● Available</p>
-<div class="price">₦4,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20TextPlus" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🦜</div>
-<h3>Talkatone</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Talkatone" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">👀</div>
-<h3>Google Voice</h3>
-<p class="stock">● Available</p>
-<div class="price">₦10,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Google%20Voice" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">📞</div>
-<h3>USA Number</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20USA%20Number" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🌍</div>
-<h3>All Countries Number</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Number" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎁</div>
-<h3>Send Gift</h3>
-<p class="stock">● Available</p>
-<div class="price">₦70,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20send%20gifts" class="send">send</a>
-</div>
-
-<div class="card">
-<div class="icon">✔️</div>
-<h3>Verified Telegram</h3>
-<p class="stock">● Available</p>
-<div class="price">₦15,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Verified%20Telegram" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">🎆</div>
-<h3>Boost Social Media Account</h3>
-<p class="stock">● Available</p>
-<div class="price">₦5,000 per 1k followers</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20boost%20account" class="buy">Buy</a>
-</div>
-
-<div class="card">
-<div class="icon">💬</div>
-<h3>Telegram Ready to use</h3>
-<p class="stock">● Available</p>
-<div class="price">₦8,000</div>
-<a href="https://wa.me/2349056661674?text=Hello%20I%20want%20to%20buy%20Telegram" class="buy">Buy</a>
+<a class="buy" href="https://wa.me/2349056661674">Buy</a>
 </div>
 
 </div>
 </div>
 
-<!-- NAV -->
+<!-- NAV (FIXED — CONSISTENT ACROSS ALL PAGES) -->
 <div class="nav">
   <a href="index.html" class="active"><i data-feather="home"></i></a>
   <a href="profile.html"><i data-feather="user"></i></a>
+  <a href="wallet.html"><i data-feather="credit-card"></i></a>
   <a href="#"><i data-feather="phone"></i></a>
-  <a href="#"><i data-feather="credit-card"></i></a>
 </div>
 
-<!-- FIREBASE AUTH -->
+<!-- AUTH GUARD -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -350,25 +205,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// 🔐 PROTECT PAGE
+// LOCK PAGE UNTIL AUTH
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    document.body.style.display = "block"; // show site
+    document.body.style.display = "block";
   } else {
     window.location.href = "auth.html";
   }
 });
-
-// LOGOUT
-window.logout = function () {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-};
 </script>
 
 <script>
-  feather.replace();
+feather.replace();
 </script>
 
 </body>

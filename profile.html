@@ -159,7 +159,7 @@ const db = getFirestore(app);
 
 let currentUser;
 
-// 🔐 AUTH CHECK + REALTIME PROFILE
+// 🔐 AUTH CHECK + LIVE PROFILE SYNC
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
@@ -170,7 +170,6 @@ onAuthStateChanged(auth, (user) => {
 
   document.getElementById("email").value = user.email;
 
-  // REAL-TIME FIRESTORE SYNC
   onSnapshot(doc(db, "users", user.uid), (snap) => {
     if (snap.exists()) {
       const data = snap.data();
@@ -191,7 +190,7 @@ window.saveProfile = async function () {
       name: name
     });
 
-    if (newPassword.length >= 6) {
+    if (newPassword && newPassword.length >= 6) {
       await updatePassword(currentUser, newPassword);
     }
 

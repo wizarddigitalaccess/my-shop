@@ -86,14 +86,14 @@ button {
     <p><b>Account Name:</b> YOUR BUSINESS NAME</p>
     <p><b>Account Number:</b> 1234567890</p>
 
-    <button onclick="alert('After payment, contact admin for confirmation')">
+    <button onclick="alert('After payment, wait for admin approval')">
       I Have Paid
     </button>
   </div>
 
   <!-- HISTORY -->
   <div class="card">
-    <h3>History</h3>
+    <h3>Transaction History</h3>
     <p>No transactions yet</p>
   </div>
 
@@ -111,7 +111,7 @@ button {
 feather.replace();
 </script>
 
-<!-- FIREBASE WALLET SYSTEM -->
+<!-- FIREBASE WALLET SYNC -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -127,14 +127,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 AUTH CHECK + REALTIME WALLET
+// 🔐 AUTH + REALTIME WALLET SYNC
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
   }
 
-  onSnapshot(doc(db, "users", user.uid), (snap) => {
+  const walletRef = doc(db, "users", user.uid);
+
+  onSnapshot(walletRef, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
       document.getElementById("balance").innerText = data.wallet ?? 0;
