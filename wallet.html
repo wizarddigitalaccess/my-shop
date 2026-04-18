@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wallet</title>
+
+<script src="https://unpkg.com/feather-icons"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0b1a2b;
+  color: white;
+}
+
+.container {
+  padding: 20px;
+  padding-bottom: 80px;
+}
+
+.card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background: purple;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0;
+}
+
+.nav a {
+  color: gray;
+}
+
+.nav a.active {
+  color: purple;
+}
+
+.nav a svg {
+  width: 22px;
+  height: 22px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Wallet Balance</h2>
+    <h1>₦<span id="balance">0</span></h1>
+  </div>
+
+  <div class="card">
+    <h3>Fund Wallet</h3>
+    <p>Send payment to the account below:</p>
+
+    <p><b>Bank:</b> Opay / PalmPay</p>
+    <p><b>Account Name:</b> YOUR BUSINESS NAME</p>
+    <p><b>Account Number:</b> 1234567890</p>
+
+    <button onclick="alert('After payment, contact admin for confirmation')">
+      I Have Paid
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>History</h3>
+    <p>No transactions yet</p>
+  </div>
+
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <a href="index.html"><i data-feather="home"></i></a>
+  <a href="profile.html"><i data-feather="user"></i></a>
+  <a href="wallet.html" class="active"><i data-feather="credit-card"></i></a>
+  <a href="#"><i data-feather="phone"></i></a>
+</div>
+
+<script>
+feather.replace();
+</script>
+
+</body>
+</html>
