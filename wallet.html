@@ -16,7 +16,7 @@ body {
 
 .container {
   padding: 20px;
-  padding-bottom: 80px;
+  padding-bottom: 90px;
 }
 
 .card {
@@ -38,6 +38,7 @@ button {
   border: none;
   border-radius: 8px;
   margin-top: 10px;
+  cursor: pointer;
 }
 
 /* NAV */
@@ -70,11 +71,13 @@ button {
 
 <div class="container">
 
+  <!-- WALLET BALANCE -->
   <div class="card">
     <h2>Wallet Balance</h2>
     <h1>₦<span id="balance">0</span></h1>
   </div>
 
+  <!-- FUND WALLET -->
   <div class="card">
     <h3>Fund Wallet</h3>
     <p>Send payment to the account below:</p>
@@ -88,6 +91,7 @@ button {
     </button>
   </div>
 
+  <!-- HISTORY -->
   <div class="card">
     <h3>History</h3>
     <p>No transactions yet</p>
@@ -105,6 +109,38 @@ button {
 
 <script>
 feather.replace();
+</script>
+
+<!-- FIREBASE WALLET SYSTEM -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// 🔐 AUTH CHECK + REALTIME WALLET
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    window.location.href = "auth.html";
+    return;
+  }
+
+  onSnapshot(doc(db, "users", user.uid), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      document.getElementById("balance").innerText = data.wallet ?? 0;
+    }
+  });
+});
 </script>
 
 </body>
