@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <title>Verify Account</title>
@@ -24,16 +25,6 @@ body {
   text-align: center;
 }
 
-input {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #111;
-  color: white;
-}
-
 button {
   width: 100%;
   padding: 12px;
@@ -51,25 +42,32 @@ button {
   color: orange;
 }
 </style>
+
 </head>
 
 <body>
 
 <div class="box">
-  <h2>Enter Verification Code</h2>
-  <p>Check your email for the 6-digit code</p>
+  <h2>Verify Your Email</h2>
+  <p>Click the link sent to your email, then click below</p>
 
-  <input id="code" placeholder="Enter code">
-
-  <button onclick="verify()">Verify</button>
+<button onclick="checkVerification()">I Have Verified</button> <button onclick="resend()">Resend Email</button>
 
   <div class="msg" id="msg"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth,
+  sendEmailVerification
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -81,9 +79,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-window.verify = async function () {
+// ✅ CHECK VERIFICATION
+window.checkVerification = async function () {
   const user = auth.currentUser;
-  const code = document.getElementById("code").value.trim();
   const msg = document.getElementById("msg");
 
   if (!user) {
@@ -91,37 +89,32 @@ window.verify = async function () {
     return;
   }
 
-  if (!code) {
-    msg.innerText = "Enter your code";
+  await user.reload();
+
+  if (user.emailVerified) {
+    // ✅ UPDATE FIRESTORE
+    await updateDoc(doc(db, "users", user.uid), {
+      verified: true
+    });
+
+    alert("Account verified successfully ✔️");
+    window.location.href = "index.html";
+  } else {
+    msg.innerText = "Still not verified. Check your email.";
+  }
+};
+
+// 🔁 RESEND EMAIL
+window.resend = async function () {
+  const user = auth.currentUser;
+
+  if (!user) {
+    window.location.href = "auth.html";
     return;
   }
 
-  try {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-
-    if (!snap.exists()) {
-      msg.innerText = "User not found";
-      return;
-    }
-
-    const data = snap.data();
-
-    if (code === data.otp) {
-      await updateDoc(ref, {
-        verified: true,
-        otp: ""
-      });
-
-      alert("Account verified ✔️");
-      window.location.href = "index.html";
-    } else {
-      msg.innerText = "Invalid code";
-    }
-
-  } catch (err) {
-    msg.innerText = err.message;
-  }
+  await sendEmailVerification(user);
+  document.getElementById("msg").innerText = "Verification email sent again!";
 };
 </script>
 
