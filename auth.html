@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -58,6 +59,7 @@ button {
   cursor: pointer;
 }
 </style>
+
 </head>
 
 <body>
@@ -68,7 +70,7 @@ button {
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
-  <button onclick="login()">Login</button>
+<button onclick="login()">Login</button>
 
   <div class="link" onclick="forgotPassword()">Forgot Password?</div>
   <div class="link" onclick="goSignup()">Create Account</div>
@@ -103,19 +105,31 @@ const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// 🔥 AUTO LOGIN IF ALREADY SIGNED IN
+// ✅ AUTO LOGIN (SAFE)
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
+  if (!user) return;
+
+  try {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
 
-    if (snap.exists() && snap.data().verified) {
+    // 🔥 If user doc missing → create fallback
+    if (!snap.exists()) {
+      console.log("User doc missing — redirecting to signup");
+      return;
+    }
+
+    const data = snap.data();
+
+    if (data.verified) {
       if (user.email === ADMIN_EMAIL) {
         window.location.href = "admin.html";
       } else {
         window.location.href = "index.html";
       }
     }
+  } catch (err) {
+    console.log(err);
   }
 });
 
@@ -138,13 +152,13 @@ window.login = async function () {
     const snap = await getDoc(ref);
 
     if (!snap.exists()) {
-      msg.innerText = "User data missing";
+      msg.innerText = "User data missing. Contact support.";
       return;
     }
 
     const data = snap.data();
 
-    // 🔥 CHECK OTP VERIFICATION
+    // 🔥 VERIFY CHECK
     if (!data.verified) {
       window.location.href = "verify.html";
       return;
@@ -185,7 +199,7 @@ window.forgotPassword = async function () {
   }
 };
 
-// 🔁 GO TO SIGNUP
+// 🔁 SIGNUP PAGE
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
