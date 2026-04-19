@@ -101,35 +101,42 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const ADMIN_EMAIL = "etee77366@gmail.com";
+// 🔐 PREVENT LOOP
+let checked = false;
 
-// ✅ AUTO LOGIN (STABLE + NO LOOP)
+// ✅ AUTO LOGIN (ROLE-BASED)
 onAuthStateChanged(auth, async (user) => {
+  if (checked) return;
+  checked = true;
 
   if (!user) return;
 
   try {
-    // 🔐 Check email verification FIRST
+    // 🔐 EMAIL VERIFICATION
     if (!user.emailVerified) {
       window.location.href = "verify.html";
       return;
     }
 
-    // ✅ Ensure Firestore user exists
     const userRef = doc(db, "users", user.uid);
     let snap = await getDoc(userRef);
 
+    // ✅ AUTO CREATE USER IF MISSING
     if (!snap.exists()) {
       await setDoc(userRef, {
         name: user.email.split("@")[0],
         email: user.email,
         wallet: 0,
+        role: "user",
         verified: true
       });
+      snap = await getDoc(userRef);
     }
 
-    // 🔥 Admin redirect
-    if (user.email === ADMIN_EMAIL) {
+    const role = snap.data().role || "user";
+
+    // 🔥 ROLE-BASED REDIRECT
+    if (role === "admin") {
       window.location.href = "admin.html";
     } else {
       window.location.href = "index.html";
@@ -155,13 +162,11 @@ window.login = async function () {
     const res = await signInWithEmailAndPassword(auth, email, password);
     const user = res.user;
 
-    // 🔐 Must verify email
     if (!user.emailVerified) {
       window.location.href = "verify.html";
       return;
     }
 
-    // ✅ Ensure Firestore user exists (CRITICAL FIX)
     const userRef = doc(db, "users", user.uid);
     let snap = await getDoc(userRef);
 
@@ -170,12 +175,16 @@ window.login = async function () {
         name: user.email.split("@")[0],
         email: user.email,
         wallet: 0,
+        role: "user",
         verified: true
       });
+      snap = await getDoc(userRef);
     }
 
-    // 🔥 Redirect
-    if (user.email === ADMIN_EMAIL) {
+    const role = snap.data().role || "user";
+
+    // 🔥 ROLE-BASED REDIRECT
+    if (role === "admin") {
       window.location.href = "admin.html";
     } else {
       window.location.href = "index.html";
