@@ -101,7 +101,7 @@ body {
 
 <div class="grid">
 
-<!-- ✅ ALL PRODUCTS (UNCHANGED) -->
+<!-- ✅ YOUR PRODUCTS (UNCHANGED) -->
 <div class="card"><h3>Africa Facebook</h3><div class="buy" onclick="openCategory('africa')">Buy</div></div>
 <div class="card"><h3>USA Facebook</h3><div class="buy" onclick="openCategory('usa')">Buy</div></div>
 <div class="card"><h3>Facebook Dating</h3><div class="buy" onclick="openCategory('dating')">Buy</div></div>
@@ -147,7 +147,6 @@ body {
   <a href="#" onclick="logout(); return false;"><i data-feather="log-out"></i></a>
 </div>
 
-<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -165,6 +164,8 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+const ADMIN_EMAIL = "etee77366@gmail.com";
+
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -178,10 +179,16 @@ let currentUser;
 let selected = null;
 let selectedDocId = null;
 
-// 🔐 AUTH FIX + AUTO USER CREATION
+// 🔐 AUTH FIX
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
+    return;
+  }
+
+  // 🔥 ADMIN REDIRECT FIX
+  if (user.email === ADMIN_EMAIL) {
+    window.location.href = "admin.html";
     return;
   }
 
@@ -190,12 +197,13 @@ onAuthStateChanged(auth, async (user) => {
   const userRef = doc(db, "users", user.uid);
   let snap = await getDoc(userRef);
 
-  // ✅ AUTO FIX MISSING USER DATA
+  // ✅ AUTO CREATE USER IF MISSING
   if (!snap.exists()) {
     await setDoc(userRef, {
       name: user.email.split("@")[0],
       email: user.email,
-      wallet: 0
+      wallet: 0,
+      verified: true
     });
 
     snap = await getDoc(userRef);
@@ -209,12 +217,12 @@ onAuthStateChanged(auth, async (user) => {
   document.body.style.display = "block";
 });
 
-// 🚪 LOGOUT
+// LOGOUT
 window.logout = function () {
   signOut(auth).then(() => window.location.href = "auth.html");
 };
 
-// 📦 OPEN CATEGORY
+// OPEN CATEGORY
 window.openCategory = async function (category) {
   document.getElementById("modal").style.display = "flex";
   const list = document.getElementById("list");
@@ -242,7 +250,7 @@ window.openCategory = async function (category) {
   if (snap.empty) list.innerHTML = "No accounts available";
 };
 
-// 👁 SELECT ITEM
+// SELECT ITEM
 window.selectItem = function (id, name, link, price) {
   selected = { name, link, price };
   selectedDocId = id;
@@ -254,13 +262,13 @@ window.selectItem = function (id, name, link, price) {
   `;
 };
 
-// 💰 BUY
+// BUY
 window.buy = async function () {
   if (!selected) return alert("Select account");
 
   const userRef = doc(db, "users", currentUser.uid);
   const userSnap = await getDoc(userRef);
-  const wallet = userSnap.data().wallet || 0;
+  const wallet = userSnap.data()?.wallet || 0;
 
   if (wallet < selected.price) {
     return alert("Insufficient balance");
@@ -286,7 +294,7 @@ window.buy = async function () {
   closeModal();
 };
 
-// ❌ CLOSE
+// CLOSE
 window.closeModal = function () {
   document.getElementById("modal").style.display = "none";
 };
