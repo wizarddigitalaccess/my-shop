@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: Arial;
-  background: #0f172a;
+  background: #0f0f1a;
   color: white;
   display: flex;
   justify-content: center;
@@ -16,28 +16,44 @@ body {
 }
 
 .box {
-  background: #1e293b;
+  background: #1c1c2e;
   padding: 30px;
   border-radius: 15px;
-  width: 300px;
+  width: 320px;
+}
+
+h2 {
+  text-align: center;
 }
 
 input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   margin: 8px 0;
   border-radius: 8px;
   border: none;
+  background: #111;
+  color: white;
 }
 
 button {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   background: purple;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.small {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 10px;
 }
 </style>
 </head>
@@ -52,11 +68,15 @@ button {
 <input id="password" type="password" placeholder="Password">
 
 <button onclick="signup()">Sign Up</button>
+
+<div class="small">
+Already have an account? <a href="auth.html" style="color:violet;">Login</a>
+</div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -69,25 +89,37 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-window.signup = function () {
-  let name = document.getElementById("name").value;
-  let email = document.getElementById("email").value;
+window.signup = async function () {
+  let name = document.getElementById("name").value.trim();
+  let email = document.getElementById("email").value.trim();
   let password = document.getElementById("password").value;
 
-  createUserWithEmailAndPassword(auth, email, password)
-    .then(async (userCredential) => {
-      const user = userCredential.user;
+  if (!name || !email || !password) {
+    alert("All fields are required");
+    return;
+  }
 
-      // create user profile in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        name: name,
-        email: email,
-        wallet: 0
-      });
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-      window.location.href = "index.html";
-    })
-    .catch(err => alert(err.message));
+    // send verification email
+    await sendEmailVerification(user);
+
+    // save user data
+    await setDoc(doc(db, "users", user.uid), {
+      name: name,
+      email: email,
+      wallet: 0
+    });
+
+    alert("Account created! Check your email to verify before login.");
+
+    window.location.href = "auth.html";
+
+  } catch (err) {
+    alert(err.message);
+  }
 };
 </script>
 
