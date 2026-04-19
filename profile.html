@@ -4,6 +4,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Profile</title>
 
+<script src="https://unpkg.com/feather-icons"></script>
+
 <style>
 body {
   margin: 0;
@@ -14,20 +16,18 @@ body {
 
 .container {
   padding: 20px;
-  padding-bottom: 80px;
 }
 
 .card {
   background: #1c1c2e;
   padding: 20px;
   border-radius: 15px;
-  margin-bottom: 15px;
 }
 
 input {
   width: 100%;
   padding: 10px;
-  margin-top: 5px;
+  margin-top: 10px;
   border-radius: 8px;
   border: none;
   background: #111;
@@ -38,83 +38,84 @@ button {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
+  border-radius: 8px;
+  border: none;
   background: purple;
   color: white;
-  border: none;
-  border-radius: 8px;
   cursor: pointer;
 }
 
-.item {
-  padding: 10px;
-  border-bottom: 1px solid #333;
-  font-size: 14px;
+.nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0;
 }
 
-.small {
-  font-size: 12px;
-  opacity: 0.7;
-}
+.nav a { color: gray; }
+.nav a.active { color: purple; }
 </style>
 </head>
 
 <body>
 
 <div class="container">
+  <div class="card">
+    <h2>My Profile</h2>
 
-<div class="card">
-<h2>My Profile</h2>
+    <input id="name" placeholder="Full Name">
+    <input id="email" disabled>
 
-<input id="name" placeholder="Full Name">
-<input id="email" disabled>
+    <input id="password" type="password" placeholder="New Password (optional)">
 
-<p>Wallet: ₦<span id="wallet">0</span></p>
-
-<input id="newPassword" type="password" placeholder="New Password">
-
-<button onclick="saveProfile()">Save Changes</button>
-<button onclick="logout()">Logout</button>
+    <button onclick="save()">Save Changes</button>
+    <button onclick="logout()">Logout</button>
+  </div>
 </div>
 
-<div class="card">
-<h3>Purchased Accounts</h3>
-<div id="purchases"></div>
+<div class="nav">
+  <a href="index.html"><i data-feather="home"></i></a>
+  <a href="profile.html" class="active"><i data-feather="user"></i></a>
+  <a href="wallet.html"><i data-feather="credit-card"></i></a>
 </div>
 
-</div>
+<script>
+feather.replace();
+</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
   getAuth, 
   onAuthStateChanged, 
-  signOut, 
-  updatePassword 
+  updatePassword, 
+  signOut 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-import {
-  getFirestore,
-  doc,
-  onSnapshot,
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
   updateDoc,
-  collection,
-  query,
-  where
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50",
-};
+  projectId: "wizard-shop-52a50"
+});
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser;
 
-onAuthStateChanged(auth, (user) => {
+// 🔐 LOAD PROFILE
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
@@ -122,70 +123,49 @@ onAuthStateChanged(auth, (user) => {
 
   currentUser = user;
 
-  document.getElementById("email").value = user.email;
+  const ref = doc(db, "users", user.uid);
+  let snap = await getDoc(ref);
 
-  // Profile + wallet
-  onSnapshot(doc(db, "users", user.uid), (snap) => {
-    if (snap.exists()) {
-      const data = snap.data();
-      document.getElementById("name").value = data.name || "";
-      document.getElementById("wallet").innerText = data.wallet ?? 0;
-    }
-  });
-
-  // Purchases
-  const q = query(
-    collection(db, "purchases"),
-    where("uid", "==", user.uid)
-  );
-
-  onSnapshot(q, (snapshot) => {
-    const container = document.getElementById("purchases");
-    container.innerHTML = "";
-
-    snapshot.forEach(doc => {
-      const item = doc.data();
-
-      container.innerHTML += `
-        <div class="item">
-          ${item.name}<br>
-          <a href="${item.link}" target="_blank" style="color:violet;">
-            View Profile
-          </a>
-        </div>
-      `;
+  // auto-fix missing user
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      name: user.email.split("@")[0],
+      email: user.email,
+      wallet: 0
     });
+    snap = await getDoc(ref);
+  }
 
-    if (snapshot.empty) {
-      container.innerHTML = "<p class='small'>No purchases yet</p>";
-    }
-  });
+  const data = snap.data();
+
+  document.getElementById("name").value = data.name || "";
+  document.getElementById("email").value = data.email || "";
 });
 
-window.saveProfile = async function () {
+// 💾 SAVE
+window.save = async function () {
   const name = document.getElementById("name").value;
-  const newPassword = document.getElementById("newPassword").value;
+  const password = document.getElementById("password").value;
 
   try {
     await updateDoc(doc(db, "users", currentUser.uid), {
-      name: name
+      name
     });
 
-    if (newPassword && newPassword.length >= 6) {
-      await updatePassword(currentUser, newPassword);
+    if (password && password.length >= 6) {
+      await updatePassword(currentUser, password);
     }
 
-    alert("Updated successfully");
+    alert("Profile updated ✅");
 
   } catch (err) {
     alert(err.message);
   }
 };
 
+// 🚪 LOGOUT
 window.logout = function () {
-  signOut(auth).then(() => {
-    window.location.href = "auth.html";
-  });
+  signOut(auth).then(() => window.location.href = "auth.html");
 };
 </script>
 
