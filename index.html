@@ -12,23 +12,57 @@ body {
   color:white;
 }
 
+/* HEADER */
 .header {
-  background:#1c1c2e;
-  padding:15px;
   display:flex;
   justify-content:space-between;
-}
-
-.container { padding:15px; }
-
-.card {
+  align-items:center;
   background:#1c1c2e;
-  padding:15px;
-  border-radius:12px;
-  margin-bottom:15px;
+  padding:10px;
+  position:sticky;
+  top:0;
 }
 
+.search {
+  flex:1;
+  margin:0 10px;
+}
+
+.search input {
+  width:100%;
+  padding:8px;
+  border:none;
+  border-radius:6px;
+}
+
+/* LAYOUT */
+.layout {
+  display:flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width:120px;
+  background:#111;
+  padding:10px;
+}
+
+.cat {
+  padding:8px;
+  margin-bottom:5px;
+  background:#222;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.cat.active {
+  background:purple;
+}
+
+/* PRODUCTS */
 .products {
+  flex:1;
+  padding:10px;
   display:grid;
   grid-template-columns:repeat(2,1fr);
   gap:10px;
@@ -40,28 +74,21 @@ body {
   border-radius:10px;
 }
 
+.product img {
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  border-radius:8px;
+}
+
 button {
   width:100%;
-  padding:10px;
+  padding:8px;
   border:none;
-  border-radius:8px;
+  border-radius:6px;
   background:purple;
   color:white;
-  cursor:pointer;
   margin-top:5px;
-}
-
-.cat {
-  display:inline-block;
-  padding:5px 10px;
-  margin:5px;
-  background:#222;
-  border-radius:20px;
-  cursor:pointer;
-}
-
-.cat.active {
-  background:purple;
 }
 </style>
 </head>
@@ -69,31 +96,24 @@ button {
 <body>
 
 <div class="header">
-  <div>🛒 Marketplace</div>
+  <div>🛒 Shop</div>
+  <div class="search">
+    <input id="search" placeholder="Search products..." oninput="renderProducts()">
+  </div>
   <div>₦<span id="wallet">0</span></div>
 </div>
 
-<div class="container">
+<div class="layout">
 
-<div class="card">
-<h3>Categories</h3>
-<div id="categories"></div>
-</div>
+<div class="sidebar" id="categories"></div>
 
-<div class="card">
-<h3>Products</h3>
-<div id="products" class="products"></div>
-</div>
+<div class="products" id="products"></div>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
   collection,
@@ -104,87 +124,64 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50"
+  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain:"wizard-shop-52a50.firebaseapp.com",
+  projectId:"wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let allProducts = [];
-let currentCategory = "all";
+let products = [];
+let currentCat = "all";
 
 // 🔐 AUTH
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return location.href = "auth.html";
+onAuthStateChanged(auth, async user=>{
+  if(!user) return location.href="auth.html";
 
-  // load wallet
   const userSnap = await getDoc(doc(db,"users",user.uid));
   if(userSnap.exists()){
-    document.getElementById("wallet").innerText =
-      userSnap.data().wallet || 0;
+    wallet.innerText = userSnap.data().wallet || 0;
   }
 
   loadProducts();
 });
 
-// 📦 LOAD PRODUCTS
+// 📦 LOAD
 async function loadProducts(){
   const snap = await getDocs(collection(db,"products"));
 
-  allProducts = [];
-  let categories = new Set();
+  let cats = new Set();
+
+  products = [];
 
   snap.forEach(d=>{
-    const data = d.data();
+    let data = d.data();
     data.id = d.id;
 
-    allProducts.push(data);
-    categories.add(data.category);
+    products.push(data);
+    cats.add(data.category);
   });
 
-  renderCategories([...categories]);
+  renderCategories([...cats]);
   renderProducts();
 }
 
-// 🎯 RENDER CATEGORIES
+// 📂 CATEGORIES
 function renderCategories(cats){
   const div = document.getElementById("categories");
   div.innerHTML = "";
 
-  div.innerHTML += `<span class="cat active" onclick="filter('all')">All</span>`;
+  div.innerHTML += `<div class="cat active" onclick="filter('all')">All</div>`;
 
   cats.forEach(c=>{
-    div.innerHTML += `
-      <span class="cat" onclick="filter('${c}')">${c}</span>
-    `;
-  });
-}
-
-// 🛒 RENDER PRODUCTS
-function renderProducts(){
-  const div = document.getElementById("products");
-  div.innerHTML = "";
-
-  const filtered = currentCategory === "all"
-    ? allProducts
-    : allProducts.filter(p => p.category === currentCategory);
-
-  filtered.forEach(p=>{
-    div.innerHTML += `
-      <div class="product">
-        <b>${p.name}</b><br>
-        ₦${p.price}<br>
-        <button onclick="buy('${p.id}', ${p.price})">Buy</button>
-      </div>
-    `;
+    div.innerHTML += `<div class="cat" onclick="filter('${c}')">${c}</div>`;
   });
 }
 
 // 🎯 FILTER
 window.filter = function(cat){
-  currentCategory = cat;
+  currentCat = cat;
 
   document.querySelectorAll(".cat").forEach(el=>{
     el.classList.remove("active");
@@ -195,11 +192,37 @@ window.filter = function(cat){
   renderProducts();
 };
 
+// 🛒 RENDER PRODUCTS
+window.renderProducts = function(){
+  const div = document.getElementById("products");
+  const search = document.getElementById("search").value.toLowerCase();
+
+  div.innerHTML = "";
+
+  let filtered = products.filter(p=>{
+    return (
+      (currentCat === "all" || p.category === currentCat) &&
+      p.name.toLowerCase().includes(search)
+    );
+  });
+
+  filtered.forEach(p=>{
+    div.innerHTML += `
+      <div class="product">
+        <img src="${p.image || 'https://via.placeholder.com/150'}">
+        <b>${p.name}</b><br>
+        ₦${p.price}
+        <button onclick="buy('${p.id}', ${p.price})">Buy Now</button>
+      </div>
+    `;
+  });
+};
+
 // 💳 BUY
 window.buy = async function(id, price){
   const user = auth.currentUser;
 
-  if(!confirm("Confirm purchase?")) return;
+  if(!confirm("Buy this product?")) return;
 
   await addDoc(collection(db,"transactions"),{
     uid:user.uid,
@@ -209,7 +232,7 @@ window.buy = async function(id, price){
     createdAt:new Date()
   });
 
-  alert("Order placed! Await admin approval.");
+  alert("Order submitted ✔️");
 };
 </script>
 
