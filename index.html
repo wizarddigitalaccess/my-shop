@@ -2,7 +2,9 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wizard Digital Access</title>
+<title>Marketplace</title>
+
+<script src="https://unpkg.com/feather-icons"></script>
 
 <style>
 body {
@@ -14,9 +16,9 @@ body {
 
 /* HEADER */
 .header {
-  background: #1e1e2f;
   text-align: center;
-  padding: 20px;
+  padding: 15px;
+  background: #1c1c2e;
 }
 
 /* GRID */
@@ -27,31 +29,44 @@ body {
   padding: 15px;
 }
 
-/* CARD */
 .card {
   background: #1c1c2e;
-  border-radius: 15px;
   padding: 15px;
-}
-
-.price {
-  font-weight: bold;
-  margin: 10px 0;
+  border-radius: 15px;
 }
 
 .buy {
   background: purple;
-  padding: 8px 15px;
+  padding: 8px;
   border-radius: 20px;
+  text-align: center;
   cursor: pointer;
-  display: inline-block;
+  margin-top: 10px;
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+}
+
+.nav a {
+  color: gray;
+}
+
+.nav a.active {
+  color: purple;
 }
 
 /* MODAL */
 .modal {
   position: fixed;
   top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   background: rgba(0,0,0,0.8);
@@ -61,23 +76,16 @@ body {
 }
 
 .modal-content {
-  background: #1e1e2f;
+  background: #1c1c2e;
   padding: 20px;
-  border-radius: 10px;
   width: 90%;
-}
-
-.account {
-  padding: 10px;
-  border-bottom: 1px solid #444;
-  cursor: pointer;
-}
-
-.preview {
-  margin-top: 15px;
-  background: #111;
-  padding: 10px;
   border-radius: 10px;
+}
+
+.item {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
 }
 </style>
 </head>
@@ -85,21 +93,119 @@ body {
 <body>
 
 <div class="header">
-<h2>Wizard Digital Access</h2>
+<h2>Wizard Marketplace</h2>
 </div>
 
 <div class="grid">
 
 <div class="card">
 <h3>Africa Facebook</h3>
-<div class="price">₦8,000</div>
-<div class="buy" onclick="openModal('africa')">Buy</div>
+<div class="buy" onclick="openCategory('africa')">Buy</div>
 </div>
 
 <div class="card">
 <h3>USA Facebook</h3>
-<div class="price">₦18,000</div>
-<div class="buy" onclick="openModal('usa')">Buy</div>
+<div class="buy" onclick="openCategory('usa')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Facebook Dating</h3>
+<div class="buy" onclick="openCategory('dating')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Europe Facebook</h3>
+<div class="buy" onclick="openCategory('europe')">Buy</div>
+</div>
+
+<div class="card">
+<h3>USA WhatsApp</h3>
+<div class="buy" onclick="openCategory('usa')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Old Africa Facebook</h3>
+<div class="buy" onclick="openCategory('africa')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Asia Facebook</h3>
+<div class="buy" onclick="openCategory('asia')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Instagram</h3>
+<div class="buy" onclick="openCategory('instagram')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Twitter</h3>
+<div class="buy" onclick="openCategory('twitter')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Pinterest</h3>
+<div class="buy" onclick="openCategory('Pinterest')">Buy</div>
+</div>
+
+<div class="card">
+<h3>YouTube</h3>
+<div class="buy" onclick="openCategory('youtube')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Netflix</h3>
+<div class="buy" onclick="openCategory('netflix')">Buy</div>
+</div>
+
+<div class="card">
+<h3>VPN</h3>
+<div class="buy" onclick="openCategory('vpn')">Buy</div>
+</div>
+
+<div class="card">
+<h3>TikTok</h3>
+<div class="buy" onclick="openCategory('tiktok')">Buy</div>
+</div>
+
+<div class="card">
+<h3>eSIM</h3>
+<div class="buy" onclick="openCategory('esim')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Renew eSIM</h3>
+<div class="buy" onclick="openCategory('renew')">Buy</div>
+</div>
+
+<div class="card">
+<h3>TextPlus</h3>
+<div class="buy" onclick="openCategory('textplus')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Talkatone</h3>
+<div class="buy" onclick="openCategory('talkatone')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Google Voice</h3>
+<div class="buy" onclick="openCategory('googlevoice')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Send Gift</h3>
+<div class="buy" onclick="openCategory('sendgift')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Verified Telegram</h3>
+<div class="buy" onclick="openCategory('verifiedtelegram')">Buy</div>
+</div>
+
+<div class="card">
+<h3>Telegram Ready to use</h3>
+<div class="buy" onclick="openCategory('telegramreadytouse')">Buy</div>
 </div>
 
 </div>
@@ -109,67 +215,129 @@ body {
 <div class="modal-content">
 
 <h3>Select Account</h3>
-
-<div id="accountList"></div>
-
-<div class="preview" id="preview"></div>
+<div id="list"></div>
+<div id="preview"></div>
 
 <br>
-<button onclick="confirmPurchase()">Confirm Purchase</button>
+<button onclick="buy()">Confirm Purchase</button>
 <button onclick="closeModal()">Close</button>
 
 </div>
 </div>
 
+<!-- NAV -->
+<div class="nav">
+  <a href="index.html" class="active"><i data-feather="home"></i></a>
+  <a href="profile.html"><i data-feather="user"></i></a>
+  <a href="wallet.html"><i data-feather="credit-card"></i></a>
+  <a href="auth.html"><i data-feather="log-out"></i></a>
+</div>
+
 <script>
-const accounts = {
-  africa: [
-    {name: "User1", link: "https://facebook.com/user1"},
-    {name: "User2", link: "https://facebook.com/user2"}
-  ],
-  usa: [
-    {name: "USAUser1", link: "https://facebook.com/usa1"},
-    {name: "USAUser2", link: "https://facebook.com/usa2"}
-  ]
+feather.replace();
+</script>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkby...",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 };
 
-let selectedAccount = null;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-function openModal(type){
+let selected = null;
+let selectedDocId = null;
+let currentUser = null;
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) window.location.href = "auth.html";
+  currentUser = user;
+});
+
+window.openCategory = async function (category) {
   document.getElementById("modal").style.display = "flex";
-  let list = document.getElementById("accountList");
+  const list = document.getElementById("list");
+  list.innerHTML = "Loading...";
+
+  const q = query(
+    collection(db, "products"),
+    where("category", "==", category),
+    where("status", "==", "available")
+  );
+
+  const snap = await getDocs(q);
   list.innerHTML = "";
 
-  accounts[type].forEach(acc => {
-    let div = document.createElement("div");
-    div.className = "account";
-    div.innerText = acc.name;
-    div.onclick = () => selectAccount(acc);
-    list.appendChild(div);
+  snap.forEach(docItem => {
+    const data = docItem.data();
+
+    list.innerHTML += `
+      <div class="item" onclick="selectItem('${docItem.id}', '${data.name}', '${data.link}')">
+        ${data.name}
+      </div>
+    `;
   });
-}
 
-function selectAccount(acc){
-  selectedAccount = acc;
-  document.getElementById("preview").innerHTML =
-    "Preview:<br>" +
-    acc.name + "<br>" +
-    "<a href='"+acc.link+"' target='_blank'>View Profile</a>";
-}
+  if (snap.empty) list.innerHTML = "No accounts available";
+};
 
-function confirmPurchase(){
-  if(!selectedAccount){
-    alert("Select account first");
-    return;
-  }
+window.selectItem = function (id, name, link) {
+  selected = { name, link };
+  selectedDocId = id;
 
-  alert("Purchased: " + selectedAccount.name);
+  document.getElementById("preview").innerHTML = `
+    <br><b>${name}</b><br>
+    <a href="${link}" target="_blank" style="color:violet;">Preview</a>
+  `;
+};
+
+window.buy = async function () {
+  if (!selected) return alert("Select account");
+
+  const userRef = doc(db, "users", currentUser.uid);
+  const userSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
+
+  let wallet = 0;
+  userSnap.forEach(d => wallet = d.data().wallet || 0);
+
+  if (wallet < 5000) return alert("Insufficient balance");
+
+  await updateDoc(userRef, { wallet: wallet - 5000 });
+
+  await updateDoc(doc(db, "products", selectedDocId), {
+    status: "sold"
+  });
+
+  await addDoc(collection(db, "purchases"), {
+    uid: currentUser.uid,
+    name: selected.name,
+    link: selected.link
+  });
+
+  alert("Purchase successful");
   closeModal();
-}
+};
 
-function closeModal(){
+window.closeModal = function () {
   document.getElementById("modal").style.display = "none";
-}
+};
 </script>
 
 </body>
