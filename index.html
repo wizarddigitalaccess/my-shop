@@ -20,7 +20,11 @@ body {
   text-align: center;
   padding: 15px;
   background: #1c1c2e;
-  font-size: 18px;
+}
+
+.user-info {
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 /* GRID */
@@ -35,7 +39,6 @@ body {
   background: #1c1c2e;
   padding: 15px;
   border-radius: 15px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.4);
 }
 
 .buy {
@@ -90,16 +93,15 @@ body {
   border-bottom: 1px solid #333;
   cursor: pointer;
 }
-
-.item:hover {
-  background: #2a2a40;
-}
 </style>
 </head>
 
 <body>
 
-<div class="header">Wizard Marketplace</div>
+<div class="header">
+  <h2>Wizard Marketplace</h2>
+  <div class="user-info" id="userinfo">Loading...</div>
+</div>
 
 <div class="grid">
 
@@ -146,12 +148,8 @@ body {
   <a href="index.html" class="active"><i data-feather="home"></i></a>
   <a href="profile.html"><i data-feather="user"></i></a>
   <a href="wallet.html"><i data-feather="credit-card"></i></a>
-  <a onclick="logout()"><i data-feather="log-out"></i></a>
+  <a href="#" onclick="logout(); return false;"><i data-feather="log-out"></i></a>
 </div>
-
-<script>
-feather.replace();
-</script>
 
 <!-- FIREBASE -->
 <script type="module">
@@ -170,7 +168,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyCkby...",
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -181,27 +179,31 @@ const db = getFirestore(app);
 let currentUser;
 let selected = null;
 let selectedDocId = null;
-let ready = false;
 
-// ✅ FIXED AUTH (NO MORE LOGOUT BUG)
-onAuthStateChanged(auth, (user) => {
-  if (ready) return;
-  ready = true;
-
+// ✅ FIXED AUTH (NO LOGOUT ISSUE)
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
   } else {
     currentUser = user;
+
+    // load user info
+    const snap = await getDoc(doc(db, "users", user.uid));
+    const data = snap.data();
+
+    document.getElementById("userinfo").innerText =
+      data.name + " • Wallet: ₦" + (data.wallet || 0);
+
     document.body.style.display = "block";
   }
 });
 
-// 🔓 LOGOUT
+// LOGOUT
 window.logout = function () {
   signOut(auth).then(() => window.location.href = "auth.html");
 };
 
-// 📦 OPEN CATEGORY
+// OPEN CATEGORY
 window.openCategory = async function (category) {
   document.getElementById("modal").style.display = "flex";
   const list = document.getElementById("list");
@@ -229,7 +231,7 @@ window.openCategory = async function (category) {
   if (snap.empty) list.innerHTML = "No accounts available";
 };
 
-// 👁 SELECT ITEM
+// SELECT ITEM
 window.selectItem = function (id, name, link, price) {
   selected = { name, link, price };
   selectedDocId = id;
@@ -241,7 +243,7 @@ window.selectItem = function (id, name, link, price) {
   `;
 };
 
-// 💰 BUY
+// BUY
 window.buy = async function () {
   if (!selected) return alert("Select account");
 
@@ -273,10 +275,14 @@ window.buy = async function () {
   closeModal();
 };
 
-// ❌ CLOSE
+// CLOSE
 window.closeModal = function () {
   document.getElementById("modal").style.display = "none";
 };
+</script>
+
+<script>
+setTimeout(() => feather.replace(), 500);
 </script>
 
 </body>
