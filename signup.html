@@ -1,3 +1,78 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Sign Up</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f0f1a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.box {
+  background: #1c1c2e;
+  padding: 30px;
+  border-radius: 15px;
+  width: 320px;
+}
+
+h2 {
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: none;
+  background: #111;
+  color: white;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: purple;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.small {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+<h2>Create Account</h2>
+
+<input id="name" placeholder="Full Name">
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+
+<button onclick="signup()">Sign Up</button>
+
+<div class="small">
+Already have an account? 
+<a href="auth.html" style="color:violet;">Login</a>
+</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
@@ -36,17 +111,18 @@ window.signup = async function () {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // ✅ SAVE USER TO FIRESTORE (THIS FIXES YOUR ERROR)
+    // ✅ CRITICAL FIX (prevents "user data missing")
     await setDoc(doc(db, "users", user.uid), {
       name: name,
       email: email,
-      wallet: 0
+      wallet: 0,
+      verified: false
     });
 
-    // ✅ SEND EMAIL VERIFICATION
+    // ✅ SEND VERIFICATION EMAIL
     await sendEmailVerification(user);
 
-    alert("Account created! Verify your email.");
+    alert("Account created! Check your email to verify.");
 
     window.location.href = "verify.html";
 
@@ -55,3 +131,6 @@ window.signup = async function () {
   }
 };
 </script>
+
+</body>
+</html>
