@@ -90,28 +90,33 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 window.signup = async function () {
-  let name = document.getElementById("name").value.trim();
-  let email = document.getElementById("email").value.trim();
+import { sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+window.signup = function () {
+  let name = document.getElementById("name").value;
+  let email = document.getElementById("email").value;
   let password = document.getElementById("password").value;
 
-  if (!name || !email || !password) {
-    alert("All fields are required");
-    return;
-  }
+  createUserWithEmailAndPassword(auth, email, password)
+    .then(async (userCredential) => {
+      const user = userCredential.user;
 
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+      // 🔥 SEND VERIFICATION EMAIL
+      await sendEmailVerification(user);
 
-    // send verification email
-    await sendEmailVerification(user);
+      // SAVE USER
+      await setDoc(doc(db, "users", user.uid), {
+        name,
+        email,
+        wallet: 0
+      });
 
-    // save user data
-    await setDoc(doc(db, "users", user.uid), {
-      name: name,
-      email: email,
-      wallet: 0
-    });
+      alert("Verification email sent. Check your inbox.");
+
+      window.location.href = "verify.html";
+    })
+    .catch(err => alert(err.message));
+};
 
     alert("Account created! Check your email to verify before login.");
 
