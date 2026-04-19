@@ -4,12 +4,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wallet</title>
 
+<script src="https://unpkg.com/feather-icons"></script>
+
 <style>
 body {
   margin: 0;
   font-family: Arial;
   background: #0f0f1a;
   color: white;
+  display: none;
 }
 
 .container {
@@ -60,6 +63,23 @@ button {
   font-size: 12px;
   opacity: 0.7;
 }
+
+.status-pending { color: orange; }
+.status-approved { color: lightgreen; }
+.status-rejected { color: red; }
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 0;
+}
+
+.nav a { color: gray; }
+.nav a.active { color: purple; }
 </style>
 </head>
 
@@ -80,19 +100,31 @@ button {
 
 <button onclick="submitPayment()">Submit Payment</button>
 
-<p class="small">⚠️ Will be automated later (Paystack)</p>
+<p class="small">⚠️ Manual approval (admin). Paystack coming later.</p>
 </div>
 
 <div class="card">
 <h3>Transaction History</h3>
-<div id="history"></div>
+<div id="history">Loading...</div>
 </div>
 
 </div>
+
+<!-- NAV -->
+<div class="nav">
+  <a href="index.html"><i data-feather="home"></i></a>
+  <a href="profile.html"><i data-feather="user"></i></a>
+  <a href="wallet.html" class="active"><i data-feather="credit-card"></i></a>
+</div>
+
+<script>
+setTimeout(() => feather.replace(), 500);
+</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 import {
   getFirestore,
   doc,
@@ -101,33 +133,57 @@ import {
   addDoc,
   query,
   where,
-  onSnapshot as onSnapshotCol
+  onSnapshot as onSnapshotCol,
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
+const ADMIN_EMAIL = "etee77366@gmail.com";
+
+const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50",
-};
+  projectId: "wizard-shop-52a50"
+});
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-onAuthStateChanged(auth, (user) => {
+// 🔐 AUTH
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
   }
 
-  // Wallet balance
-  onSnapshot(doc(db, "users", user.uid), (snap) => {
+  // 🔥 ADMIN REDIRECT
+  if (user.email === ADMIN_EMAIL) {
+    window.location.href = "admin.html";
+    return;
+  }
+
+  const userRef = doc(db, "users", user.uid);
+  let snap = await getDoc(userRef);
+
+  // ✅ AUTO FIX USER DATA
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      name: user.email.split("@")[0],
+      email: user.email,
+      wallet: 0,
+      verified: true
+    });
+  }
+
+  // 💰 LIVE BALANCE
+  onSnapshot(userRef, (snap) => {
     if (snap.exists()) {
-      document.getElementById("balance").innerText = snap.data().wallet || 0;
+      document.getElementById("balance").innerText =
+        snap.data().wallet || 0;
     }
   });
 
-  // Transaction history
+  // 📜 TRANSACTIONS
   const q = query(
     collection(db, "transactions"),
     where("uid", "==", user.uid)
@@ -137,17 +193,27 @@ onAuthStateChanged(auth, (user) => {
     const history = document.getElementById("history");
     history.innerHTML = "";
 
+    if (snapshot.empty) {
+      history.innerHTML = "No transactions yet";
+      return;
+    }
+
     snapshot.forEach(doc => {
       const tx = doc.data();
+
       history.innerHTML += `
         <div class="tx">
-          ₦${tx.amount} - ${tx.status}
+          ₦${tx.amount} 
+          <span class="status-${tx.status}">(${tx.status})</span>
         </div>
       `;
     });
   });
+
+  document.body.style.display = "block";
 });
 
+// 💳 SUBMIT PAYMENT
 window.submitPayment = async function () {
   const user = auth.currentUser;
   const amount = Number(document.getElementById("amount").value);
@@ -157,14 +223,21 @@ window.submitPayment = async function () {
     return;
   }
 
-  await addDoc(collection(db, "transactions"), {
-    uid: user.uid,
-    amount: amount,
-    status: "pending",
-    createdAt: new Date()
-  });
+  try {
+    await addDoc(collection(db, "transactions"), {
+      uid: user.uid,
+      amount: amount,
+      status: "pending",
+      createdAt: new Date()
+    });
 
-  alert("Payment submitted");
+    document.getElementById("amount").value = "";
+
+    alert("Payment submitted ✔️ Waiting for admin approval");
+
+  } catch (err) {
+    alert(err.message);
+  }
 };
 </script>
 
