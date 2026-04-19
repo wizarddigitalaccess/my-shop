@@ -2,51 +2,36 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Profile</title>
-
-<script src="https://unpkg.com/feather-icons"></script>
+<title>Profile</title>
 
 <style>
 body {
   margin: 0;
   font-family: Arial;
-  background: #0b1a2b;
+  background: #0f0f1a;
   color: white;
 }
 
-/* CENTER */
 .container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  padding: 20px;
   padding-bottom: 80px;
 }
 
 .card {
-  background: #1e293b;
-  padding: 25px;
+  background: #1c1c2e;
+  padding: 20px;
   border-radius: 15px;
-  width: 320px;
-}
-
-h2 {
-  text-align: center;
-}
-
-.info {
-  margin: 10px 0;
-  padding: 10px;
-  background: #0f172a;
-  border-radius: 8px;
+  margin-bottom: 15px;
 }
 
 input {
   width: 100%;
+  padding: 10px;
   margin-top: 5px;
-  padding: 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
+  background: #111;
+  color: white;
 }
 
 button {
@@ -60,28 +45,15 @@ button {
   cursor: pointer;
 }
 
-/* NAV */
-.nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
+.item {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  font-size: 14px;
 }
 
-.nav a {
-  color: gray;
-}
-
-.nav a.active {
-  color: purple;
-}
-
-.nav a svg {
-  width: 22px;
-  height: 22px;
+.small {
+  font-size: 12px;
+  opacity: 0.7;
 }
 </style>
 </head>
@@ -89,48 +61,28 @@ button {
 <body>
 
 <div class="container">
+
 <div class="card">
+<h2>My Profile</h2>
 
-  <h2>My Profile</h2>
+<input id="name" placeholder="Full Name">
+<input id="email" disabled>
 
-  <div class="info">
-    Name:
-    <input id="name" placeholder="Enter your name">
-  </div>
+<p>Wallet: ₦<span id="wallet">0</span></p>
 
-  <div class="info">
-    Email:
-    <input id="email" disabled>
-  </div>
+<input id="newPassword" type="password" placeholder="New Password">
 
-  <div class="info">
-    Wallet: ₦<span id="wallet">0</span>
-  </div>
-
-  <div class="info">
-    New Password:
-    <input id="newPassword" type="password" placeholder="Change password">
-  </div>
-
-  <button onclick="saveProfile()">Save Changes</button>
-  <button onclick="logout()">Logout</button>
-
-</div>
+<button onclick="saveProfile()">Save Changes</button>
+<button onclick="logout()">Logout</button>
 </div>
 
-<!-- NAV -->
-<div class="nav">
-  <a href="index.html"><i data-feather="home"></i></a>
-  <a href="profile.html" class="active"><i data-feather="user"></i></a>
-  <a href="wallet.html"><i data-feather="credit-card"></i></a>
-  <a href="#"><i data-feather="phone"></i></a>
+<div class="card">
+<h3>Purchased Accounts</h3>
+<div id="purchases"></div>
 </div>
 
-<script>
-feather.replace();
-</script>
+</div>
 
-<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
@@ -140,11 +92,14 @@ import {
   updatePassword 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-import { 
-  getFirestore, 
-  doc, 
-  onSnapshot, 
-  updateDoc 
+import {
+  getFirestore,
+  doc,
+  onSnapshot,
+  updateDoc,
+  collection,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -159,7 +114,6 @@ const db = getFirestore(app);
 
 let currentUser;
 
-// 🔐 AUTH CHECK + LIVE PROFILE SYNC
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
@@ -170,17 +124,44 @@ onAuthStateChanged(auth, (user) => {
 
   document.getElementById("email").value = user.email;
 
+  // Profile + wallet
   onSnapshot(doc(db, "users", user.uid), (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-
       document.getElementById("name").value = data.name || "";
       document.getElementById("wallet").innerText = data.wallet ?? 0;
     }
   });
+
+  // Purchases
+  const q = query(
+    collection(db, "purchases"),
+    where("uid", "==", user.uid)
+  );
+
+  onSnapshot(q, (snapshot) => {
+    const container = document.getElementById("purchases");
+    container.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const item = doc.data();
+
+      container.innerHTML += `
+        <div class="item">
+          ${item.name}<br>
+          <a href="${item.link}" target="_blank" style="color:violet;">
+            View Profile
+          </a>
+        </div>
+      `;
+    });
+
+    if (snapshot.empty) {
+      container.innerHTML = "<p class='small'>No purchases yet</p>";
+    }
+  });
 });
 
-// 💾 SAVE PROFILE
 window.saveProfile = async function () {
   const name = document.getElementById("name").value;
   const newPassword = document.getElementById("newPassword").value;
@@ -194,14 +175,13 @@ window.saveProfile = async function () {
       await updatePassword(currentUser, newPassword);
     }
 
-    alert("Profile updated ✔️");
+    alert("Updated successfully");
 
   } catch (err) {
     alert(err.message);
   }
 };
 
-// 🚪 LOGOUT
 window.logout = function () {
   signOut(auth).then(() => {
     window.location.href = "auth.html";
