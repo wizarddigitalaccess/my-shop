@@ -58,7 +58,6 @@ button {
   cursor: pointer;
 }
 </style>
-
 </head>
 
 <body>
@@ -93,58 +92,59 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50",
-};
+  projectId: "wizard-shop-52a50"
+});
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// ✅ SAFE AUTO LOGIN (NO LOOP)
-let checked = false;
-
+// ✅ AUTO LOGIN (STABLE + NO LOOP)
 onAuthStateChanged(auth, async (user) => {
-  if (checked) return;
-  checked = true;
 
   if (!user) return;
 
-  // 🔐 Email must be verified
-  if (!user.emailVerified) {
-    window.location.href = "verify.html";
-    return;
-  }
+  try {
+    // 🔐 Check email verification FIRST
+    if (!user.emailVerified) {
+      window.location.href = "verify.html";
+      return;
+    }
 
-  // ✅ Ensure user doc exists
-  const ref = doc(db, "users", user.uid);
-  let snap = await getDoc(ref);
+    // ✅ Ensure Firestore user exists
+    const userRef = doc(db, "users", user.uid);
+    let snap = await getDoc(userRef);
 
-  if (!snap.exists()) {
-    await setDoc(ref, {
-      name: user.email.split("@")[0],
-      email: user.email,
-      wallet: 0
-    });
-  }
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        name: user.email.split("@")[0],
+        email: user.email,
+        wallet: 0,
+        verified: true
+      });
+    }
 
-  // 🔥 ADMIN CHECK
-  if (user.email === ADMIN_EMAIL) {
-    window.location.href = "admin.html";
-  } else {
-    window.location.href = "index.html";
+    // 🔥 Admin redirect
+    if (user.email === ADMIN_EMAIL) {
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "index.html";
+    }
+
+  } catch (err) {
+    console.log(err);
   }
 });
 
 // 🔐 LOGIN
 window.login = async function () {
-  let email = document.getElementById("email").value.trim();
-  let password = document.getElementById("password").value;
-  let msg = document.getElementById("msg");
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const msg = document.getElementById("msg");
 
   if (!email || !password) {
     msg.innerText = "Enter email and password";
@@ -155,25 +155,26 @@ window.login = async function () {
     const res = await signInWithEmailAndPassword(auth, email, password);
     const user = res.user;
 
-    // 🔐 EMAIL VERIFICATION CHECK
+    // 🔐 Must verify email
     if (!user.emailVerified) {
       window.location.href = "verify.html";
       return;
     }
 
-    // ✅ Ensure user doc exists
-    const ref = doc(db, "users", user.uid);
-    let snap = await getDoc(ref);
+    // ✅ Ensure Firestore user exists (CRITICAL FIX)
+    const userRef = doc(db, "users", user.uid);
+    let snap = await getDoc(userRef);
 
     if (!snap.exists()) {
-      await setDoc(ref, {
+      await setDoc(userRef, {
         name: user.email.split("@")[0],
         email: user.email,
-        wallet: 0
+        wallet: 0,
+        verified: true
       });
     }
 
-    // 🔥 ADMIN CHECK
+    // 🔥 Redirect
     if (user.email === ADMIN_EMAIL) {
       window.location.href = "admin.html";
     } else {
@@ -208,7 +209,7 @@ window.forgotPassword = async function () {
   }
 };
 
-// 🔁 SIGNUP PAGE
+// 🔁 SIGNUP
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
