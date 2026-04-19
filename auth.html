@@ -70,6 +70,7 @@ button {
 
   <button onclick="login()">Login</button>
 
+  <div class="link" onclick="forgotPassword()">Forgot Password?</div>
   <div class="link" onclick="goSignup()">Create Account</div>
 
   <div class="msg" id="msg"></div>
@@ -79,8 +80,16 @@ button {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -90,9 +99,27 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
+// 🔥 AUTO LOGIN IF ALREADY SIGNED IN
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+
+    if (snap.exists() && snap.data().verified) {
+      if (user.email === ADMIN_EMAIL) {
+        window.location.href = "admin.html";
+      } else {
+        window.location.href = "index.html";
+      }
+    }
+  }
+});
+
+// 🔐 LOGIN
 window.login = async function () {
   let email = document.getElementById("email").value.trim();
   let password = document.getElementById("password").value;
@@ -104,11 +131,21 @@ window.login = async function () {
   }
 
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    const res = await signInWithEmailAndPassword(auth, email, password);
+    const user = res.user;
 
-    // 🔐 IF NOT VERIFIED → GO TO VERIFY PAGE
-    if (!user.emailVerified) {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      msg.innerText = "User data missing";
+      return;
+    }
+
+    const data = snap.data();
+
+    // 🔥 CHECK OTP VERIFICATION
+    if (!data.verified) {
       window.location.href = "verify.html";
       return;
     }
@@ -131,6 +168,24 @@ window.login = async function () {
   }
 };
 
+// 🔁 FORGOT PASSWORD
+window.forgotPassword = async function () {
+  const email = document.getElementById("email").value;
+
+  if (!email) {
+    alert("Enter your email first");
+    return;
+  }
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("Password reset email sent ✔️");
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+// 🔁 GO TO SIGNUP
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
