@@ -4,48 +4,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wallet</title>
 
-<script src="https://unpkg.com/feather-icons"></script>
-
 <style>
 body {
   margin: 0;
   font-family: Arial;
-  background: #0b1a2b;
+  background: #0f0f1a;
   color: white;
 }
 
 .container {
   padding: 20px;
-  padding-bottom: 90px;
+  padding-bottom: 80px;
 }
 
 .card {
-  background: #1e293b;
+  background: #1c1c2e;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 15px;
   margin-bottom: 15px;
 }
 
-h2, h3 {
-  margin-top: 0;
-}
-
 .balance {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: bold;
 }
 
 input {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   margin-top: 10px;
   border-radius: 8px;
   border: none;
+  background: #111;
+  color: white;
 }
 
 button {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   background: purple;
   color: white;
   border: none;
@@ -54,33 +50,15 @@ button {
   cursor: pointer;
 }
 
+.tx {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  font-size: 14px;
+}
+
 .small {
   font-size: 12px;
-  opacity: 0.8;
-}
-
-/* NAV */
-.nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
-}
-
-.nav a {
-  color: gray;
-}
-
-.nav a.active {
-  color: purple;
-}
-
-.nav a svg {
-  width: 22px;
-  height: 22px;
+  opacity: 0.7;
 }
 </style>
 </head>
@@ -89,65 +67,41 @@ button {
 
 <div class="container">
 
-  <!-- WALLET BALANCE -->
-  <div class="card">
-    <h2>Wallet Balance</h2>
-    <div class="balance">₦<span id="balance">Loading...</span></div>
-    <p class="small">Balance updates instantly after admin approval</p>
-  </div>
+<div class="card">
+<h2>Wallet Balance</h2>
+<div class="balance">₦<span id="balance">0</span></div>
+<p class="small">Updates instantly</p>
+</div>
 
-  <!-- FUND WALLET -->
-  <div class="card">
-    <h3>Fund Wallet</h3>
+<div class="card">
+<h3>Fund Wallet</h3>
 
-    <p class="small">Transfer to the account below, then submit amount</p>
+<input id="amount" type="number" placeholder="Enter amount">
 
-    <p><b>Bank:</b> Moniepoint MFB</p>
-    <p><b>Account Name:</b> Abraham Samuel</p>
-    <p><b>Account Number:</b> 6048761014</p>
+<button onclick="submitPayment()">Submit Payment</button>
 
-    <input id="amount" type="number" placeholder="Enter amount you paid">
+<p class="small">⚠️ Will be automated later (Paystack)</p>
+</div>
 
-    <button onclick="submitPayment()">I Have Paid</button>
-
-    <p class="small">⚠️ Your wallet will be credited after admin confirms payment</p>
-  </div>
-
-  <!-- HISTORY (READY FOR NEXT STEP) -->
-  <div class="card">
-    <h3>Transaction History</h3>
-    <p class="small">No transactions yet</p>
-  </div>
+<div class="card">
+<h3>Transaction History</h3>
+<div id="history"></div>
+</div>
 
 </div>
 
-<!-- NAV -->
-<div class="nav">
-  <a href="index.html"><i data-feather="home"></i></a>
-  <a href="profile.html"><i data-feather="user"></i></a>
-  <a href="wallet.html" class="active"><i data-feather="credit-card"></i></a>
-  <a href="#"><i data-feather="phone"></i></a>
-</div>
-
-<script>
-feather.replace();
-</script>
-
-<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-import { 
-  getAuth, 
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-import { 
-  getFirestore, 
-  doc, 
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
   onSnapshot,
+  collection,
   addDoc,
-  collection
+  query,
+  where,
+  onSnapshot as onSnapshotCol
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -160,32 +114,40 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let listenerAttached = false;
-
-// 🔐 AUTH CHECK + REALTIME WALLET
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
   }
 
-  if (listenerAttached) return;
-  listenerAttached = true;
-
-  const walletRef = doc(db, "users", user.uid);
-
-  onSnapshot(walletRef, (snap) => {
-    if (!snap.exists()) {
-      document.getElementById("balance").innerText = "0";
-      return;
+  // Wallet balance
+  onSnapshot(doc(db, "users", user.uid), (snap) => {
+    if (snap.exists()) {
+      document.getElementById("balance").innerText = snap.data().wallet || 0;
     }
+  });
 
-    const data = snap.data();
-    document.getElementById("balance").innerText = data.wallet ?? 0;
+  // Transaction history
+  const q = query(
+    collection(db, "transactions"),
+    where("uid", "==", user.uid)
+  );
+
+  onSnapshotCol(q, (snapshot) => {
+    const history = document.getElementById("history");
+    history.innerHTML = "";
+
+    snapshot.forEach(doc => {
+      const tx = doc.data();
+      history.innerHTML += `
+        <div class="tx">
+          ₦${tx.amount} - ${tx.status}
+        </div>
+      `;
+    });
   });
 });
 
-// 💳 SUBMIT PAYMENT REQUEST
 window.submitPayment = async function () {
   const user = auth.currentUser;
   const amount = Number(document.getElementById("amount").value);
@@ -195,22 +157,14 @@ window.submitPayment = async function () {
     return;
   }
 
-  try {
-    await addDoc(collection(db, "transactions"), {
-      uid: user.uid,
-      amount: amount,
-      type: "deposit",
-      status: "pending",
-      createdAt: new Date()
-    });
+  await addDoc(collection(db, "transactions"), {
+    uid: user.uid,
+    amount: amount,
+    status: "pending",
+    createdAt: new Date()
+  });
 
-    alert("Payment submitted. Waiting for admin approval.");
-
-    document.getElementById("amount").value = "";
-
-  } catch (err) {
-    alert(err.message);
-  }
+  alert("Payment submitted");
 };
 </script>
 
