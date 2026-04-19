@@ -137,7 +137,11 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import {
   getFirestore,
   collection,
-  getDocs
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -149,23 +153,27 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let currentUser = null;
 let allProducts = [];
 let currentCategory = "all";
 
-// 🔐 AUTH CHECK
+// 🔐 AUTH
 onAuthStateChanged(auth, (user) => {
-  if (!user) location.href = "auth.html";
+  if (!user) return location.href = "auth.html";
+  currentUser = user;
 });
 
-// 📦 LOAD PRODUCTS + CATEGORIES
+// INIT
 async function init() {
   const snap = await getDocs(collection(db, "products"));
 
   let categories = new Set();
 
-  snap.forEach(doc => {
-    const data = doc.data();
-    data.id = doc.id;
+  snap.forEach(d => {
+    const data = d.data();
+    data.id = d.id;
+
+    if (data.status !== "available") return;
 
     allProducts.push(data);
     categories.add(data.category);
@@ -177,20 +185,17 @@ async function init() {
 
 init();
 
-// 🏷 RENDER CATEGORIES
+// CATEGORIES
 function renderCategories(cats) {
   const div = document.getElementById("categories");
 
   div.innerHTML = `<div class="cat active" onclick="setCategory('all')">All</div>`;
 
   cats.forEach(cat => {
-    div.innerHTML += `
-      <div class="cat" onclick="setCategory('${cat}')">${cat}</div>
-    `;
+    div.innerHTML += `<div class="cat" onclick="setCategory('${cat}')">${cat}</div>`;
   });
 }
 
-// 📂 SET CATEGORY
 window.setCategory = function(cat){
   currentCategory = cat;
 
@@ -198,9 +203,9 @@ window.setCategory = function(cat){
   event.target.classList.add("active");
 
   loadProducts();
-}
+};
 
-// 🔍 LOAD PRODUCTS
+// LOAD PRODUCTS
 window.loadProducts = function () {
   const search = document.getElementById("search").value.toLowerCase();
   const div = document.getElementById("products");
@@ -223,9 +228,63 @@ window.loadProducts = function () {
   });
 };
 
-// 🛒 BUY
-window.buy = function(id){
-  alert("Next step: connect to wallet / order system");
+// 🛒 REAL BUY SYSTEM
+window.buy = async function(id){
+  try {
+    const productRef = doc(db, "products", id);
+    const productSnap = await getDoc(productRef);
+
+    if (!productSnap.exists()) return alert("Product not found");
+
+    const product = productSnap.data();
+
+    if (product.status !== "available") {
+      return alert("Product already sold");
+    }
+
+    // 🔐 GET USER
+    const userRef = doc(db, "users", currentUser.uid);
+    const userSnap = await getDoc(userRef);
+
+    const user = userSnap.data();
+
+    if ((user.wallet || 0) < product.price) {
+      return alert("Insufficient balance");
+    }
+
+    // 💸 DEDUCT WALLET
+    await updateDoc(userRef, {
+      wallet: user.wallet - product.price
+    });
+
+    // 📦 MARK PRODUCT SOLD
+    await updateDoc(productRef, {
+      status: "sold",
+      buyer: currentUser.uid
+    });
+
+    // 🧾 CREATE ORDER
+    await addDoc(collection(db, "orders"), {
+      userId: currentUser.uid,
+      productId: id,
+      name: product.name,
+      price: product.price,
+      link: product.link,
+      createdAt: new Date(),
+      status: "completed"
+    });
+
+    // ✅ SHOW PRODUCT ACCESS (THIS IS IMPORTANT)
+    alert("Purchase successful ✅\n\nAccess:\n" + product.link);
+
+    // reload
+    allProducts = [];
+    init();
+
+  } catch (err) {
+    console.error(err);
+    alert("Error processing order");
+  }
 };
 </script>
 
