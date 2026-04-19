@@ -14,225 +14,218 @@ body {
 
 /* HEADER */
 .header {
+  background:#1c1c2e;
+  padding:15px;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:#1c1c2e;
+}
+
+.header input {
+  width:60%;
   padding:10px;
-  position:sticky;
-  top:0;
-}
-
-.search {
-  flex:1;
-  margin:0 10px;
-}
-
-.search input {
-  width:100%;
-  padding:8px;
   border:none;
-  border-radius:6px;
-}
-
-/* LAYOUT */
-.layout {
-  display:flex;
-}
-
-/* SIDEBAR */
-.sidebar {
-  width:120px;
+  border-radius:8px;
   background:#111;
+  color:white;
+}
+
+/* CATEGORY BAR */
+.categories {
+  display:flex;
+  overflow-x:auto;
   padding:10px;
+  gap:10px;
 }
 
 .cat {
-  padding:8px;
-  margin-bottom:5px;
-  background:#222;
-  border-radius:6px;
+  background:#1c1c2e;
+  padding:8px 12px;
+  border-radius:20px;
   cursor:pointer;
+  white-space:nowrap;
 }
 
 .cat.active {
   background:purple;
 }
 
-/* PRODUCTS */
-.products {
-  flex:1;
-  padding:10px;
+/* PRODUCTS GRID */
+.grid {
   display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:15px;
+  padding:15px;
 }
 
-.product {
+/* PRODUCT CARD */
+.card {
   background:#1c1c2e;
-  padding:10px;
-  border-radius:10px;
+  padding:12px;
+  border-radius:12px;
 }
 
-.product img {
-  width:100%;
-  height:120px;
-  object-fit:cover;
-  border-radius:8px;
+.card h4 {
+  margin:5px 0;
+  font-size:14px;
+}
+
+.price {
+  color:violet;
+  font-weight:bold;
 }
 
 button {
   width:100%;
   padding:8px;
+  margin-top:5px;
   border:none;
-  border-radius:6px;
+  border-radius:8px;
   background:purple;
   color:white;
-  margin-top:5px;
+  cursor:pointer;
+}
+
+/* NAV */
+.nav {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  background:#111;
+  display:flex;
+}
+
+.nav a {
+  flex:1;
+  text-align:center;
+  padding:10px;
+  color:gray;
+  text-decoration:none;
+}
+
+.nav a.active {
+  color:purple;
 }
 </style>
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  <div>🛒 Shop</div>
-  <div class="search">
-    <input id="search" placeholder="Search products..." oninput="renderProducts()">
-  </div>
-  <div>₦<span id="wallet">0</span></div>
+  <b>🛒 Marketplace</b>
+  <input id="search" placeholder="Search products..." oninput="loadProducts()">
 </div>
 
-<div class="layout">
+<!-- CATEGORIES -->
+<div class="categories" id="categories"></div>
 
-<div class="sidebar" id="categories"></div>
+<!-- PRODUCTS -->
+<div class="grid" id="products"></div>
 
-<div class="products" id="products"></div>
-
+<!-- NAV -->
+<div class="nav">
+  <a href="index.html" class="active">Home</a>
+  <a href="wallet.html">Wallet</a>
+  <a href="profile.html">Profile</a>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 import {
   getFirestore,
   collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain:"wizard-shop-52a50.firebaseapp.com",
-  projectId:"wizard-shop-52a50"
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let products = [];
-let currentCat = "all";
+let allProducts = [];
+let currentCategory = "all";
 
-// 🔐 AUTH
-onAuthStateChanged(auth, async user=>{
-  if(!user) return location.href="auth.html";
-
-  const userSnap = await getDoc(doc(db,"users",user.uid));
-  if(userSnap.exists()){
-    wallet.innerText = userSnap.data().wallet || 0;
-  }
-
-  loadProducts();
+// 🔐 AUTH CHECK
+onAuthStateChanged(auth, (user) => {
+  if (!user) location.href = "auth.html";
 });
 
-// 📦 LOAD
-async function loadProducts(){
-  const snap = await getDocs(collection(db,"products"));
+// 📦 LOAD PRODUCTS + CATEGORIES
+async function init() {
+  const snap = await getDocs(collection(db, "products"));
 
-  let cats = new Set();
+  let categories = new Set();
 
-  products = [];
+  snap.forEach(doc => {
+    const data = doc.data();
+    data.id = doc.id;
 
-  snap.forEach(d=>{
-    let data = d.data();
-    data.id = d.id;
-
-    products.push(data);
-    cats.add(data.category);
+    allProducts.push(data);
+    categories.add(data.category);
   });
 
-  renderCategories([...cats]);
-  renderProducts();
+  renderCategories([...categories]);
+  loadProducts();
 }
 
-// 📂 CATEGORIES
-function renderCategories(cats){
+init();
+
+// 🏷 RENDER CATEGORIES
+function renderCategories(cats) {
   const div = document.getElementById("categories");
-  div.innerHTML = "";
 
-  div.innerHTML += `<div class="cat active" onclick="filter('all')">All</div>`;
+  div.innerHTML = `<div class="cat active" onclick="setCategory('all')">All</div>`;
 
-  cats.forEach(c=>{
-    div.innerHTML += `<div class="cat" onclick="filter('${c}')">${c}</div>`;
+  cats.forEach(cat => {
+    div.innerHTML += `
+      <div class="cat" onclick="setCategory('${cat}')">${cat}</div>
+    `;
   });
 }
 
-// 🎯 FILTER
-window.filter = function(cat){
-  currentCat = cat;
+// 📂 SET CATEGORY
+window.setCategory = function(cat){
+  currentCategory = cat;
 
-  document.querySelectorAll(".cat").forEach(el=>{
-    el.classList.remove("active");
-  });
-
+  document.querySelectorAll(".cat").forEach(c => c.classList.remove("active"));
   event.target.classList.add("active");
 
-  renderProducts();
-};
+  loadProducts();
+}
 
-// 🛒 RENDER PRODUCTS
-window.renderProducts = function(){
-  const div = document.getElementById("products");
+// 🔍 LOAD PRODUCTS
+window.loadProducts = function () {
   const search = document.getElementById("search").value.toLowerCase();
+  const div = document.getElementById("products");
 
   div.innerHTML = "";
 
-  let filtered = products.filter(p=>{
-    return (
-      (currentCat === "all" || p.category === currentCat) &&
-      p.name.toLowerCase().includes(search)
-    );
-  });
+  allProducts.forEach(p => {
 
-  filtered.forEach(p=>{
+    if (currentCategory !== "all" && p.category !== currentCategory) return;
+    if (!p.name.toLowerCase().includes(search)) return;
+
     div.innerHTML += `
-      <div class="product">
-        <img src="${p.image || 'https://via.placeholder.com/150'}">
-        <b>${p.name}</b><br>
-        ₦${p.price}
-        <button onclick="buy('${p.id}', ${p.price})">Buy Now</button>
+      <div class="card">
+        <h4>${p.name}</h4>
+        <div class="price">₦${p.price}</div>
+
+        <button onclick="buy('${p.id}')">Buy</button>
       </div>
     `;
   });
 };
 
-// 💳 BUY
-window.buy = async function(id, price){
-  const user = auth.currentUser;
-
-  if(!confirm("Buy this product?")) return;
-
-  await addDoc(collection(db,"transactions"),{
-    uid:user.uid,
-    productId:id,
-    amount:price,
-    status:"pending",
-    createdAt:new Date()
-  });
-
-  alert("Order submitted ✔️");
+// 🛒 BUY
+window.buy = function(id){
+  alert("Next step: connect to wallet / order system");
 };
 </script>
 
