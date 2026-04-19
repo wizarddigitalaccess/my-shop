@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -70,7 +69,7 @@ button {
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
 
-<button onclick="login()">Login</button>
+  <button onclick="login()">Login</button>
 
   <div class="link" onclick="forgotPassword()">Forgot Password?</div>
   <div class="link" onclick="goSignup()">Create Account</div>
@@ -90,7 +89,8 @@ import {
 import {
   getFirestore,
   doc,
-  getDoc
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -105,31 +105,38 @@ const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// ✅ AUTO LOGIN (SAFE)
+// ✅ SAFE AUTO LOGIN (NO LOOP)
+let checked = false;
+
 onAuthStateChanged(auth, async (user) => {
+  if (checked) return;
+  checked = true;
+
   if (!user) return;
 
-  try {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
+  // 🔐 Email must be verified
+  if (!user.emailVerified) {
+    window.location.href = "verify.html";
+    return;
+  }
 
-    // 🔥 If user doc missing → create fallback
-    if (!snap.exists()) {
-      console.log("User doc missing — redirecting to signup");
-      return;
-    }
+  // ✅ Ensure user doc exists
+  const ref = doc(db, "users", user.uid);
+  let snap = await getDoc(ref);
 
-    const data = snap.data();
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      name: user.email.split("@")[0],
+      email: user.email,
+      wallet: 0
+    });
+  }
 
-    if (data.verified) {
-      if (user.email === ADMIN_EMAIL) {
-        window.location.href = "admin.html";
-      } else {
-        window.location.href = "index.html";
-      }
-    }
-  } catch (err) {
-    console.log(err);
+  // 🔥 ADMIN CHECK
+  if (user.email === ADMIN_EMAIL) {
+    window.location.href = "admin.html";
+  } else {
+    window.location.href = "index.html";
   }
 });
 
@@ -148,20 +155,22 @@ window.login = async function () {
     const res = await signInWithEmailAndPassword(auth, email, password);
     const user = res.user;
 
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
-
-    if (!snap.exists()) {
-      msg.innerText = "User data missing. Contact support.";
+    // 🔐 EMAIL VERIFICATION CHECK
+    if (!user.emailVerified) {
+      window.location.href = "verify.html";
       return;
     }
 
-    const data = snap.data();
+    // ✅ Ensure user doc exists
+    const ref = doc(db, "users", user.uid);
+    let snap = await getDoc(ref);
 
-    // 🔥 VERIFY CHECK
-    if (!data.verified) {
-      window.location.href = "verify.html";
-      return;
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        name: user.email.split("@")[0],
+        email: user.email,
+        wallet: 0
+      });
     }
 
     // 🔥 ADMIN CHECK

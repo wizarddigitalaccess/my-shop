@@ -10,19 +10,16 @@ body {
   font-family: Arial;
   background: #0f0f1a;
   color: white;
+  display: none;
 }
 
-.container {
-  padding: 20px;
-}
-
+.container { padding: 20px; }
 .card {
   background: #1c1c2e;
   padding: 20px;
   border-radius: 15px;
   margin-bottom: 15px;
 }
-
 input, button {
   width: 100%;
   padding: 10px;
@@ -30,13 +27,11 @@ input, button {
   border-radius: 8px;
   border: none;
 }
-
 button {
   background: purple;
   color: white;
   cursor: pointer;
 }
-
 .item {
   padding: 10px;
   border-bottom: 1px solid #333;
@@ -50,31 +45,25 @@ button {
 
 <div class="card">
 <h2>Admin Panel</h2>
-<p>Manage products, users & payments</p>
 </div>
 
-<!-- ADD PRODUCT -->
 <div class="card">
 <h3>Add Product</h3>
-
 <input id="name" placeholder="Account Name">
 <input id="link" placeholder="Profile Link">
-<input id="category" placeholder="Category (africa, usa, instagram)">
+<input id="category" placeholder="Category">
 <input id="price" type="number" placeholder="Price">
-
 <button onclick="addProduct()">Add Product</button>
 </div>
 
-<!-- TRANSACTIONS -->
 <div class="card">
 <h3>Pending Payments</h3>
-<div id="transactions">Loading...</div>
+<div id="transactions"></div>
 </div>
 
-<!-- USERS -->
 <div class="card">
 <h3>Users</h3>
-<div id="users">Loading...</div>
+<div id="users"></div>
 </div>
 
 </div>
@@ -96,37 +85,41 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyCkby...",
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
-let ready = false;
 
-// 🔐 ADMIN CHECK (FIXED)
-onAuthStateChanged(auth, (user) => {
-  if (ready) return;
-  ready = true;
+// ✅ FIXED ADMIN AUTH (NO LOOP)
+onAuthStateChanged(auth, async (user) => {
 
-  if (!user || user.email !== ADMIN_EMAIL) {
+  if (!user) {
     window.location.href = "auth.html";
     return;
   }
+
+  if (user.email !== ADMIN_EMAIL) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  document.body.style.display = "block";
 
   loadUsers();
   loadTransactions();
 });
 
-// ➕ ADD PRODUCT (WITH PRICE)
+// ADD PRODUCT
 window.addProduct = async function () {
-  const name = document.getElementById("name").value;
-  const link = document.getElementById("link").value;
-  const category = document.getElementById("category").value.toLowerCase();
-  const price = Number(document.getElementById("price").value);
+  const name = nameEl.value;
+  const link = linkEl.value;
+  const category = categoryEl.value.toLowerCase();
+  const price = Number(priceEl.value);
 
   if (!name || !link || !category || !price) {
     alert("Fill all fields");
@@ -134,22 +127,13 @@ window.addProduct = async function () {
   }
 
   await addDoc(collection(db, "products"), {
-    name,
-    link,
-    category,
-    price,
-    status: "available"
+    name, link, category, price, status: "available"
   });
 
-  alert("Product added ✔️");
-
-  document.getElementById("name").value = "";
-  document.getElementById("link").value = "";
-  document.getElementById("category").value = "";
-  document.getElementById("price").value = "";
+  alert("Product added");
 };
 
-// 👤 LOAD USERS
+// LOAD USERS
 async function loadUsers() {
   const div = document.getElementById("users");
   div.innerHTML = "";
@@ -161,16 +145,13 @@ async function loadUsers() {
 
     div.innerHTML += `
       <div class="item">
-        <b>${data.name || "No Name"}</b><br>
-        ${data.email}<br>
-        Wallet: ₦${data.wallet || 0}<br>
-        UID: ${docItem.id}
+        ${data.name} - ₦${data.wallet || 0}
       </div>
     `;
   });
 }
 
-// 💳 LOAD TRANSACTIONS
+// LOAD TRANSACTIONS
 async function loadTransactions() {
   const div = document.getElementById("transactions");
   div.innerHTML = "";
@@ -182,18 +163,12 @@ async function loadTransactions() {
 
   const snap = await getDocs(q);
 
-  if (snap.empty) {
-    div.innerHTML = "No pending payments";
-    return;
-  }
-
   snap.forEach(docItem => {
     const data = docItem.data();
 
     div.innerHTML += `
       <div class="item">
-        ₦${data.amount}<br>
-        UID: ${data.uid}<br>
+        ₦${data.amount}
         <button onclick="approve('${docItem.id}', '${data.uid}', ${data.amount})">
           Approve
         </button>
@@ -202,7 +177,7 @@ async function loadTransactions() {
   });
 }
 
-// ✅ APPROVE PAYMENT
+// APPROVE
 window.approve = async function (txId, uid, amount) {
   await updateDoc(doc(db, "users", uid), {
     wallet: increment(amount)
@@ -212,7 +187,7 @@ window.approve = async function (txId, uid, amount) {
     status: "approved"
   });
 
-  alert("Payment approved ✔️");
+  alert("Approved!");
   loadTransactions();
 };
 </script>
