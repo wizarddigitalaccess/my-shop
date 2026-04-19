@@ -1,78 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Sign Up</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body {
-  font-family: Arial;
-  background: #0f0f1a;
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-
-.box {
-  background: #1c1c2e;
-  padding: 30px;
-  border-radius: 15px;
-  width: 320px;
-}
-
-h2 {
-  text-align: center;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: none;
-  background: #111;
-  color: white;
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  background: purple;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.small {
-  font-size: 12px;
-  text-align: center;
-  margin-top: 10px;
-}
-</style>
-</head>
-
-<body>
-
-<div class="box">
-<h2>Create Account</h2>
-
-<input id="name" placeholder="Full Name">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-
-<button onclick="signup()">Sign Up</button>
-
-<div class="small">
-Already have an account? <a href="auth.html" style="color:violet;">Login</a>
-</div>
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -85,16 +13,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔥 GENERATE OTP
-function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// 🔥 SIGNUP FUNCTION
+// ✅ CLEAN SIGNUP FUNCTION
 window.signup = async function () {
-  let name = document.getElementById("name").value.trim();
-  let email = document.getElementById("email").value.trim();
-  let password = document.getElementById("password").value;
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
 
   if (!name || !email || !password) {
     alert("Fill all fields");
@@ -102,30 +25,28 @@ window.signup = async function () {
   }
 
   try {
-    const res = await createUserWithEmailAndPassword(auth, email, password);
-    const user = res.user;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-    const code = generateCode();
-
-    // SAVE USER WITH OTP
+    // 🔥 SAVE USER
     await setDoc(doc(db, "users", user.uid), {
-      name: name,
-      email: email,
-      wallet: 0,
-      verified: false,
-      otp: code
+      name,
+      email,
+      wallet: 0
     });
 
-    // ⚠️ TEMP (replace later with real email sender)
-    alert("Your verification code is: " + code);
+    // 📧 SEND VERIFICATION LINK
+    await sendEmailVerification(user);
 
-    window.location.href = "verify.html";
+    alert("Verification link sent to your email. Please verify before login.");
+
+    // 🚪 FORCE LOGOUT UNTIL VERIFIED
+    await signOut(auth);
+
+    window.location.href = "auth.html";
 
   } catch (err) {
     alert(err.message);
   }
 };
 </script>
-
-</body>
-</html>
