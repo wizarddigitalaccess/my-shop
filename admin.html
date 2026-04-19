@@ -18,9 +18,9 @@ body {
 .header {
   padding:15px;
   background:#1c1c2e;
-  font-weight:bold;
   display:flex;
   justify-content:space-between;
+  align-items:center;
 }
 
 .container { padding:15px; }
@@ -86,7 +86,7 @@ button {
 <body>
 
 <div class="header">
-  <span>Admin Pro Dashboard</span>
+  <span>Admin Dashboard</span>
   <button onclick="logout()" style="width:auto;background:red;">Logout</button>
 </div>
 
@@ -100,9 +100,9 @@ button {
 </div>
 
 <div class="card">
-Total Users: <span id="usersCount"></span><br>
-Total Products: <span id="productsCount"></span><br>
-Total Revenue: ₦<span id="revenue"></span>
+Users: <span id="usersCount"></span><br>
+Products: <span id="productsCount"></span><br>
+Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
@@ -121,9 +121,12 @@ Total Revenue: ₦<span id="revenue"></span>
 <input id="productSearch" placeholder="Search products..." oninput="loadProducts()">
 
 <input id="name" placeholder="Product Name">
-<input id="link" placeholder="Link">
 <input id="category" placeholder="Category">
 <input id="price" type="number" placeholder="Price">
+
+<!-- 🔐 SECRET DATA -->
+<input id="emailLogin" placeholder="Account Email (hidden)">
+<input id="passwordLogin" placeholder="Account Password (hidden)">
 
 <button onclick="addProduct()">Add Product</button>
 
@@ -153,7 +156,8 @@ import {
   deleteDoc,
   addDoc,
   increment,
-  getDoc
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -167,34 +171,24 @@ const db = getFirestore(app);
 
 let chartInstance;
 
-// 🔐 ADMIN AUTH (STABLE FIX)
+// 🔐 ADMIN CHECK
 onAuthStateChanged(auth, async (user) => {
   if (!user) return location.href = "auth.html";
 
-  try {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
 
-    if (!snap.exists()) {
-      return location.href = "auth.html";
-    }
+  if (!snap.exists()) return location.href = "auth.html";
 
-    const data = snap.data();
-
-    if (data.role !== "admin") {
-      return location.href = "index.html";
-    }
-
-    document.body.style.display = "block";
-
-    loadDashboard();
-    loadUsers();
-    loadProducts();
-
-  } catch (err) {
-    console.error(err);
-    alert("Admin load error");
+  if (snap.data().role !== "admin") {
+    return location.href = "index.html";
   }
+
+  document.body.style.display = "block";
+
+  loadDashboard();
+  loadUsers();
+  loadProducts();
 });
 
 // 📊 DASHBOARD
@@ -211,7 +205,6 @@ async function loadDashboard(){
 
   txSnap.forEach(d=>{
     const data = d.data();
-
     if(data.status==="approved"){
       revenue += data.amount;
 
@@ -231,10 +224,7 @@ async function loadDashboard(){
     type:"line",
     data:{
       labels:Object.keys(days),
-      datasets:[{
-        label:"Revenue",
-        data:Object.values(days)
-      }]
+      datasets:[{ label:"Revenue", data:Object.values(days) }]
     }
   });
 }
@@ -242,23 +232,21 @@ async function loadDashboard(){
 // 👤 USERS
 window.loadUsers = async function(){
   const search = userSearch.value.toLowerCase();
-  const div = document.getElementById("users");
-  div.innerHTML = "";
+  users.innerHTML = "";
 
   const snap = await getDocs(collection(db,"users"));
 
   snap.forEach(d=>{
     const data = d.data();
-
     const email = data.email || "";
 
     if (!email.toLowerCase().includes(search)) return;
 
-    div.innerHTML += `
+    users.innerHTML += `
     <div class="item">
       <b>${data.name || "No Name"}</b><br>
       ${email}<br>
-      Wallet: ₦${data.wallet || 0}<br>
+      Wallet: ₦${data.wallet || 0}
 
       <div class="row">
         <button onclick="fund('${d.id}')">Fund</button>
@@ -270,7 +258,7 @@ window.loadUsers = async function(){
 };
 
 window.fund = async(uid)=>{
-  const amount = Number(prompt("Enter amount"));
+  const amount = Number(prompt("Amount"));
   if (!amount) return;
   await updateDoc(doc(db,"users",uid),{wallet:increment(amount)});
   loadUsers();
@@ -293,8 +281,7 @@ window.deleteUser = async(uid)=>{
 // 📦 PRODUCTS
 window.loadProducts = async function(){
   const search = productSearch.value.toLowerCase();
-  const div = document.getElementById("products");
-  div.innerHTML = "";
+  products.innerHTML = "";
 
   const snap = await getDocs(collection(db,"products"));
 
@@ -303,7 +290,7 @@ window.loadProducts = async function(){
 
     if (!data.name.toLowerCase().includes(search)) return;
 
-    div.innerHTML += `
+    products.innerHTML += `
     <div class="item">
       ${data.name} (${data.category}) - ₦${data.price}
 
@@ -315,28 +302,35 @@ window.loadProducts = async function(){
   });
 };
 
+// ➕ ADD PRODUCT + SECRET
 window.addProduct = async()=>{
   try {
-    const name = document.getElementById("name").value.trim();
-    const link = document.getElementById("link").value.trim();
-    const category = document.getElementById("category").value.trim().toLowerCase();
-    const price = Number(document.getElementById("price").value);
+    const name = name.value.trim();
+    const category = category.value.trim().toLowerCase();
+    const price = Number(price.value);
 
-    if (!name || !link || !category || !price) {
+    const email = emailLogin.value.trim();
+    const password = passwordLogin.value.trim();
+
+    if (!name || !category || !price || !email || !password) {
       return alert("Fill all fields");
     }
 
-    await addDoc(collection(db,"products"),{
-      name, link, category, price, status:"available"
+    const productRef = await addDoc(collection(db,"products"),{
+      name, category, price, status:"available"
+    });
+
+    await setDoc(doc(db,"productSecrets", productRef.id),{
+      email, password
     });
 
     alert("Product added ✅");
 
-    // reset fields
-    document.getElementById("name").value="";
-    document.getElementById("link").value="";
-    document.getElementById("category").value="";
-    document.getElementById("price").value="";
+    name.value = "";
+    category.value = "";
+    price.value = "";
+    emailLogin.value = "";
+    passwordLogin.value = "";
 
     loadProducts();
 
@@ -356,6 +350,7 @@ window.editProduct = async(id)=>{
 window.deleteProduct = async(id)=>{
   if(confirm("Delete product?")){
     await deleteDoc(doc(db,"products",id));
+    await deleteDoc(doc(db,"productSecrets",id));
     loadProducts();
   }
 };
