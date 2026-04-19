@@ -12,6 +12,7 @@ body {
   font-family: Arial;
   background: #0f0f1a;
   color: white;
+  display: none;
 }
 
 .container {
@@ -45,6 +46,16 @@ button {
   cursor: pointer;
 }
 
+button.secondary {
+  background: #333;
+}
+
+.msg {
+  font-size: 13px;
+  margin-top: 10px;
+  color: orange;
+}
+
 .nav {
   position: fixed;
   bottom: 0;
@@ -72,7 +83,9 @@ button {
     <input id="password" type="password" placeholder="New Password (optional)">
 
     <button onclick="save()">Save Changes</button>
-    <button onclick="logout()">Logout</button>
+    <button class="secondary" onclick="logout()">Logout</button>
+
+    <div class="msg" id="msg"></div>
   </div>
 </div>
 
@@ -83,7 +96,7 @@ button {
 </div>
 
 <script>
-feather.replace();
+setTimeout(() => feather.replace(), 500);
 </script>
 
 <script type="module">
@@ -103,6 +116,8 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+const ADMIN_EMAIL = "etee77366@gmail.com";
+
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -114,10 +129,16 @@ const db = getFirestore(app);
 
 let currentUser;
 
-// 🔐 LOAD PROFILE
+// 🔐 LOAD USER
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
+    return;
+  }
+
+  // 🔥 ADMIN REDIRECT
+  if (user.email === ADMIN_EMAIL) {
+    window.location.href = "admin.html";
     return;
   }
 
@@ -126,12 +147,13 @@ onAuthStateChanged(auth, async (user) => {
   const ref = doc(db, "users", user.uid);
   let snap = await getDoc(ref);
 
-  // auto-fix missing user
+  // ✅ AUTO FIX USER DATA
   if (!snap.exists()) {
     await setDoc(ref, {
       name: user.email.split("@")[0],
       email: user.email,
-      wallet: 0
+      wallet: 0,
+      verified: true
     });
     snap = await getDoc(ref);
   }
@@ -140,26 +162,47 @@ onAuthStateChanged(auth, async (user) => {
 
   document.getElementById("name").value = data.name || "";
   document.getElementById("email").value = data.email || "";
+
+  document.body.style.display = "block";
 });
 
-// 💾 SAVE
+// 💾 SAVE PROFILE
 window.save = async function () {
-  const name = document.getElementById("name").value;
+  const name = document.getElementById("name").value.trim();
   const password = document.getElementById("password").value;
+  const msg = document.getElementById("msg");
+
+  msg.innerText = "Saving...";
 
   try {
+    if (!name) {
+      msg.innerText = "Name cannot be empty";
+      return;
+    }
+
+    // update name
     await updateDoc(doc(db, "users", currentUser.uid), {
       name
     });
 
-    if (password && password.length >= 6) {
+    // update password safely
+    if (password) {
+      if (password.length < 6) {
+        msg.innerText = "Password must be at least 6 characters";
+        return;
+      }
+
       await updatePassword(currentUser, password);
     }
 
-    alert("Profile updated ✅");
+    msg.innerText = "Profile updated successfully ✅";
 
   } catch (err) {
-    alert(err.message);
+    if (err.code === "auth/requires-recent-login") {
+      msg.innerText = "Please logout and login again before changing password";
+    } else {
+      msg.innerText = err.message;
+    }
   }
 };
 
