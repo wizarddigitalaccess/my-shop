@@ -249,7 +249,12 @@ window.buy = async function () {
 
   const userRef = doc(db, "users", currentUser.uid);
   const userSnap = await getDoc(userRef);
-  const wallet = userSnap.data().wallet || 0;
+  const userData = userSnap.data();
+if (!userData) {
+  alert("User data missing. Please contact support.");
+  return;
+}
+const wallet = userData.wallet || 0;
 
   if (wallet < selected.price) {
     return alert("Insufficient balance");
