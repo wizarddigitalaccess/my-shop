@@ -90,14 +90,14 @@ button {
 <!-- DASHBOARD -->
 <div id="dashboard">
 <div class="card">
-<h3>Analytics</h3>
+<h3>Revenue Chart</h3>
 <canvas id="chart"></canvas>
 </div>
 
 <div class="card">
 Total Users: <span id="usersCount"></span><br>
 Total Products: <span id="productsCount"></span><br>
-Inventory: <span id="inventory"></span>
+Total Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
@@ -112,9 +112,10 @@ Inventory: <span id="inventory"></span>
 <!-- PRODUCTS -->
 <div id="productsPage" style="display:none">
 <div class="card">
+
 <input id="productSearch" placeholder="Search products..." oninput="loadProducts()">
 
-<input id="name" placeholder="Name">
+<input id="name" placeholder="Product Name">
 <input id="link" placeholder="Link">
 <input id="category" placeholder="Category">
 <input id="price" type="number" placeholder="Price">
@@ -129,9 +130,9 @@ Inventory: <span id="inventory"></span>
 
 <!-- NAV -->
 <div class="nav">
-<button onclick="show('dashboard')" class="active" id="b1">Dashboard</button>
-<button onclick="show('users')" id="b2">Users</button>
-<button onclick="show('products')" id="b3">Products</button>
+<button onclick="showPage('dashboard')" class="active" id="b1">Dashboard</button>
+<button onclick="showPage('users')" id="b2">Users</button>
+<button onclick="showPage('products')" id="b3">Products</button>
 </div>
 
 <script type="module">
@@ -139,178 +140,216 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import {
-getFirestore, collection, getDocs, doc,
-updateDoc, deleteDoc, addDoc, increment
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  addDoc,
+  increment,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-apiKey:"AIzaSy...",
-authDomain:"wizard-shop-52a50.firebaseapp.com",
-projectId:"wizard-shop-52a50"
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 ROLE BASED ADMIN
-onAuthStateChanged(auth, async (user)=>{
-if(!user) return location.href="auth.html";
+let chartInstance;
 
-const adminSnap = await getDocs(collection(db,"admins"));
-let isAdmin = false;
+// 🔐 ADMIN AUTH (FIXED PROPERLY)
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "auth.html";
 
-adminSnap.forEach(d=>{
-if(d.id === user.uid) isAdmin = true;
-});
+  try {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
 
-if(!isAdmin) return location.href="index.html";
+    if (!snap.exists()) return location.href = "auth.html";
 
-document.body.style.display="block";
+    const data = snap.data();
 
-loadDashboard();
-loadUsers();
-loadProducts();
+    if (data.role !== "admin") {
+      return location.href = "index.html";
+    }
+
+    document.body.style.display = "block";
+
+    loadDashboard();
+    loadUsers();
+    loadProducts();
+
+  } catch (err) {
+    console.error(err);
+    alert("Admin load error");
+  }
 });
 
 // 📊 DASHBOARD
 async function loadDashboard(){
-const users = await getDocs(collection(db,"users"));
-const products = await getDocs(collection(db,"products"));
-const tx = await getDocs(collection(db,"transactions"));
+  const usersSnap = await getDocs(collection(db,"users"));
+  const productsSnap = await getDocs(collection(db,"products"));
+  const txSnap = await getDocs(collection(db,"transactions"));
 
-document.getElementById("usersCount").innerText = users.size;
-document.getElementById("productsCount").innerText = products.size;
+  document.getElementById("usersCount").innerText = usersSnap.size;
+  document.getElementById("productsCount").innerText = productsSnap.size;
 
-let inventory = 0;
-let days = {};
-tx.forEach(d=>{
-let data=d.data();
-if(data.status==="approved"){
-inventory += data.amount;
+  let revenue = 0;
+  let days = {};
 
-let day = new Date(data.createdAt?.seconds*1000).toLocaleDateString();
-days[day] = (days[day]||0)+data.amount;
-}
-});
+  txSnap.forEach(d=>{
+    const data = d.data();
+    if(data.status==="approved"){
+      revenue += data.amount;
 
-document.getElementById("inventory").innerText = inventory;
+      let date = new Date(data.createdAt?.seconds * 1000).toLocaleDateString();
+      days[date] = (days[date] || 0) + data.amount;
+    }
+  });
 
-// chart
-new Chart(document.getElementById("chart"),{
-type:"line",
-data:{
-labels:Object.keys(days),
-datasets:[{label:"Revenue",data:Object.values(days)}]
-}
-});
+  document.getElementById("revenue").innerText = revenue;
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(document.getElementById("chart"), {
+    type:"line",
+    data:{
+      labels:Object.keys(days),
+      datasets:[{
+        label:"Revenue",
+        data:Object.values(days)
+      }]
+    }
+  });
 }
 
 // 👤 USERS
 window.loadUsers = async function(){
-const search = userSearch.value.toLowerCase();
-const div = document.getElementById("users");
-div.innerHTML="";
+  const search = document.getElementById("userSearch").value.toLowerCase();
+  const div = document.getElementById("users");
+  div.innerHTML = "";
 
-const snap = await getDocs(collection(db,"users"));
+  const snap = await getDocs(collection(db,"users"));
 
-snap.forEach(d=>{
-const data=d.data();
-if(!data.email.toLowerCase().includes(search)) return;
+  snap.forEach(d=>{
+    const data = d.data();
 
-div.innerHTML += `
-<div class="item">
-${data.name}<br>${data.email}<br>₦${data.wallet||0}
+    if (!data.email.toLowerCase().includes(search)) return;
 
-<div class="row">
-<button onclick="fund('${d.id}')">Fund</button>
-<button onclick="editUser('${d.id}')">Edit</button>
-<button onclick="delUser('${d.id}')">Delete</button>
-</div>
-</div>`;
-});
-}
+    div.innerHTML += `
+    <div class="item">
+      <b>${data.name}</b><br>
+      ${data.email}<br>
+      Wallet: ₦${data.wallet || 0}<br>
+
+      <div class="row">
+        <button onclick="fund('${d.id}')">Fund</button>
+        <button onclick="editUser('${d.id}')">Edit</button>
+        <button onclick="deleteUser('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+};
 
 window.fund = async(uid)=>{
-const amount = Number(prompt("Amount"));
-await updateDoc(doc(db,"users",uid),{wallet:increment(amount)});
-loadUsers();
-}
+  const amount = Number(prompt("Enter amount"));
+  if (!amount) return;
+  await updateDoc(doc(db,"users",uid),{wallet:increment(amount)});
+  loadUsers();
+};
 
 window.editUser = async(uid)=>{
-const name = prompt("New name");
-await updateDoc(doc(db,"users",uid),{name});
-loadUsers();
-}
+  const name = prompt("New name");
+  if (!name) return;
+  await updateDoc(doc(db,"users",uid),{name});
+  loadUsers();
+};
 
-window.delUser = async(uid)=>{
-if(confirm("Delete user?")){
-await deleteDoc(doc(db,"users",uid));
-loadUsers();
-}
-}
+window.deleteUser = async(uid)=>{
+  if(confirm("Delete user?")){
+    await deleteDoc(doc(db,"users",uid));
+    loadUsers();
+  }
+};
 
 // 📦 PRODUCTS
 window.loadProducts = async function(){
-const search = productSearch.value.toLowerCase();
-const div = document.getElementById("products");
-div.innerHTML="";
+  const search = document.getElementById("productSearch").value.toLowerCase();
+  const div = document.getElementById("products");
+  div.innerHTML = "";
 
-const snap = await getDocs(collection(db,"products"));
+  const snap = await getDocs(collection(db,"products"));
 
-snap.forEach(d=>{
-const data=d.data();
-if(!data.name.toLowerCase().includes(search)) return;
+  snap.forEach(d=>{
+    const data = d.data();
 
-div.innerHTML += `
-<div class="item">
-${data.name} (${data.category}) - ₦${data.price}
+    if (!data.name.toLowerCase().includes(search)) return;
 
-<div class="row">
-<button onclick="editProduct('${d.id}')">Edit</button>
-<button onclick="deleteProduct('${d.id}')">Delete</button>
-</div>
-</div>`;
-});
-}
+    div.innerHTML += `
+    <div class="item">
+      ${data.name} (${data.category}) - ₦${data.price}
+
+      <div class="row">
+        <button onclick="editProduct('${d.id}')">Edit</button>
+        <button onclick="deleteProduct('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+};
 
 window.addProduct = async()=>{
-await addDoc(collection(db,"products"),{
-name:name.value,
-link:link.value,
-category:category.value,
-price:Number(price.value),
-status:"available"
-});
-loadProducts();
-}
+  const name = document.getElementById("name").value;
+  const link = document.getElementById("link").value;
+  const category = document.getElementById("category").value.toLowerCase();
+  const price = Number(document.getElementById("price").value);
+
+  if (!name || !link || !category || !price) {
+    alert("Fill all fields");
+    return;
+  }
+
+  await addDoc(collection(db,"products"),{
+    name, link, category, price, status:"available"
+  });
+
+  alert("Product added ✅");
+
+  loadProducts();
+};
 
 window.editProduct = async(id)=>{
-const price = Number(prompt("New price"));
-await updateDoc(doc(db,"products",id),{price});
-loadProducts();
-}
+  const price = Number(prompt("New price"));
+  if (!price) return;
+  await updateDoc(doc(db,"products",id),{price});
+  loadProducts();
+};
 
 window.deleteProduct = async(id)=>{
-if(confirm("Delete product?")){
-await deleteDoc(doc(db,"products",id));
-loadProducts();
-}
-}
+  if(confirm("Delete product?")){
+    await deleteDoc(doc(db,"products",id));
+    loadProducts();
+  }
+};
 
 // NAV
-window.show = function(p){
-dashboard.style.display="none";
-usersPage.style.display="none";
-productsPage.style.display="none";
+window.showPage = function(page){
+  document.getElementById("dashboard").style.display="none";
+  document.getElementById("usersPage").style.display="none";
+  document.getElementById("productsPage").style.display="none";
 
-b1.classList.remove("active");
-b2.classList.remove("active");
-b3.classList.remove("active");
+  b1.classList.remove("active");
+  b2.classList.remove("active");
+  b3.classList.remove("active");
 
-if(p==="dashboard"){dashboard.style.display="block";b1.classList.add("active");}
-if(p==="users"){usersPage.style.display="block";b2.classList.add("active");}
-if(p==="products"){productsPage.style.display="block";b3.classList.add("active");}
-}
+  if(page==="dashboard"){dashboard.style.display="block";b1.classList.add("active");}
+  if(page==="users"){usersPage.style.display="block";b2.classList.add("active");}
+  if(page==="products"){productsPage.style.display="block";b3.classList.add("active");}
+};
 </script>
 
 </body>
