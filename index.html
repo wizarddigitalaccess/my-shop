@@ -12,6 +12,7 @@ body {
   font-family: Arial;
   background: #0f0f1a;
   color: white;
+  display: none;
 }
 
 /* HEADER */
@@ -19,6 +20,7 @@ body {
   text-align: center;
   padding: 15px;
   background: #1c1c2e;
+  font-size: 18px;
 }
 
 /* GRID */
@@ -33,11 +35,12 @@ body {
   background: #1c1c2e;
   padding: 15px;
   border-radius: 15px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
 }
 
 .buy {
   background: purple;
-  padding: 8px;
+  padding: 10px;
   border-radius: 20px;
   text-align: center;
   cursor: pointer;
@@ -52,7 +55,7 @@ body {
   background: #111;
   display: flex;
   justify-content: space-around;
-  padding: 10px 0;
+  padding: 12px 0;
 }
 
 .nav a {
@@ -87,141 +90,54 @@ body {
   border-bottom: 1px solid #333;
   cursor: pointer;
 }
+
+.item:hover {
+  background: #2a2a40;
+}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-<h2>Wizard Marketplace</h2>
-</div>
+<div class="header">Wizard Marketplace</div>
 
 <div class="grid">
 
-<div class="card">
-<h3>Africa Facebook</h3>
-<div class="buy" onclick="openCategory('africa')">Buy</div>
-</div>
-
-<div class="card">
-<h3>USA Facebook</h3>
-<div class="buy" onclick="openCategory('usa')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Facebook Dating</h3>
-<div class="buy" onclick="openCategory('dating')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Europe Facebook</h3>
-<div class="buy" onclick="openCategory('europe')">Buy</div>
-</div>
-
-<div class="card">
-<h3>USA WhatsApp</h3>
-<div class="buy" onclick="openCategory('usa')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Old Africa Facebook</h3>
-<div class="buy" onclick="openCategory('africa')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Asia Facebook</h3>
-<div class="buy" onclick="openCategory('asia')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Instagram</h3>
-<div class="buy" onclick="openCategory('instagram')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Twitter</h3>
-<div class="buy" onclick="openCategory('twitter')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Pinterest</h3>
-<div class="buy" onclick="openCategory('Pinterest')">Buy</div>
-</div>
-
-<div class="card">
-<h3>YouTube</h3>
-<div class="buy" onclick="openCategory('youtube')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Netflix</h3>
-<div class="buy" onclick="openCategory('netflix')">Buy</div>
-</div>
-
-<div class="card">
-<h3>VPN</h3>
-<div class="buy" onclick="openCategory('vpn')">Buy</div>
-</div>
-
-<div class="card">
-<h3>TikTok</h3>
-<div class="buy" onclick="openCategory('tiktok')">Buy</div>
-</div>
-
-<div class="card">
-<h3>eSIM</h3>
-<div class="buy" onclick="openCategory('esim')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Renew eSIM</h3>
-<div class="buy" onclick="openCategory('renew')">Buy</div>
-</div>
-
-<div class="card">
-<h3>TextPlus</h3>
-<div class="buy" onclick="openCategory('textplus')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Talkatone</h3>
-<div class="buy" onclick="openCategory('talkatone')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Google Voice</h3>
-<div class="buy" onclick="openCategory('googlevoice')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Send Gift</h3>
-<div class="buy" onclick="openCategory('sendgift')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Verified Telegram</h3>
-<div class="buy" onclick="openCategory('verifiedtelegram')">Buy</div>
-</div>
-
-<div class="card">
-<h3>Telegram Ready to use</h3>
-<div class="buy" onclick="openCategory('telegramreadytouse')">Buy</div>
-</div>
+<!-- ✅ ALL YOUR PRODUCTS (UNCHANGED) -->
+<div class="card"><h3>Africa Facebook</h3><div class="buy" onclick="openCategory('africa')">Buy</div></div>
+<div class="card"><h3>USA Facebook</h3><div class="buy" onclick="openCategory('usa')">Buy</div></div>
+<div class="card"><h3>Facebook Dating</h3><div class="buy" onclick="openCategory('dating')">Buy</div></div>
+<div class="card"><h3>Europe Facebook</h3><div class="buy" onclick="openCategory('europe')">Buy</div></div>
+<div class="card"><h3>USA WhatsApp</h3><div class="buy" onclick="openCategory('usa')">Buy</div></div>
+<div class="card"><h3>Old Africa Facebook</h3><div class="buy" onclick="openCategory('africa')">Buy</div></div>
+<div class="card"><h3>Asia Facebook</h3><div class="buy" onclick="openCategory('asia')">Buy</div></div>
+<div class="card"><h3>Instagram</h3><div class="buy" onclick="openCategory('instagram')">Buy</div></div>
+<div class="card"><h3>Twitter</h3><div class="buy" onclick="openCategory('twitter')">Buy</div></div>
+<div class="card"><h3>Pinterest</h3><div class="buy" onclick="openCategory('pinterest')">Buy</div></div>
+<div class="card"><h3>YouTube</h3><div class="buy" onclick="openCategory('youtube')">Buy</div></div>
+<div class="card"><h3>Netflix</h3><div class="buy" onclick="openCategory('netflix')">Buy</div></div>
+<div class="card"><h3>VPN</h3><div class="buy" onclick="openCategory('vpn')">Buy</div></div>
+<div class="card"><h3>TikTok</h3><div class="buy" onclick="openCategory('tiktok')">Buy</div></div>
+<div class="card"><h3>eSIM</h3><div class="buy" onclick="openCategory('esim')">Buy</div></div>
+<div class="card"><h3>Renew eSIM</h3><div class="buy" onclick="openCategory('renew')">Buy</div></div>
+<div class="card"><h3>TextPlus</h3><div class="buy" onclick="openCategory('textplus')">Buy</div></div>
+<div class="card"><h3>Talkatone</h3><div class="buy" onclick="openCategory('talkatone')">Buy</div></div>
+<div class="card"><h3>Google Voice</h3><div class="buy" onclick="openCategory('googlevoice')">Buy</div></div>
+<div class="card"><h3>Send Gift</h3><div class="buy" onclick="openCategory('sendgift')">Buy</div></div>
+<div class="card"><h3>Verified Telegram</h3><div class="buy" onclick="openCategory('verifiedtelegram')">Buy</div></div>
+<div class="card"><h3>Telegram Ready to use</h3><div class="buy" onclick="openCategory('telegramreadytouse')">Buy</div></div>
 
 </div>
 
 <!-- MODAL -->
 <div class="modal" id="modal">
 <div class="modal-content">
-
 <h3>Select Account</h3>
 <div id="list"></div>
 <div id="preview"></div>
-
 <br>
 <button onclick="buy()">Confirm Purchase</button>
 <button onclick="closeModal()">Close</button>
-
 </div>
 </div>
 
@@ -230,7 +146,7 @@ body {
   <a href="index.html" class="active"><i data-feather="home"></i></a>
   <a href="profile.html"><i data-feather="user"></i></a>
   <a href="wallet.html"><i data-feather="credit-card"></i></a>
-  <a href="auth.html"><i data-feather="log-out"></i></a>
+  <a onclick="logout()"><i data-feather="log-out"></i></a>
 </div>
 
 <script>
@@ -240,7 +156,7 @@ feather.replace();
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
   collection,
@@ -249,28 +165,43 @@ import {
   getDocs,
   doc,
   updateDoc,
+  getDoc,
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: "AIzaSyCkby...",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
-};
+});
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let currentUser;
 let selected = null;
 let selectedDocId = null;
-let currentUser = null;
+let ready = false;
 
+// ✅ FIXED AUTH (NO MORE LOGOUT BUG)
 onAuthStateChanged(auth, (user) => {
-  if (!user) window.location.href = "auth.html";
-  currentUser = user;
+  if (ready) return;
+  ready = true;
+
+  if (!user) {
+    window.location.href = "auth.html";
+  } else {
+    currentUser = user;
+    document.body.style.display = "block";
+  }
 });
 
+// 🔓 LOGOUT
+window.logout = function () {
+  signOut(auth).then(() => window.location.href = "auth.html");
+};
+
+// 📦 OPEN CATEGORY
 window.openCategory = async function (category) {
   document.getElementById("modal").style.display = "flex";
   const list = document.getElementById("list");
@@ -289,8 +220,8 @@ window.openCategory = async function (category) {
     const data = docItem.data();
 
     list.innerHTML += `
-      <div class="item" onclick="selectItem('${docItem.id}', '${data.name}', '${data.link}')">
-        ${data.name}
+      <div class="item" onclick="selectItem('${docItem.id}', '${data.name}', '${data.link}', '${data.price || 5000}')">
+        ${data.name} - ₦${data.price || 5000}
       </div>
     `;
   });
@@ -298,28 +229,33 @@ window.openCategory = async function (category) {
   if (snap.empty) list.innerHTML = "No accounts available";
 };
 
-window.selectItem = function (id, name, link) {
-  selected = { name, link };
+// 👁 SELECT ITEM
+window.selectItem = function (id, name, link, price) {
+  selected = { name, link, price };
   selectedDocId = id;
 
   document.getElementById("preview").innerHTML = `
     <br><b>${name}</b><br>
+    Price: ₦${price}<br>
     <a href="${link}" target="_blank" style="color:violet;">Preview</a>
   `;
 };
 
+// 💰 BUY
 window.buy = async function () {
   if (!selected) return alert("Select account");
 
   const userRef = doc(db, "users", currentUser.uid);
-  const userSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
+  const userSnap = await getDoc(userRef);
+  const wallet = userSnap.data().wallet || 0;
 
-  let wallet = 0;
-  userSnap.forEach(d => wallet = d.data().wallet || 0);
+  if (wallet < selected.price) {
+    return alert("Insufficient balance");
+  }
 
-  if (wallet < 5000) return alert("Insufficient balance");
-
-  await updateDoc(userRef, { wallet: wallet - 5000 });
+  await updateDoc(userRef, {
+    wallet: wallet - selected.price
+  });
 
   await updateDoc(doc(db, "products", selectedDocId), {
     status: "sold"
@@ -328,13 +264,16 @@ window.buy = async function () {
   await addDoc(collection(db, "purchases"), {
     uid: currentUser.uid,
     name: selected.name,
-    link: selected.link
+    link: selected.link,
+    price: selected.price,
+    date: new Date()
   });
 
-  alert("Purchase successful");
+  alert("Purchase successful ✅");
   closeModal();
 };
 
+// ❌ CLOSE
 window.closeModal = function () {
   document.getElementById("modal").style.display = "none";
 };
