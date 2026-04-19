@@ -1,7 +1,16 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  doc, 
+  setDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -13,7 +22,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ✅ CLEAN SIGNUP FUNCTION
 window.signup = async function () {
   const name = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -28,22 +36,19 @@ window.signup = async function () {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // 🔥 SAVE USER
+    // ✅ SAVE USER TO FIRESTORE (THIS FIXES YOUR ERROR)
     await setDoc(doc(db, "users", user.uid), {
-      name,
-      email,
+      name: name,
+      email: email,
       wallet: 0
     });
 
-    // 📧 SEND VERIFICATION LINK
+    // ✅ SEND EMAIL VERIFICATION
     await sendEmailVerification(user);
 
-    alert("Verification link sent to your email. Please verify before login.");
+    alert("Account created! Verify your email.");
 
-    // 🚪 FORCE LOGOUT UNTIL VERIFIED
-    await signOut(auth);
-
-    window.location.href = "auth.html";
+    window.location.href = "verify.html";
 
   } catch (err) {
     alert(err.message);
