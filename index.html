@@ -37,13 +37,13 @@ body {
   background: #1c1c2e;
   padding: 15px;
   border-radius: 15px;
+  text-align: center;
 }
 
 .buy {
   background: purple;
   padding: 10px;
   border-radius: 20px;
-  text-align: center;
   cursor: pointer;
   margin-top: 10px;
 }
@@ -58,13 +58,8 @@ body {
   padding: 12px 0;
 }
 
-.nav a {
-  color: gray;
-}
-
-.nav a.active {
-  color: purple;
-}
+.nav a { color: gray; }
+.nav a.active { color: purple; }
 
 .modal {
   position: fixed;
@@ -99,33 +94,8 @@ body {
   <div class="user-info" id="userinfo">Loading...</div>
 </div>
 
-<div class="grid">
-
-<!-- ✅ YOUR PRODUCTS (UNCHANGED) -->
-<div class="card"><h3>Africa Facebook</h3><div class="buy" onclick="openCategory('africa')">Buy</div></div>
-<div class="card"><h3>USA Facebook</h3><div class="buy" onclick="openCategory('usa')">Buy</div></div>
-<div class="card"><h3>Facebook Dating</h3><div class="buy" onclick="openCategory('dating')">Buy</div></div>
-<div class="card"><h3>Europe Facebook</h3><div class="buy" onclick="openCategory('europe')">Buy</div></div>
-<div class="card"><h3>USA WhatsApp</h3><div class="buy" onclick="openCategory('usa')">Buy</div></div>
-<div class="card"><h3>Old Africa Facebook</h3><div class="buy" onclick="openCategory('africa')">Buy</div></div>
-<div class="card"><h3>Asia Facebook</h3><div class="buy" onclick="openCategory('asia')">Buy</div></div>
-<div class="card"><h3>Instagram</h3><div class="buy" onclick="openCategory('instagram')">Buy</div></div>
-<div class="card"><h3>Twitter</h3><div class="buy" onclick="openCategory('twitter')">Buy</div></div>
-<div class="card"><h3>Pinterest</h3><div class="buy" onclick="openCategory('pinterest')">Buy</div></div>
-<div class="card"><h3>YouTube</h3><div class="buy" onclick="openCategory('youtube')">Buy</div></div>
-<div class="card"><h3>Netflix</h3><div class="buy" onclick="openCategory('netflix')">Buy</div></div>
-<div class="card"><h3>VPN</h3><div class="buy" onclick="openCategory('vpn')">Buy</div></div>
-<div class="card"><h3>TikTok</h3><div class="buy" onclick="openCategory('tiktok')">Buy</div></div>
-<div class="card"><h3>eSIM</h3><div class="buy" onclick="openCategory('esim')">Buy</div></div>
-<div class="card"><h3>Renew eSIM</h3><div class="buy" onclick="openCategory('renew')">Buy</div></div>
-<div class="card"><h3>TextPlus</h3><div class="buy" onclick="openCategory('textplus')">Buy</div></div>
-<div class="card"><h3>Talkatone</h3><div class="buy" onclick="openCategory('talkatone')">Buy</div></div>
-<div class="card"><h3>Google Voice</h3><div class="buy" onclick="openCategory('googlevoice')">Buy</div></div>
-<div class="card"><h3>Send Gift</h3><div class="buy" onclick="openCategory('sendgift')">Buy</div></div>
-<div class="card"><h3>Verified Telegram</h3><div class="buy" onclick="openCategory('verifiedtelegram')">Buy</div></div>
-<div class="card"><h3>Telegram Ready to use</h3><div class="buy" onclick="openCategory('telegramreadytouse')">Buy</div></div>
-
-</div>
+<!-- 🔥 DYNAMIC CATEGORY GRID -->
+<div class="grid" id="categoryGrid"></div>
 
 <!-- MODAL -->
 <div class="modal" id="modal">
@@ -154,17 +124,15 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 import {
   getFirestore,
   collection,
+  getDocs,
   query,
   where,
-  getDocs,
   doc,
-  updateDoc,
   getDoc,
+  updateDoc,
   addDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const ADMIN_EMAIL = "etee77366@gmail.com";
 
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -179,16 +147,10 @@ let currentUser;
 let selected = null;
 let selectedDocId = null;
 
-// 🔐 AUTH FIX
+// 🔐 AUTH
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
-    return;
-  }
-
-  // 🔥 ADMIN REDIRECT FIX
-  if (user.email === ADMIN_EMAIL) {
-    window.location.href = "admin.html";
     return;
   }
 
@@ -197,15 +159,12 @@ onAuthStateChanged(auth, async (user) => {
   const userRef = doc(db, "users", user.uid);
   let snap = await getDoc(userRef);
 
-  // ✅ AUTO CREATE USER IF MISSING
   if (!snap.exists()) {
     await setDoc(userRef, {
       name: user.email.split("@")[0],
       email: user.email,
-      wallet: 0,
-      verified: true
+      wallet: 0
     });
-
     snap = await getDoc(userRef);
   }
 
@@ -215,14 +174,46 @@ onAuthStateChanged(auth, async (user) => {
     (data.name || "User") + " • Wallet: ₦" + (data.wallet || 0);
 
   document.body.style.display = "block";
+
+  loadCategories(); // 🔥 load dynamic categories
 });
 
-// LOGOUT
+// 🚪 LOGOUT
 window.logout = function () {
   signOut(auth).then(() => window.location.href = "auth.html");
 };
 
-// OPEN CATEGORY
+// 🔥 LOAD UNIQUE CATEGORIES
+async function loadCategories() {
+  const grid = document.getElementById("categoryGrid");
+  grid.innerHTML = "Loading...";
+
+  const snap = await getDocs(collection(db, "products"));
+
+  const categories = new Set();
+
+  snap.forEach(doc => {
+    const data = doc.data();
+    if (data.category) categories.add(data.category);
+  });
+
+  grid.innerHTML = "";
+
+  categories.forEach(cat => {
+    grid.innerHTML += `
+      <div class="card">
+        <h3>${cat.toUpperCase()}</h3>
+        <div class="buy" onclick="openCategory('${cat}')">Browse</div>
+      </div>
+    `;
+  });
+
+  if (categories.size === 0) {
+    grid.innerHTML = "No products yet";
+  }
+}
+
+// 📦 OPEN CATEGORY
 window.openCategory = async function (category) {
   document.getElementById("modal").style.display = "flex";
   const list = document.getElementById("list");
@@ -241,8 +232,8 @@ window.openCategory = async function (category) {
     const data = docItem.data();
 
     list.innerHTML += `
-      <div class="item" onclick="selectItem('${docItem.id}', '${data.name}', '${data.link}', '${data.price || 5000}')">
-        ${data.name} - ₦${data.price || 5000}
+      <div class="item" onclick="selectItem('${docItem.id}', '${data.name}', '${data.link}', '${data.price}')">
+        ${data.name} - ₦${data.price}
       </div>
     `;
   });
@@ -250,7 +241,7 @@ window.openCategory = async function (category) {
   if (snap.empty) list.innerHTML = "No accounts available";
 };
 
-// SELECT ITEM
+// 👁 SELECT ITEM
 window.selectItem = function (id, name, link, price) {
   selected = { name, link, price };
   selectedDocId = id;
@@ -262,13 +253,13 @@ window.selectItem = function (id, name, link, price) {
   `;
 };
 
-// BUY
+// 💰 BUY
 window.buy = async function () {
   if (!selected) return alert("Select account");
 
   const userRef = doc(db, "users", currentUser.uid);
   const userSnap = await getDoc(userRef);
-  const wallet = userSnap.data()?.wallet || 0;
+  const wallet = userSnap.data().wallet || 0;
 
   if (wallet < selected.price) {
     return alert("Insufficient balance");
@@ -294,7 +285,7 @@ window.buy = async function () {
   closeModal();
 };
 
-// CLOSE
+// ❌ CLOSE
 window.closeModal = function () {
   document.getElementById("modal").style.display = "none";
 };
