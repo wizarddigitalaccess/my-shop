@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel</title>
+<title>Admin Dashboard</title>
 
 <style>
 body {
@@ -13,77 +13,162 @@ body {
   display: none;
 }
 
-.container { padding: 20px; }
+.header {
+  padding: 15px;
+  background: #1c1c2e;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.container {
+  padding: 15px;
+  padding-bottom: 80px;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 
 .card {
   background: #1c1c2e;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 15px;
+  padding: 15px;
+  border-radius: 12px;
 }
 
-input, button {
+/* STATS */
+.stat {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+/* BUTTONS */
+button {
   width: 100%;
   padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
+  margin-top: 8px;
   border: none;
-}
-
-button {
+  border-radius: 8px;
   background: purple;
   color: white;
   cursor: pointer;
 }
 
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: none;
+  background: #111;
+  color: white;
+}
+
 .item {
   padding: 10px;
   border-bottom: 1px solid #333;
+  font-size: 14px;
 }
 
-.row-btn {
-  margin-top: 5px;
-  display: flex;
-  gap: 5px;
-}
-
-.row-btn button {
-  flex: 1;
+.small {
   font-size: 12px;
+  opacity: 0.7;
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+  display: flex;
+}
+
+.nav button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: gray;
+  padding: 10px;
+}
+
+.nav button.active {
+  color: purple;
 }
 </style>
 </head>
 
 <body>
 
+<div class="header">Admin Dashboard</div>
+
 <div class="container">
 
-<div class="card">
-<h2>Admin Dashboard</h2>
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+<div class="grid">
+  <div class="card">
+    <div>Total Users</div>
+    <div class="stat" id="totalUsers">0</div>
+  </div>
+
+  <div class="card">
+    <div>Total Products</div>
+    <div class="stat" id="totalProducts">0</div>
+  </div>
+
+  <div class="card">
+    <div>Total Revenue</div>
+    <div class="stat">₦<span id="revenue">0</span></div>
+  </div>
+
+  <div class="card">
+    <div>Pending Payments</div>
+    <div class="stat" id="pending">0</div>
+  </div>
 </div>
 
-<!-- ADD PRODUCT -->
+<br>
+
 <div class="card">
-<h3>Add Product</h3>
-<input id="name" placeholder="Account Name">
-<input id="link" placeholder="Profile Link">
-<input id="category" placeholder="Category (e.g instagram, usa)">
+<h3>Quick Actions</h3>
+
+<input id="name" placeholder="Product Name">
+<input id="link" placeholder="Link">
+<input id="category" placeholder="Category">
 <input id="price" type="number" placeholder="Price">
+
 <button onclick="addProduct()">Add Product</button>
 </div>
 
+</div>
+
 <!-- USERS -->
+<div id="usersPage" style="display:none">
 <div class="card">
-<h3>Manage Users</h3>
-<div id="users">Loading...</div>
+<h3>Users</h3>
+<div id="users"></div>
+</div>
 </div>
 
 <!-- PAYMENTS -->
+<div id="paymentsPage" style="display:none">
 <div class="card">
 <h3>Pending Payments</h3>
-<div id="transactions">Loading...</div>
+<div id="transactions"></div>
+</div>
 </div>
 
+</div>
+
+<!-- NAV -->
+<div class="nav">
+<button onclick="showPage('dashboard')" class="active" id="btnDashboard">Dashboard</button>
+<button onclick="showPage('users')" id="btnUsers">Users</button>
+<button onclick="showPage('payments')" id="btnPayments">Payments</button>
 </div>
 
 <script type="module">
@@ -93,11 +178,10 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import {
   getFirestore,
   collection,
-  addDoc,
   getDocs,
+  addDoc,
   doc,
   updateDoc,
-  deleteDoc,
   increment,
   query,
   where
@@ -114,30 +198,46 @@ const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// 🔐 ADMIN AUTH (NO LOOP)
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "auth.html";
-    return;
-  }
-
-  if (user.email !== ADMIN_EMAIL) {
-    window.location.href = "index.html";
-    return;
-  }
+// 🔐 AUTH
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "auth.html";
+  if (user.email !== ADMIN_EMAIL) return location.href = "index.html";
 
   document.body.style.display = "block";
 
+  loadDashboard();
   loadUsers();
-  loadTransactions();
+  loadPayments();
 });
 
-// ➕ ADD PRODUCT (FIXED)
+// 📊 DASHBOARD
+async function loadDashboard() {
+  const usersSnap = await getDocs(collection(db, "users"));
+  const productsSnap = await getDocs(collection(db, "products"));
+  const txSnap = await getDocs(collection(db, "transactions"));
+
+  document.getElementById("totalUsers").innerText = usersSnap.size;
+  document.getElementById("totalProducts").innerText = productsSnap.size;
+
+  let revenue = 0;
+  let pending = 0;
+
+  txSnap.forEach(doc => {
+    const data = doc.data();
+    if (data.status === "approved") revenue += data.amount;
+    if (data.status === "pending") pending++;
+  });
+
+  document.getElementById("revenue").innerText = revenue;
+  document.getElementById("pending").innerText = pending;
+}
+
+// ➕ ADD PRODUCT
 window.addProduct = async function () {
-  const name = document.getElementById("name").value;
-  const link = document.getElementById("link").value;
-  const category = document.getElementById("category").value.toLowerCase();
-  const price = Number(document.getElementById("price").value);
+  const name = nameEl.value;
+  const link = linkEl.value;
+  const category = categoryEl.value.toLowerCase();
+  const price = Number(priceEl.value);
 
   if (!name || !link || !category || !price) {
     alert("Fill all fields");
@@ -145,23 +245,20 @@ window.addProduct = async function () {
   }
 
   await addDoc(collection(db, "products"), {
-    name,
-    link,
-    category,
-    price,
-    status: "available"
+    name, link, category, price, status: "available"
   });
 
-  alert("Product added ✅");
+  alert("Added");
 
-  // clear inputs
-  document.getElementById("name").value = "";
-  document.getElementById("link").value = "";
-  document.getElementById("category").value = "";
-  document.getElementById("price").value = "";
+  nameEl.value = "";
+  linkEl.value = "";
+  categoryEl.value = "";
+  priceEl.value = "";
+
+  loadDashboard();
 };
 
-// 👤 LOAD USERS
+// 👤 USERS
 async function loadUsers() {
   const div = document.getElementById("users");
   div.innerHTML = "";
@@ -173,97 +270,41 @@ async function loadUsers() {
 
     div.innerHTML += `
       <div class="item">
-        <b>${data.name || "No Name"}</b><br>
+        ${data.name}<br>
         ${data.email}<br>
-        Wallet: ₦${data.wallet || 0}
+        ₦${data.wallet || 0}
 
-        <div class="row-btn">
-          <button onclick="fundUser('${docItem.id}')">+Fund</button>
-          <button onclick="deductUser('${docItem.id}')">-Deduct</button>
-          <button onclick="editName('${docItem.id}')">Edit</button>
-          <button onclick="deleteUser('${docItem.id}')">Delete</button>
-        </div>
+        <button onclick="fund('${docItem.id}')">Fund</button>
       </div>
     `;
   });
 }
 
-// 💰 FUND USER
-window.fundUser = async function (uid) {
-  const amount = Number(prompt("Enter amount to ADD"));
-
-  if (!amount || amount <= 0) return;
+window.fund = async function (uid) {
+  const amount = Number(prompt("Amount"));
+  if (!amount) return;
 
   await updateDoc(doc(db, "users", uid), {
     wallet: increment(amount)
   });
 
-  alert("Wallet funded");
   loadUsers();
 };
 
-// 💸 DEDUCT USER
-window.deductUser = async function (uid) {
-  const amount = Number(prompt("Enter amount to REMOVE"));
-
-  if (!amount || amount <= 0) return;
-
-  await updateDoc(doc(db, "users", uid), {
-    wallet: increment(-amount)
-  });
-
-  alert("Wallet deducted");
-  loadUsers();
-};
-
-// ✏️ EDIT NAME
-window.editName = async function (uid) {
-  const name = prompt("Enter new name");
-
-  if (!name) return;
-
-  await updateDoc(doc(db, "users", uid), {
-    name
-  });
-
-  alert("Name updated");
-  loadUsers();
-};
-
-// ❌ DELETE USER
-window.deleteUser = async function (uid) {
-  if (!confirm("Delete this user?")) return;
-
-  await deleteDoc(doc(db, "users", uid));
-
-  alert("User deleted");
-  loadUsers();
-};
-
-// 💳 LOAD TRANSACTIONS
-async function loadTransactions() {
+// 💳 PAYMENTS
+async function loadPayments() {
   const div = document.getElementById("transactions");
   div.innerHTML = "";
 
-  const q = query(
-    collection(db, "transactions"),
-    where("status", "==", "pending")
-  );
-
+  const q = query(collection(db, "transactions"), where("status", "==", "pending"));
   const snap = await getDocs(q);
-
-  if (snap.empty) {
-    div.innerHTML = "No pending payments";
-    return;
-  }
 
   snap.forEach(docItem => {
     const data = docItem.data();
 
     div.innerHTML += `
       <div class="item">
-        ₦${data.amount}<br>
-        UID: ${data.uid}
+        ₦${data.amount}
         <button onclick="approve('${docItem.id}', '${data.uid}', ${data.amount})">
           Approve
         </button>
@@ -272,7 +313,6 @@ async function loadTransactions() {
   });
 }
 
-// ✅ APPROVE PAYMENT
 window.approve = async function (txId, uid, amount) {
   await updateDoc(doc(db, "users", uid), {
     wallet: increment(amount)
@@ -282,8 +322,34 @@ window.approve = async function (txId, uid, amount) {
     status: "approved"
   });
 
-  alert("Payment approved ✅");
-  loadTransactions();
+  loadPayments();
+  loadDashboard();
+};
+
+// 📱 NAVIGATION
+window.showPage = function (page) {
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("usersPage").style.display = "none";
+  document.getElementById("paymentsPage").style.display = "none";
+
+  document.getElementById("btnDashboard").classList.remove("active");
+  document.getElementById("btnUsers").classList.remove("active");
+  document.getElementById("btnPayments").classList.remove("active");
+
+  if (page === "dashboard") {
+    dashboard.style.display = "block";
+    btnDashboard.classList.add("active");
+  }
+
+  if (page === "users") {
+    usersPage.style.display = "block";
+    btnUsers.classList.add("active");
+  }
+
+  if (page === "payments") {
+    paymentsPage.style.display = "block";
+    btnPayments.classList.add("active");
+  }
 };
 </script>
 
