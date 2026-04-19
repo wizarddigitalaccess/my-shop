@@ -18,7 +18,6 @@ body {
   padding:15px;
   display:flex;
   justify-content:space-between;
-  align-items:center;
 }
 
 .header input {
@@ -30,7 +29,7 @@ body {
   color:white;
 }
 
-/* CATEGORY BAR */
+/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -43,31 +42,28 @@ body {
   padding:8px 12px;
   border-radius:20px;
   cursor:pointer;
-  white-space:nowrap;
 }
 
-.cat.active {
-  background:purple;
-}
+.cat.active { background:purple; }
 
-/* PRODUCTS GRID */
+/* GRID */
 .grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
   gap:15px;
   padding:15px;
 }
 
-/* PRODUCT CARD */
+/* CARD */
 .card {
   background:#1c1c2e;
   padding:12px;
   border-radius:12px;
+  text-align:center;
 }
 
-.card h4 {
-  margin:5px 0;
-  font-size:14px;
+.icon {
+  font-size:40px;
 }
 
 .price {
@@ -75,15 +71,32 @@ body {
   font-weight:bold;
 }
 
-button {
+.row {
+  display:flex;
+  gap:5px;
+}
+
+.row button {
+  flex:1;
+}
+
+/* MODAL */
+.modal {
+  position:fixed;
+  top:0; left:0;
   width:100%;
-  padding:8px;
-  margin-top:5px;
-  border:none;
-  border-radius:8px;
-  background:purple;
-  color:white;
-  cursor:pointer;
+  height:100%;
+  background:rgba(0,0,0,0.8);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content {
+  background:#1c1c2e;
+  padding:20px;
+  border-radius:12px;
+  width:80%;
 }
 
 /* NAV */
@@ -91,8 +104,8 @@ button {
   position:fixed;
   bottom:0;
   width:100%;
-  background:#111;
   display:flex;
+  background:#111;
 }
 
 .nav a {
@@ -103,37 +116,37 @@ button {
   text-decoration:none;
 }
 
-.nav a.active {
-  color:purple;
-}
+.nav a.active { color:purple; }
 </style>
 </head>
 
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <b>🛒 Marketplace</b>
-  <input id="search" placeholder="Search products..." oninput="loadProducts()">
+  <input id="search" placeholder="Search..." oninput="loadProducts()">
 </div>
 
-<!-- CATEGORIES -->
 <div class="categories" id="categories"></div>
 
-<!-- PRODUCTS -->
 <div class="grid" id="products"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
 
 <!-- NAV -->
 <div class="nav">
-  <a href="index.html" class="active">Home</a>
-  <a href="wallet.html">Wallet</a>
-  <a href="profile.html">Profile</a>
+  <a href="index.html" class="active">🏠</a>
+  <a href="wallet.html">💳</a>
+  <a href="#">☰</a>
+  <a href="profile.html">👤</a>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 import {
   getFirestore,
   collection,
@@ -145,146 +158,142 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50"
+  apiKey:"AIzaSy...",
+  authDomain:"wizard-shop-52a50.firebaseapp.com",
+  projectId:"wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser = null;
-let allProducts = [];
-let currentCategory = "all";
+let user, allProducts = [], currentCategory="all";
 
-// 🔐 AUTH
-onAuthStateChanged(auth, (user) => {
-  if (!user) return location.href = "auth.html";
-  currentUser = user;
+onAuthStateChanged(auth,(u)=>{
+  if(!u) location.href="auth.html";
+  user = u;
 });
 
-// INIT
-async function init() {
-  const snap = await getDocs(collection(db, "products"));
-
-  let categories = new Set();
-
-  snap.forEach(d => {
-    const data = d.data();
-    data.id = d.id;
-
-    if (data.status !== "available") return;
-
-    allProducts.push(data);
-    categories.add(data.category);
-  });
-
-  renderCategories([...categories]);
-  loadProducts();
+/* AUTO ICON */
+function getIcon(category){
+  if(category.includes("facebook")) return "📘";
+  if(category.includes("instagram")) return "📸";
+  if(category.includes("tiktok")) return "🎵";
+  if(category.includes("twitter")) return "🐦";
+  return "📦";
 }
 
+/* INIT */
+async function init(){
+  allProducts=[];
+  const snap = await getDocs(collection(db,"products"));
+
+  let cats=new Set();
+
+  snap.forEach(d=>{
+    const p=d.data();
+    p.id=d.id;
+
+    if(p.status!=="available") return;
+
+    allProducts.push(p);
+    cats.add(p.category);
+  });
+
+  renderCats([...cats]);
+  loadProducts();
+}
 init();
 
-// CATEGORIES
-function renderCategories(cats) {
+/* CATEGORIES */
+function renderCats(cats){
   const div = document.getElementById("categories");
 
-  div.innerHTML = `<div class="cat active" onclick="setCategory('all')">All</div>`;
+  div.innerHTML=`<div class="cat active" onclick="setCat('all')">All</div>`;
 
-  cats.forEach(cat => {
-    div.innerHTML += `<div class="cat" onclick="setCategory('${cat}')">${cat}</div>`;
+  cats.forEach(c=>{
+    div.innerHTML+=`<div class="cat" onclick="setCat('${c}')">${c}</div>`;
   });
 }
 
-window.setCategory = function(cat){
-  currentCategory = cat;
-
-  document.querySelectorAll(".cat").forEach(c => c.classList.remove("active"));
+window.setCat=(c)=>{
+  currentCategory=c;
+  document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active"));
   event.target.classList.add("active");
-
   loadProducts();
 };
 
-// LOAD PRODUCTS
-window.loadProducts = function () {
-  const search = document.getElementById("search").value.toLowerCase();
+/* LOAD */
+window.loadProducts=()=>{
+  const search = searchEl.value.toLowerCase();
   const div = document.getElementById("products");
+  div.innerHTML="";
 
-  div.innerHTML = "";
+  allProducts.forEach(p=>{
+    if(currentCategory!=="all" && p.category!==currentCategory) return;
+    if(!p.name.toLowerCase().includes(search)) return;
 
-  allProducts.forEach(p => {
+    div.innerHTML+=`
+    <div class="card">
+      <div class="icon">${getIcon(p.category)}</div>
+      <h4>${p.name}</h4>
+      <div class="price">₦${p.price}</div>
 
-    if (currentCategory !== "all" && p.category !== currentCategory) return;
-    if (!p.name.toLowerCase().includes(search)) return;
-
-    div.innerHTML += `
-      <div class="card">
-        <h4>${p.name}</h4>
-        <div class="price">₦${p.price}</div>
-
+      <div class="row">
+        <button onclick="preview('${p.id}')">Preview</button>
         <button onclick="buy('${p.id}')">Buy</button>
       </div>
-    `;
+    </div>`;
   });
 };
 
-// 🛒 REAL BUY SYSTEM
-window.buy = async function(id){
-  try {
-    const productRef = doc(db, "products", id);
-    const productSnap = await getDoc(productRef);
+/* PREVIEW */
+window.preview = async(id)=>{
+  const snap = await getDoc(doc(db,"products",id));
+  const p = snap.data();
 
-    if (!productSnap.exists()) return alert("Product not found");
+  modal.style.display="flex";
+  modalContent.innerHTML=`
+    <h3>${p.name}</h3>
+    <p>Category: ${p.category}</p>
+    <p><a href="${p.link}" target="_blank">Open Profile</a></p>
+    <button onclick="modal.style.display='none'">Close</button>
+  `;
+};
 
-    const product = productSnap.data();
+/* BUY */
+window.buy = async(id)=>{
+  const pSnap = await getDoc(doc(db,"products",id));
+  const p = pSnap.data();
 
-    if (product.status !== "available") {
-      return alert("Product already sold");
-    }
+  const uRef = doc(db,"users",user.uid);
+  const uSnap = await getDoc(uRef);
+  const u = uSnap.data();
 
-    // 🔐 GET USER
-    const userRef = doc(db, "users", currentUser.uid);
-    const userSnap = await getDoc(userRef);
-
-    const user = userSnap.data();
-
-    if ((user.wallet || 0) < product.price) {
-      return alert("Insufficient balance");
-    }
-
-    // 💸 DEDUCT WALLET
-    await updateDoc(userRef, {
-      wallet: user.wallet - product.price
-    });
-
-    // 📦 MARK PRODUCT SOLD
-    await updateDoc(productRef, {
-      status: "sold",
-      buyer: currentUser.uid
-    });
-
-    // 🧾 CREATE ORDER
-    await addDoc(collection(db, "orders"), {
-      userId: currentUser.uid,
-      productId: id,
-      name: product.name,
-      price: product.price,
-      link: product.link,
-      createdAt: new Date(),
-      status: "completed"
-    });
-
-    // ✅ SHOW PRODUCT ACCESS (THIS IS IMPORTANT)
-    alert("Purchase successful ✅\n\nAccess:\n" + product.link);
-
-    // reload
-    allProducts = [];
-    init();
-
-  } catch (err) {
-    console.error(err);
-    alert("Error processing order");
+  if((u.wallet||0) < p.price){
+    return alert("Insufficient balance");
   }
+
+  await updateDoc(uRef,{wallet:u.wallet - p.price});
+  await updateDoc(doc(db,"products",id),{status:"sold",buyer:user.uid});
+
+  await addDoc(collection(db,"orders"),{
+    userId:user.uid,
+    productId:id,
+    name:p.name,
+    price:p.price,
+    link:p.link,
+    createdAt:new Date()
+  });
+
+  modal.style.display="flex";
+  modalContent.innerHTML=`
+    <h3>Purchase Successful ✅</h3>
+    <p>Here are your details:</p>
+    <p><a href="${p.link}" target="_blank">${p.link}</a></p>
+    <button onclick="modal.style.display='none'">Close</button>
+  `;
+
+  init();
 };
 </script>
 
