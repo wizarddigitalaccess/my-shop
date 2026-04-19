@@ -8,7 +8,7 @@
 body {
   margin: 0;
   font-family: Arial;
-  background: #0b1a2b;
+  background: #0f0f1a;
   color: white;
 }
 
@@ -17,9 +17,9 @@ body {
 }
 
 .card {
-  background: #1e293b;
+  background: #1c1c2e;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 15px;
   margin-bottom: 15px;
 }
 
@@ -27,8 +27,8 @@ input, button {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
-  border: none;
   border-radius: 8px;
+  border: none;
 }
 
 button {
@@ -37,15 +37,9 @@ button {
   cursor: pointer;
 }
 
-h2 {
-  margin-top: 0;
-}
-
-.user {
+.item {
   padding: 10px;
-  background: #0f172a;
-  margin-top: 10px;
-  border-radius: 8px;
+  border-bottom: 1px solid #333;
 }
 </style>
 </head>
@@ -54,43 +48,49 @@ h2 {
 
 <div class="container">
 
-  <div class="card">
-    <h2>Admin Panel</h2>
-    <p>Manage users & wallet</p>
-  </div>
+<div class="card">
+<h2>Admin Panel</h2>
+</div>
 
-  <!-- ADD WALLET -->
-  <div class="card">
-    <h3>Add Wallet Credit</h3>
+<!-- ADD PRODUCT -->
+<div class="card">
+<h3>Add Account</h3>
 
-    <input id="uid" placeholder="User UID">
-    <input id="amount" type="number" placeholder="Amount">
+<input id="name" placeholder="Account Name">
+<input id="link" placeholder="Profile Link">
+<input id="category" placeholder="Category (africa, usa)">
 
-    <button onclick="addMoney()">Credit Wallet</button>
-  </div>
+<button onclick="addProduct()">Add</button>
+</div>
 
-  <!-- USERS LIST -->
-  <div class="card">
-    <h3>Users</h3>
-    <div id="users">Loading...</div>
-  </div>
+<!-- TRANSACTIONS -->
+<div class="card">
+<h3>Pending Payments</h3>
+<div id="transactions"></div>
+</div>
+
+<!-- USERS -->
+<div class="card">
+<h3>Users</h3>
+<div id="users"></div>
+</div>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-  getAuth, 
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-import { 
-  getFirestore, 
-  collection, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  increment 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
+  increment,
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -103,73 +103,96 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ✅ YOUR ADMIN EMAIL (UPDATED)
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// 🔐 SECURITY CHECK
+// 🔐 ADMIN CHECK
 onAuthStateChanged(auth, (user) => {
-  if (!user) {
+  if (!user || user.email !== ADMIN_EMAIL) {
     window.location.href = "auth.html";
     return;
   }
 
-  if (user.email !== ADMIN_EMAIL) {
-    alert("Access denied!");
-    window.location.href = "index.html";
+  loadUsers();
+  loadTransactions();
+});
+
+// ➕ ADD PRODUCT
+window.addProduct = async function () {
+  const name = document.getElementById("name").value;
+  const link = document.getElementById("link").value;
+  const category = document.getElementById("category").value;
+
+  if (!name || !link || !category) {
+    alert("Fill all fields");
     return;
   }
 
-  loadUsers();
-});
+  await addDoc(collection(db, "products"), {
+    name,
+    link,
+    category,
+    status: "available"
+  });
+
+  alert("Product added");
+};
 
 // 👤 LOAD USERS
 async function loadUsers() {
-  const usersDiv = document.getElementById("users");
-  usersDiv.innerHTML = "";
+  const div = document.getElementById("users");
+  div.innerHTML = "";
 
   const snap = await getDocs(collection(db, "users"));
 
-  snap.forEach((docItem) => {
+  snap.forEach(docItem => {
     const data = docItem.data();
 
-    usersDiv.innerHTML += `
-      <div class="user">
-        <b>${data.name || "No Name"}</b><br>
-        Email: ${data.email || "No Email"}<br>
-        Wallet: ₦${data.wallet || 0}<br>
-        UID: ${docItem.id}
+    div.innerHTML += `
+      <div class="item">
+        ${data.name} - ₦${data.wallet}
       </div>
     `;
   });
 }
 
-// 💰 ADD MONEY
-window.addMoney = async function () {
-  const uid = document.getElementById("uid").value;
-  const amount = Number(document.getElementById("amount").value);
+// 💳 LOAD TRANSACTIONS
+async function loadTransactions() {
+  const div = document.getElementById("transactions");
+  div.innerHTML = "";
 
-  if (!uid || !amount) {
-    alert("Fill all fields");
-    return;
-  }
+  const q = query(
+    collection(db, "transactions"),
+    where("status", "==", "pending")
+  );
 
-  try {
-    const userRef = doc(db, "users", uid);
+  const snap = await getDocs(q);
 
-    await updateDoc(userRef, {
-      wallet: increment(amount)
-    });
+  snap.forEach(docItem => {
+    const data = docItem.data();
 
-    alert("Wallet updated successfully ✔️");
+    div.innerHTML += `
+      <div class="item">
+        ₦${data.amount}
+        <button onclick="approve('${docItem.id}', '${data.uid}', ${data.amount})">
+          Approve
+        </button>
+      </div>
+    `;
+  });
+}
 
-    document.getElementById("uid").value = "";
-    document.getElementById("amount").value = "";
+// ✅ APPROVE PAYMENT
+window.approve = async function (txId, uid, amount) {
+  await updateDoc(doc(db, "users", uid), {
+    wallet: increment(amount)
+  });
 
-    loadUsers();
+  await updateDoc(doc(db, "transactions", txId), {
+    status: "approved"
+  });
 
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
+  alert("Approved!");
+  loadTransactions();
 };
 </script>
 
