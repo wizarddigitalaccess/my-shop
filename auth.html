@@ -79,8 +79,7 @@ button {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
-  signInWithEmailAndPassword,
-  sendEmailVerification
+  signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -108,14 +107,13 @@ window.login = async function () {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // 🔐 EMAIL VERIFICATION CHECK
+    // 🔐 IF NOT VERIFIED → GO TO VERIFY PAGE
     if (!user.emailVerified) {
-      msg.innerText = "Verify your email first!";
-      await sendEmailVerification(user);
+      window.location.href = "verify.html";
       return;
     }
 
-    // 🔥 ADMIN CHECK (basic for now)
+    // 🔥 ADMIN CHECK
     if (user.email === ADMIN_EMAIL) {
       window.location.href = "admin.html";
     } else {
