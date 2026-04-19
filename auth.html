@@ -101,42 +101,37 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 PREVENT LOOP
-let checked = false;
-
-// ✅ AUTO LOGIN (ROLE-BASED)
+// ✅ SAFE AUTO LOGIN (ROLE BASED)
 onAuthStateChanged(auth, async (user) => {
-  if (checked) return;
-  checked = true;
-
   if (!user) return;
 
   try {
-    // 🔐 EMAIL VERIFICATION
+    // 🔐 Check email verification
     if (!user.emailVerified) {
       window.location.href = "verify.html";
       return;
     }
 
-    const userRef = doc(db, "users", user.uid);
-    let snap = await getDoc(userRef);
+    const ref = doc(db, "users", user.uid);
+    let snap = await getDoc(ref);
 
-    // ✅ AUTO CREATE USER IF MISSING
+    // ✅ CREATE USER IF MISSING
     if (!snap.exists()) {
-      await setDoc(userRef, {
+      await setDoc(ref, {
         name: user.email.split("@")[0],
         email: user.email,
         wallet: 0,
         role: "user",
         verified: true
       });
-      snap = await getDoc(userRef);
+
+      snap = await getDoc(ref);
     }
 
-    const role = snap.data().role || "user";
+    const data = snap.data();
 
     // 🔥 ROLE-BASED REDIRECT
-    if (role === "admin") {
+    if (data.role === "admin") {
       window.location.href = "admin.html";
     } else {
       window.location.href = "index.html";
@@ -167,24 +162,26 @@ window.login = async function () {
       return;
     }
 
-    const userRef = doc(db, "users", user.uid);
-    let snap = await getDoc(userRef);
+    const ref = doc(db, "users", user.uid);
+    let snap = await getDoc(ref);
 
+    // ✅ CREATE USER DOC IF MISSING
     if (!snap.exists()) {
-      await setDoc(userRef, {
+      await setDoc(ref, {
         name: user.email.split("@")[0],
         email: user.email,
         wallet: 0,
         role: "user",
         verified: true
       });
-      snap = await getDoc(userRef);
+
+      snap = await getDoc(ref);
     }
 
-    const role = snap.data().role || "user";
+    const data = snap.data();
 
-    // 🔥 ROLE-BASED REDIRECT
-    if (role === "admin") {
+    // 🔥 ROLE CHECK (THIS FIXES YOUR ISSUE)
+    if (data.role === "admin") {
       window.location.href = "admin.html";
     } else {
       window.location.href = "index.html";
@@ -201,7 +198,7 @@ window.login = async function () {
   }
 };
 
-// 🔁 FORGOT PASSWORD
+// 🔁 RESET PASSWORD
 window.forgotPassword = async function () {
   const email = document.getElementById("email").value;
 
@@ -218,11 +215,10 @@ window.forgotPassword = async function () {
   }
 };
 
-// 🔁 SIGNUP
+// 🔁 SIGNUP PAGE
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
 </script>
-
 </body>
 </html>
