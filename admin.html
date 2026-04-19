@@ -41,14 +41,15 @@ button {
   border-bottom: 1px solid #333;
 }
 
-.success {
-  color: lightgreen;
-  font-size: 13px;
+.row-btn {
+  margin-top: 5px;
+  display: flex;
+  gap: 5px;
 }
 
-.error {
-  color: orange;
-  font-size: 13px;
+.row-btn button {
+  flex: 1;
+  font-size: 12px;
 }
 </style>
 </head>
@@ -58,34 +59,29 @@ button {
 <div class="container">
 
 <div class="card">
-<h2>Admin Panel</h2>
-<p>Manage products, users & payments</p>
+<h2>Admin Dashboard</h2>
 </div>
 
 <!-- ADD PRODUCT -->
 <div class="card">
 <h3>Add Product</h3>
-
 <input id="name" placeholder="Account Name">
 <input id="link" placeholder="Profile Link">
-<input id="category" placeholder="Category (e.g africa, usa, netflix)">
+<input id="category" placeholder="Category (e.g instagram, usa)">
 <input id="price" type="number" placeholder="Price">
-
 <button onclick="addProduct()">Add Product</button>
-
-<div id="msg"></div>
-</div>
-
-<!-- TRANSACTIONS -->
-<div class="card">
-<h3>Pending Payments</h3>
-<div id="transactions">Loading...</div>
 </div>
 
 <!-- USERS -->
 <div class="card">
-<h3>Users</h3>
+<h3>Manage Users</h3>
 <div id="users">Loading...</div>
+</div>
+
+<!-- PAYMENTS -->
+<div class="card">
+<h3>Pending Payments</h3>
+<div id="transactions">Loading...</div>
 </div>
 
 </div>
@@ -101,6 +97,7 @@ import {
   getDocs,
   doc,
   updateDoc,
+  deleteDoc,
   increment,
   query,
   where
@@ -117,9 +114,8 @@ const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
 
-// 🔐 ADMIN AUTH (STABLE)
-onAuthStateChanged(auth, async (user) => {
-
+// 🔐 ADMIN AUTH (NO LOOP)
+onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "auth.html";
     return;
@@ -136,47 +132,33 @@ onAuthStateChanged(auth, async (user) => {
   loadTransactions();
 });
 
-// ➕ ADD PRODUCT (FIXED + UPGRADED)
+// ➕ ADD PRODUCT (FIXED)
 window.addProduct = async function () {
-  const msg = document.getElementById("msg");
-
-  const name = document.getElementById("name").value.trim();
-  const link = document.getElementById("link").value.trim();
-  const category = document.getElementById("category").value.trim().toLowerCase();
+  const name = document.getElementById("name").value;
+  const link = document.getElementById("link").value;
+  const category = document.getElementById("category").value.toLowerCase();
   const price = Number(document.getElementById("price").value);
 
   if (!name || !link || !category || !price) {
-    msg.innerHTML = '<div class="error">Fill all fields</div>';
+    alert("Fill all fields");
     return;
   }
 
-  try {
-    // ✅ ADD PRODUCT
-    await addDoc(collection(db, "products"), {
-      name,
-      link,
-      category,
-      price,
-      status: "available",
-      createdAt: new Date()
-    });
+  await addDoc(collection(db, "products"), {
+    name,
+    link,
+    category,
+    price,
+    status: "available"
+  });
 
-    // ✅ SAVE CATEGORY (for future dynamic UI)
-    await addDoc(collection(db, "categories"), {
-      name: category
-    });
+  alert("Product added ✅");
 
-    msg.innerHTML = '<div class="success">Product added successfully ✔️</div>';
-
-    // CLEAR INPUTS
-    document.getElementById("name").value = "";
-    document.getElementById("link").value = "";
-    document.getElementById("category").value = "";
-    document.getElementById("price").value = "";
-
-  } catch (err) {
-    msg.innerHTML = '<div class="error">' + err.message + '</div>';
-  }
+  // clear inputs
+  document.getElementById("name").value = "";
+  document.getElementById("link").value = "";
+  document.getElementById("category").value = "";
+  document.getElementById("price").value = "";
 };
 
 // 👤 LOAD USERS
@@ -194,10 +176,69 @@ async function loadUsers() {
         <b>${data.name || "No Name"}</b><br>
         ${data.email}<br>
         Wallet: ₦${data.wallet || 0}
+
+        <div class="row-btn">
+          <button onclick="fundUser('${docItem.id}')">+Fund</button>
+          <button onclick="deductUser('${docItem.id}')">-Deduct</button>
+          <button onclick="editName('${docItem.id}')">Edit</button>
+          <button onclick="deleteUser('${docItem.id}')">Delete</button>
+        </div>
       </div>
     `;
   });
 }
+
+// 💰 FUND USER
+window.fundUser = async function (uid) {
+  const amount = Number(prompt("Enter amount to ADD"));
+
+  if (!amount || amount <= 0) return;
+
+  await updateDoc(doc(db, "users", uid), {
+    wallet: increment(amount)
+  });
+
+  alert("Wallet funded");
+  loadUsers();
+};
+
+// 💸 DEDUCT USER
+window.deductUser = async function (uid) {
+  const amount = Number(prompt("Enter amount to REMOVE"));
+
+  if (!amount || amount <= 0) return;
+
+  await updateDoc(doc(db, "users", uid), {
+    wallet: increment(-amount)
+  });
+
+  alert("Wallet deducted");
+  loadUsers();
+};
+
+// ✏️ EDIT NAME
+window.editName = async function (uid) {
+  const name = prompt("Enter new name");
+
+  if (!name) return;
+
+  await updateDoc(doc(db, "users", uid), {
+    name
+  });
+
+  alert("Name updated");
+  loadUsers();
+};
+
+// ❌ DELETE USER
+window.deleteUser = async function (uid) {
+  if (!confirm("Delete this user?")) return;
+
+  await deleteDoc(doc(db, "users", uid));
+
+  alert("User deleted");
+  loadUsers();
+};
 
 // 💳 LOAD TRANSACTIONS
 async function loadTransactions() {
@@ -222,7 +263,7 @@ async function loadTransactions() {
     div.innerHTML += `
       <div class="item">
         ₦${data.amount}<br>
-        UID: ${data.uid}<br>
+        UID: ${data.uid}
         <button onclick="approve('${docItem.id}', '${data.uid}', ${data.amount})">
           Approve
         </button>
@@ -241,7 +282,7 @@ window.approve = async function (txId, uid, amount) {
     status: "approved"
   });
 
-  alert("Payment approved ✔️");
+  alert("Payment approved ✅");
   loadTransactions();
 };
 </script>
