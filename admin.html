@@ -50,29 +50,31 @@ button {
 
 <div class="card">
 <h2>Admin Panel</h2>
+<p>Manage products, users & payments</p>
 </div>
 
 <!-- ADD PRODUCT -->
 <div class="card">
-<h3>Add Account</h3>
+<h3>Add Product</h3>
 
 <input id="name" placeholder="Account Name">
 <input id="link" placeholder="Profile Link">
-<input id="category" placeholder="Category (africa, usa)">
+<input id="category" placeholder="Category (africa, usa, instagram)">
+<input id="price" type="number" placeholder="Price">
 
-<button onclick="addProduct()">Add</button>
+<button onclick="addProduct()">Add Product</button>
 </div>
 
 <!-- TRANSACTIONS -->
 <div class="card">
 <h3>Pending Payments</h3>
-<div id="transactions"></div>
+<div id="transactions">Loading...</div>
 </div>
 
 <!-- USERS -->
 <div class="card">
 <h3>Users</h3>
-<div id="users"></div>
+<div id="users">Loading...</div>
 </div>
 
 </div>
@@ -93,20 +95,23 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+const app = initializeApp({
+  apiKey: "AIzaSyCkby...",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50",
-};
+});
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
+let ready = false;
 
-// 🔐 ADMIN CHECK
+// 🔐 ADMIN CHECK (FIXED)
 onAuthStateChanged(auth, (user) => {
+  if (ready) return;
+  ready = true;
+
   if (!user || user.email !== ADMIN_EMAIL) {
     window.location.href = "auth.html";
     return;
@@ -116,13 +121,14 @@ onAuthStateChanged(auth, (user) => {
   loadTransactions();
 });
 
-// ➕ ADD PRODUCT
+// ➕ ADD PRODUCT (WITH PRICE)
 window.addProduct = async function () {
   const name = document.getElementById("name").value;
   const link = document.getElementById("link").value;
-  const category = document.getElementById("category").value;
+  const category = document.getElementById("category").value.toLowerCase();
+  const price = Number(document.getElementById("price").value);
 
-  if (!name || !link || !category) {
+  if (!name || !link || !category || !price) {
     alert("Fill all fields");
     return;
   }
@@ -131,10 +137,16 @@ window.addProduct = async function () {
     name,
     link,
     category,
+    price,
     status: "available"
   });
 
-  alert("Product added");
+  alert("Product added ✔️");
+
+  document.getElementById("name").value = "";
+  document.getElementById("link").value = "";
+  document.getElementById("category").value = "";
+  document.getElementById("price").value = "";
 };
 
 // 👤 LOAD USERS
@@ -149,7 +161,10 @@ async function loadUsers() {
 
     div.innerHTML += `
       <div class="item">
-        ${data.name} - ₦${data.wallet}
+        <b>${data.name || "No Name"}</b><br>
+        ${data.email}<br>
+        Wallet: ₦${data.wallet || 0}<br>
+        UID: ${docItem.id}
       </div>
     `;
   });
@@ -167,12 +182,18 @@ async function loadTransactions() {
 
   const snap = await getDocs(q);
 
+  if (snap.empty) {
+    div.innerHTML = "No pending payments";
+    return;
+  }
+
   snap.forEach(docItem => {
     const data = docItem.data();
 
     div.innerHTML += `
       <div class="item">
-        ₦${data.amount}
+        ₦${data.amount}<br>
+        UID: ${data.uid}<br>
         <button onclick="approve('${docItem.id}', '${data.uid}', ${data.amount})">
           Approve
         </button>
@@ -191,7 +212,7 @@ window.approve = async function (txId, uid, amount) {
     status: "approved"
   });
 
-  alert("Approved!");
+  alert("Payment approved ✔️");
   loadTransactions();
 };
 </script>
