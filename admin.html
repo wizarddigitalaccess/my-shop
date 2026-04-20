@@ -44,6 +44,7 @@ button {
 
 <div class="container">
 
+<!-- DASHBOARD -->
 <div id="dashboard">
 <div class="card">
 <h3>Revenue Chart</h3>
@@ -58,6 +59,7 @@ Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
+<!-- USERS -->
 <div id="usersPage" style="display:none">
 <div class="card">
 <input id="userSearch" placeholder="Search users..." oninput="loadUsers()">
@@ -65,6 +67,7 @@ Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
+<!-- PRODUCTS -->
 <div id="productsPage" style="display:none">
 <div class="card">
 
@@ -82,6 +85,7 @@ Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
+<!-- ORDERS -->
 <div id="ordersPage" style="display:none">
 <div class="card">
 <h3>Orders</h3>
@@ -120,7 +124,7 @@ const db = getFirestore(app);
 let chartInstance;
 let checked = false;
 
-/* 🔐 STABLE ADMIN CHECK */
+/* 🔐 FIXED ADMIN AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if (checked) return;
 
@@ -134,9 +138,25 @@ onAuthStateChanged(auth, async (user)=>{
   checked = true;
 
   try{
-    const snap = await getDoc(doc(db,"users",user.uid));
+    const ref = doc(db,"users",user.uid);
+    let snap = await getDoc(ref);
 
-    if(!snap.exists() || snap.data().role !== "admin"){
+    /* AUTO CREATE USER */
+    if (!snap.exists()) {
+      await setDoc(ref,{
+        email:user.email,
+        name:user.email.split("@")[0],
+        wallet:0,
+        role:"user"
+      });
+      location.reload();
+      return;
+    }
+
+    const data = snap.data();
+
+    if (data.role !== "admin") {
+      alert("Not admin account");
       location.href="index.html";
       return;
     }
@@ -149,8 +169,8 @@ onAuthStateChanged(auth, async (user)=>{
     loadOrders();
 
   }catch(e){
-    console.error(e);
-    alert("Admin load error");
+    console.error("ADMIN ERROR:", e);
+    alert("Admin load failed");
   }
 });
 
@@ -160,9 +180,9 @@ async function loadDashboard(){
   const productsSnap = await getDocs(collection(db,"products"));
   const ordersSnap = await getDocs(collection(db,"orders"));
 
-  document.getElementById("usersCount").innerText = usersSnap.size;
-  document.getElementById("productsCount").innerText = productsSnap.size;
-  document.getElementById("ordersCount").innerText = ordersSnap.size;
+  usersCount.innerText = usersSnap.size;
+  productsCount.innerText = productsSnap.size;
+  ordersCount.innerText = ordersSnap.size;
 
   let revenue=0, days={};
 
@@ -176,11 +196,11 @@ async function loadDashboard(){
     }
   });
 
-  document.getElementById("revenue").innerText = revenue;
+  revenue.innerText = revenue;
 
   if(chartInstance) chartInstance.destroy();
 
-  chartInstance = new Chart(document.getElementById("chart"),{
+  chartInstance = new Chart(chart,{
     type:"line",
     data:{
       labels:Object.keys(days),
@@ -189,16 +209,51 @@ async function loadDashboard(){
   });
 }
 
+/* USERS */
+window.loadUsers = async ()=>{
+  const search = userSearch.value.toLowerCase();
+  users.innerHTML="";
+
+  const snap = await getDocs(collection(db,"users"));
+
+  snap.forEach(d=>{
+    const u=d.data();
+    if(!(u.email||"").toLowerCase().includes(search)) return;
+
+    users.innerHTML+=`
+    <div class="item">
+      ${u.name}<br>${u.email}<br>₦${u.wallet||0}
+      <div class="row">
+        <button onclick="fund('${d.id}')">Fund</button>
+        <button onclick="deleteUser('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+};
+
+window.fund = async(uid)=>{
+  const amount = Number(prompt("Amount"));
+  if(!amount) return;
+  await updateDoc(doc(db,"users",uid),{wallet:increment(amount)});
+  loadUsers();
+};
+
+window.deleteUser = async(uid)=>{
+  if(confirm("Delete user?")){
+    await deleteDoc(doc(db,"users",uid));
+    loadUsers();
+  }
+};
+
 /* PRODUCTS */
 window.loadProducts = async ()=>{
-  const search = document.getElementById("productSearch").value.toLowerCase();
-  const div = document.getElementById("products");
-  div.innerHTML="";
+  const search = productSearch.value.toLowerCase();
+  products.innerHTML="";
 
   const snap = await getDocs(collection(db,"products"));
 
-  for (const d of snap.docs){
-    const p = d.data();
+  for(const d of snap.docs){
+    const p=d.data();
     if(!p.name.toLowerCase().includes(search)) continue;
 
     const stockSnap = await getDoc(doc(db,"productStock",d.id));
@@ -208,7 +263,7 @@ window.loadProducts = async ()=>{
       left = stockSnap.data().items.filter(i=>!i.sold).length;
     }
 
-    div.innerHTML+=`
+    products.innerHTML+=`
     <div class="item">
       ${p.name} - ₦${p.price} | Stock: ${left}
       <div class="row">
@@ -220,35 +275,32 @@ window.loadProducts = async ()=>{
 
 /* ADD PRODUCT */
 window.addProduct = async ()=>{
-  const name = document.getElementById("name").value.trim();
-  const category = document.getElementById("category").value.trim().toLowerCase();
-  const price = Number(document.getElementById("price").value);
-  const raw = document.getElementById("stockData").value.trim();
+  const nameV = name.value.trim();
+  const categoryV = category.value.trim().toLowerCase();
+  const priceV = Number(price.value);
+  const raw = stockData.value.trim();
 
-  if(!name||!category||!price||!raw){
+  if(!nameV||!categoryV||!priceV||!raw){
     return alert("Fill all fields");
   }
 
   const ref = await addDoc(collection(db,"products"),{
-    name, category, price, status:"active"
+    name:nameV, category:categoryV, price:priceV, status:"active"
   });
 
-  const items = raw.split("\n")
-    .map(line=>line.trim())
-    .filter(line=>line.includes(":"))
-    .map(line=>{
-      const [email,password] = line.split(":");
-      return {email,password,sold:false};
-    });
+  const items = raw.split("\n").map(line=>{
+    const [email,password] = line.split(":");
+    return {email,password,sold:false};
+  });
 
   await setDoc(doc(db,"productStock",ref.id),{items});
 
   alert("Product added ✅");
 
-  document.getElementById("name").value="";
-  document.getElementById("category").value="";
-  document.getElementById("price").value="";
-  document.getElementById("stockData").value="";
+  name.value="";
+  category.value="";
+  price.value="";
+  stockData.value="";
 
   loadProducts();
 };
@@ -262,8 +314,40 @@ window.deleteProduct = async(id)=>{
   }
 };
 
+/* ORDERS */
+async function loadOrders(){
+  orders.innerHTML="";
+  const snap = await getDocs(collection(db,"orders"));
+
+  snap.forEach(d=>{
+    const o=d.data();
+    orders.innerHTML+=`
+    <div class="item">
+      ${o.name}<br>₦${o.price}<br>User: ${o.userId}
+    </div>`;
+  });
+}
+
 /* LOGOUT */
 window.logout=()=>signOut(auth).then(()=>location.href="auth.html");
+
+/* NAV */
+window.showPage=(p)=>{
+  dashboard.style.display="none";
+  usersPage.style.display="none";
+  productsPage.style.display="none";
+  ordersPage.style.display="none";
+
+  b1.classList.remove("active");
+  b2.classList.remove("active");
+  b3.classList.remove("active");
+  b4.classList.remove("active");
+
+  if(p==="dashboard"){dashboard.style.display="block";b1.classList.add("active");}
+  if(p==="users"){usersPage.style.display="block";b2.classList.add("active");}
+  if(p==="products"){productsPage.style.display="block";b3.classList.add("active");}
+  if(p==="orders"){ordersPage.style.display="block";b4.classList.add("active");}
+};
 </script>
 
 </body>
