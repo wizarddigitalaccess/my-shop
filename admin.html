@@ -261,17 +261,18 @@ window.addProduct = async ()=>{
   const nameV = name.value.trim();
   const cat = category.value.trim();
   const priceV = Number(price.value);
+  const desc = prompt("Enter product description");
 
   if(!nameV||!cat||!priceV) return alert("Fill fields");
 
-  const ref = await addDoc(collection(db,"products"),{
+  await addDoc(collection(db,"products"),{
     name:nameV,
     category:cat,
-    price:priceV
+    price:priceV,
+    description: desc || ""
   });
 
   alert("Added ✅");
-  name.value=""; category.value=""; price.value="";
   loadProducts();
 };
 
@@ -279,13 +280,15 @@ window.editProduct = async(id)=>{
   const n = prompt("Name");
   const c = prompt("Category");
   const p = Number(prompt("Price"));
+  const d = prompt("Description");
 
   if(!n||!c||!p) return;
 
   await updateDoc(doc(db,"products",id),{
     name:n,
     category:c,
-    price:p
+    price:p,
+    description:d || ""
   });
 
   loadProducts();
