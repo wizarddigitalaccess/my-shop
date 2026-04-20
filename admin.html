@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Pro</title>
+<title>Admin Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -44,7 +44,6 @@ button {
 
 <div class="container">
 
-<!-- DASHBOARD -->
 <div id="dashboard">
 <div class="card">
 <h3>Revenue Chart</h3>
@@ -59,7 +58,6 @@ Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
-<!-- USERS -->
 <div id="usersPage" style="display:none">
 <div class="card">
 <input id="userSearch" placeholder="Search users..." oninput="loadUsers()">
@@ -67,7 +65,6 @@ Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
-<!-- PRODUCTS -->
 <div id="productsPage" style="display:none">
 <div class="card">
 
@@ -77,7 +74,6 @@ Revenue: ₦<span id="revenue"></span>
 <input id="category" placeholder="Category">
 <input id="price" type="number" placeholder="Price">
 
-<!-- 🔥 MULTI STOCK INPUT -->
 <textarea id="stockData" placeholder="email:password (one per line)"></textarea>
 
 <button onclick="addProduct()">Add Product</button>
@@ -86,7 +82,6 @@ Revenue: ₦<span id="revenue"></span>
 </div>
 </div>
 
-<!-- ORDERS -->
 <div id="ordersPage" style="display:none">
 <div class="card">
 <h3>Orders</h3>
@@ -96,7 +91,6 @@ Revenue: ₦<span id="revenue"></span>
 
 </div>
 
-<!-- NAV -->
 <div class="nav">
 <button onclick="showPage('dashboard')" class="active" id="b1">Dashboard</button>
 <button onclick="showPage('users')" id="b2">Users</button>
@@ -113,7 +107,7 @@ import {
   getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ USE REAL CONFIG */
+/* ✅ CONFIG */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -124,13 +118,20 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let chartInstance;
+let checked = false;
 
-/* 🔐 ADMIN CHECK (SAFE) */
+/* 🔐 STABLE ADMIN CHECK */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    location.href="auth.html";
+  if (checked) return;
+
+  if (!user) {
+    setTimeout(()=>{
+      if (!auth.currentUser) location.href="auth.html";
+    }, 500);
     return;
   }
+
+  checked = true;
 
   try{
     const snap = await getDoc(doc(db,"users",user.uid));
@@ -149,7 +150,7 @@ onAuthStateChanged(auth, async (user)=>{
 
   }catch(e){
     console.error(e);
-    alert("Admin error");
+    alert("Admin load error");
   }
 });
 
@@ -159,15 +160,15 @@ async function loadDashboard(){
   const productsSnap = await getDocs(collection(db,"products"));
   const ordersSnap = await getDocs(collection(db,"orders"));
 
-  usersCount.innerText = usersSnap.size;
-  productsCount.innerText = productsSnap.size;
-  ordersCount.innerText = ordersSnap.size;
+  document.getElementById("usersCount").innerText = usersSnap.size;
+  document.getElementById("productsCount").innerText = productsSnap.size;
+  document.getElementById("ordersCount").innerText = ordersSnap.size;
 
   let revenue=0, days={};
 
   ordersSnap.forEach(d=>{
     const o=d.data();
-    revenue+=o.price||0;
+    revenue += o.price || 0;
 
     if(o.createdAt){
       const date = new Date(o.createdAt.seconds*1000).toLocaleDateString();
@@ -175,11 +176,11 @@ async function loadDashboard(){
     }
   });
 
-  revenueEl.innerText = revenue;
+  document.getElementById("revenue").innerText = revenue;
 
   if(chartInstance) chartInstance.destroy();
 
-  chartInstance = new Chart(chart,{
+  chartInstance = new Chart(document.getElementById("chart"),{
     type:"line",
     data:{
       labels:Object.keys(days),
@@ -188,44 +189,7 @@ async function loadDashboard(){
   });
 }
 
-/* USERS */
-window.loadUsers = async ()=>{
-  const search = document.getElementById("userSearch").value.toLowerCase();
-  const div = document.getElementById("users");
-  div.innerHTML="";
-
-  const snap = await getDocs(collection(db,"users"));
-
-  snap.forEach(d=>{
-    const u=d.data();
-    if(!(u.email||"").toLowerCase().includes(search)) return;
-
-    div.innerHTML+=`
-    <div class="item">
-      ${u.name}<br>${u.email}<br>₦${u.wallet||0}
-      <div class="row">
-        <button onclick="fund('${d.id}')">Fund</button>
-        <button onclick="deleteUser('${d.id}')">Delete</button>
-      </div>
-    </div>`;
-  });
-};
-
-window.fund = async(uid)=>{
-  const amount = Number(prompt("Amount"));
-  if(!amount) return;
-  await updateDoc(doc(db,"users",uid),{wallet:increment(amount)});
-  loadUsers();
-};
-
-window.deleteUser = async(uid)=>{
-  if(confirm("Delete user?")){
-    await deleteDoc(doc(db,"users",uid));
-    loadUsers();
-  }
-};
-
-/* PRODUCTS (WITH STOCK COUNT) */
+/* PRODUCTS */
 window.loadProducts = async ()=>{
   const search = document.getElementById("productSearch").value.toLowerCase();
   const div = document.getElementById("products");
@@ -233,9 +197,8 @@ window.loadProducts = async ()=>{
 
   const snap = await getDocs(collection(db,"products"));
 
-  for(const d of snap.docs){
+  for (const d of snap.docs){
     const p = d.data();
-
     if(!p.name.toLowerCase().includes(search)) continue;
 
     const stockSnap = await getDoc(doc(db,"productStock",d.id));
@@ -255,7 +218,7 @@ window.loadProducts = async ()=>{
   }
 };
 
-/* ADD PRODUCT (MULTI STOCK) */
+/* ADD PRODUCT */
 window.addProduct = async ()=>{
   const name = document.getElementById("name").value.trim();
   const category = document.getElementById("category").value.trim().toLowerCase();
@@ -270,14 +233,17 @@ window.addProduct = async ()=>{
     name, category, price, status:"active"
   });
 
-  const items = raw.split("\n").map(line=>{
-    const [email,password] = line.split(":");
-    return {email,password,sold:false};
-  });
+  const items = raw.split("\n")
+    .map(line=>line.trim())
+    .filter(line=>line.includes(":"))
+    .map(line=>{
+      const [email,password] = line.split(":");
+      return {email,password,sold:false};
+    });
 
   await setDoc(doc(db,"productStock",ref.id),{items});
 
-  alert("Product added with stock ✅");
+  alert("Product added ✅");
 
   document.getElementById("name").value="";
   document.getElementById("category").value="";
@@ -296,43 +262,8 @@ window.deleteProduct = async(id)=>{
   }
 };
 
-/* ORDERS */
-async function loadOrders(){
-  const div = document.getElementById("orders");
-  div.innerHTML="";
-
-  const snap = await getDocs(collection(db,"orders"));
-
-  snap.forEach(d=>{
-    const o=d.data();
-
-    div.innerHTML+=`
-    <div class="item">
-      ${o.name}<br>₦${o.price}<br>User: ${o.userId}
-    </div>`;
-  });
-}
-
 /* LOGOUT */
 window.logout=()=>signOut(auth).then(()=>location.href="auth.html");
-
-/* NAV */
-window.showPage=(p)=>{
-  dashboard.style.display="none";
-  usersPage.style.display="none";
-  productsPage.style.display="none";
-  ordersPage.style.display="none";
-
-  b1.classList.remove("active");
-  b2.classList.remove("active");
-  b3.classList.remove("active");
-  b4.classList.remove("active");
-
-  if(p==="dashboard"){dashboard.style.display="block";b1.classList.add("active");}
-  if(p==="users"){usersPage.style.display="block";b2.classList.add("active");}
-  if(p==="products"){productsPage.style.display="block";b3.classList.add("active");}
-  if(p==="orders"){ordersPage.style.display="block";b4.classList.add("active");}
-};
 </script>
 
 </body>
