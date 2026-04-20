@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wizard Digital Access</title>
 
 <style>
 body {
   margin:0;
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   background:#0f0f1a;
   color:white;
 }
@@ -17,6 +18,8 @@ body {
   padding:15px;
   display:flex;
   justify-content:space-between;
+  align-items:center;
+  gap:10px;
 }
 
 .header input {
@@ -40,6 +43,7 @@ body {
   padding:8px 12px;
   border-radius:20px;
   cursor:pointer;
+  white-space:nowrap;
 }
 
 .cat.active { background:purple; }
@@ -68,6 +72,7 @@ body {
 .row {
   display:flex;
   gap:5px;
+  margin-top:10px;
 }
 
 .row button {
@@ -77,6 +82,11 @@ body {
   border-radius:8px;
   background:purple;
   color:white;
+  cursor:pointer;
+}
+
+.row button:hover {
+  opacity:0.85;
 }
 
 .modal {
@@ -88,13 +98,15 @@ body {
   display:none;
   justify-content:center;
   align-items:center;
+  z-index:999;
 }
 
 .modal-content {
   background:#1c1c2e;
   padding:20px;
   border-radius:12px;
-  width:80%;
+  width:90%;
+  max-width:400px;
 }
 
 .nav {
@@ -121,7 +133,7 @@ body {
 
 <div class="header">
   <b>🛒 Wizard Digital Access</b>
-  <input id="search" placeholder="Search..." oninput="loadProducts()">
+  <input id="search" placeholder="Search...">
 </div>
 
 <div class="categories" id="categories"></div>
@@ -151,7 +163,7 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ CONFIG */
+/* 🔐 CONFIG (SAFE: isolated from admin panel) */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -166,6 +178,13 @@ let user = null;
 let allProducts = [];
 let currentCategory = "all";
 let loaded = false;
+
+/* DOM */
+const searchInput = document.getElementById("search");
+const productsDiv = document.getElementById("products");
+const categoriesDiv = document.getElementById("categories");
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modalContent");
 
 /* 🔐 AUTH */
 onAuthStateChanged(auth, async (u) => {
@@ -184,12 +203,16 @@ onAuthStateChanged(auth, async (u) => {
   }
 });
 
+/* SEARCH */
+searchInput.addEventListener("input", loadProducts);
+
 /* ICON */
 function getIcon(category){
-  if(category.includes("facebook")) return "📘";
-  if(category.includes("instagram")) return "📸";
-  if(category.includes("tiktok")) return "🎵";
-  if(category.includes("twitter")) return "🐦";
+  const c = category.toLowerCase();
+  if(c.includes("facebook")) return "📘";
+  if(c.includes("instagram")) return "📸";
+  if(c.includes("tiktok")) return "🎵";
+  if(c.includes("twitter")) return "🐦";
   return "📦";
 }
 
@@ -216,61 +239,100 @@ async function init(){
 
 /* CATEGORIES */
 function renderCats(cats){
-  const div = document.getElementById("categories");
+  categoriesDiv.innerHTML = "";
 
-  div.innerHTML = `<div class="cat active" onclick="setCat('all')">All</div>`;
+  const allBtn = createCatButton("All", "all");
+  allBtn.classList.add("active");
+  categoriesDiv.appendChild(allBtn);
 
   cats.forEach(c=>{
-    div.innerHTML += `<div class="cat" onclick="setCat('${c}')">${c}</div>`;
+    categoriesDiv.appendChild(createCatButton(c, c));
   });
 }
 
-window.setCat = (c)=>{
-  currentCategory = c;
-  document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active"));
-  event.target.classList.add("active");
-  loadProducts();
-};
+function createCatButton(label, value){
+  const btn = document.createElement("div");
+  btn.className = "cat";
+  btn.textContent = label;
 
-/* LOAD */
-window.loadProducts = ()=>{
-  const search = document.getElementById("search").value.toLowerCase();
-  const div = document.getElementById("products");
+  btn.addEventListener("click", () => {
+    currentCategory = value;
 
-  div.innerHTML = "";
+    document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active"));
+    btn.classList.add("active");
+
+    loadProducts();
+  });
+
+  return btn;
+}
+
+/* LOAD PRODUCTS */
+function loadProducts(){
+  const search = searchInput.value.toLowerCase();
+  productsDiv.innerHTML = "";
 
   allProducts.forEach(p=>{
     if(currentCategory !== "all" && p.category !== currentCategory) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
-    div.innerHTML += `
-    <div class="card">
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
       <div class="icon">${getIcon(p.category)}</div>
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
+    `;
 
-      <div class="row">
-        <button onclick="preview('${p.id}')">Preview</button>
-        <button onclick="buy('${p.id}')">Buy</button>
-      </div>
-    </div>`;
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const previewBtn = document.createElement("button");
+    previewBtn.textContent = "Preview";
+    previewBtn.onclick = () => preview(p.id);
+
+    const buyBtn = document.createElement("button");
+    buyBtn.textContent = "Buy";
+    buyBtn.onclick = () => buy(p.id);
+
+    row.appendChild(previewBtn);
+    row.appendChild(buyBtn);
+    card.appendChild(row);
+
+    productsDiv.appendChild(card);
   });
-};
+}
 
 /* PREVIEW */
-window.preview = async(id)=>{
+async function preview(id){
   const snap = await getDoc(doc(db,"products",id));
   const p = snap.data();
 
   modalContent.innerHTML = `
-  <h3>${p.name}</h3>
-  <p>${p.description || "No description"}</p>
-  <p>Category: ${p.category}</p>
-  <button onclick="modal.style.display='none'">Close</button>
-`;
+    <h3>${p.name}</h3>
+    <p>${p.description || "No description"}</p>
+    <p>Category: ${p.category}</p>
+    <br>
+    <button id="closeModal">Close</button>
+  `;
 
-/* 🔥 BUY WITH STOCK DELIVERY */
-window.buy = async(id)=>{
+  modal.style.display = "flex";
+
+  document.getElementById("closeModal").onclick = () => {
+    modal.style.display = "none";
+  };
+}
+
+/* CLOSE MODAL ON OUTSIDE CLICK */
+modal.addEventListener("click", (e)=>{
+  if(e.target === modal){
+    modal.style.display = "none";
+  }
+});
+
+/* BUY */
+async function buy(id){
   try{
     const pRef = doc(db,"products",id);
     const pSnap = await getDoc(pRef);
@@ -284,7 +346,6 @@ window.buy = async(id)=>{
       return alert("Insufficient balance");
     }
 
-    // 🔥 GET STOCK
     const stockRef = doc(db,"productStock",id);
     const stockSnap = await getDoc(stockRef);
 
@@ -293,7 +354,6 @@ window.buy = async(id)=>{
     }
 
     let items = stockSnap.data().items;
-
     const index = items.findIndex(i => !i.sold);
 
     if(index === -1){
@@ -303,10 +363,8 @@ window.buy = async(id)=>{
     const item = items[index];
     items[index].sold = true;
 
-    // 💸 deduct wallet
     await updateDoc(uRef,{wallet:u.wallet - p.price});
 
-    // 🧾 create order WITH credentials
     await addDoc(collection(db,"orders"),{
       userId:user.uid,
       productId:id,
@@ -317,7 +375,6 @@ window.buy = async(id)=>{
       createdAt:new Date()
     });
 
-    // 💾 update stock
     await updateDoc(stockRef,{items});
 
     alert("Purchase successful ✅");
@@ -327,7 +384,7 @@ window.buy = async(id)=>{
     console.error(err);
     alert("Error processing purchase");
   }
-};
+}
 </script>
 
 </body>

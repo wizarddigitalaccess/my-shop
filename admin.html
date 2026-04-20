@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
 
@@ -9,103 +9,144 @@
 
 <style>
 body { margin:0; font-family: Arial; background:#0f0f1a; color:white; display:none; }
-.header { padding:15px; background:#1c1c2e; display:flex; justify-content:space-between; }
+
+.header {
+  padding:15px;
+  background:#1c1c2e;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
 .container { padding:15px; }
-.card { background:#1c1c2e; padding:15px; border-radius:12px; margin-bottom:15px; }
+
+.card {
+  background:#1c1c2e;
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:15px;
+}
 
 input, textarea {
-  width:100%; padding:10px; margin-top:8px;
-  border:none; border-radius:8px; background:#111; color:white;
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
 }
 
 button {
-  width:100%; padding:10px; margin-top:8px;
-  border:none; border-radius:8px; background:purple; color:white;
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
+  cursor:pointer;
 }
 
-.item { padding:10px; border-bottom:1px solid #333; }
-.row { display:flex; gap:5px; }
-.row button { flex:1; font-size:12px; }
+button:hover { opacity:0.85; }
+
+.item {
+  padding:10px;
+  border-bottom:1px solid #333;
+}
+
+.row {
+  display:flex;
+  gap:5px;
+}
+
+.row button {
+  flex:1;
+  font-size:12px;
+}
 
 .nav {
-  position:fixed; bottom:0; width:100%;
-  display:flex; background:#111;
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  background:#111;
 }
-.nav button { flex:1; background:none; color:gray; }
+
+.nav button {
+  flex:1;
+  background:none;
+  color:gray;
+}
+
 .nav button.active { color:purple; }
 </style>
-
 </head>
 
 <body>
 
 <div class="header">
   <span>Admin Dashboard</span>
-  <button onclick="logout()" style="width:auto;background:red;">Logout</button>
+  <button id="logoutBtn" style="width:auto;background:red;">Logout</button>
 </div>
 
 <div class="container">
 
 <!-- DASHBOARD -->
-
 <div id="dashboard">
-<div class="card">
-<h3>Revenue Chart</h3>
-<canvas id="chart"></canvas>
-</div>
+  <div class="card">
+    <h3>Revenue Chart</h3>
+    <canvas id="chart"></canvas>
+  </div>
 
-<div class="card">
-Users: <span id="usersCount"></span><br>
-Products: <span id="productsCount"></span><br>
-Orders: <span id="ordersCount"></span><br>
-Revenue: ₦<span id="revenue"></span>
-</div>
+  <div class="card">
+    Users: <span id="usersCount"></span><br>
+    Products: <span id="productsCount"></span><br>
+    Orders: <span id="ordersCount"></span><br>
+    Revenue: ₦<span id="revenue"></span>
+  </div>
 </div>
 
 <!-- USERS -->
-
 <div id="usersPage" style="display:none">
-<div class="card">
-<input id="userSearch" placeholder="Search users..." oninput="loadUsers()">
-<div id="users"></div>
-</div>
+  <div class="card">
+    <input id="userSearch" placeholder="Search users...">
+    <div id="users"></div>
+  </div>
 </div>
 
 <!-- PRODUCTS -->
-
 <div id="productsPage" style="display:none">
-<div class="card">
+  <div class="card">
 
-<input id="productSearch" placeholder="Search products..." oninput="loadProducts()">
+    <input id="productSearch" placeholder="Search products...">
 
-<input id="name" placeholder="Product Name">
-<input id="category" placeholder="Category">
-<input id="price" type="number" placeholder="Price">
+    <input id="name" placeholder="Product Name">
+    <input id="category" placeholder="Category">
+    <input id="price" type="number" placeholder="Price">
+    <textarea id="stockData" placeholder="email:password"></textarea>
 
-<textarea id="stockData" placeholder="email:password"></textarea>
+    <button id="addProductBtn">Add Product</button>
 
-<button onclick="addProduct()">Add Product</button>
-
-<div id="products"></div>
-</div>
+    <div id="products"></div>
+  </div>
 </div>
 
 <!-- ORDERS -->
-
 <div id="ordersPage" style="display:none">
-<div class="card">
-<h3>Transactions</h3>
-<div id="orders"></div>
-</div>
+  <div class="card">
+    <h3>Transactions</h3>
+    <div id="orders"></div>
+  </div>
 </div>
 
 </div>
 
 <div class="nav">
-<button onclick="showPage('dashboard')" class="active" id="b1">Dashboard</button>
-<button onclick="showPage('users')" id="b2">Users</button>
-<button onclick="showPage('products')" id="b3">Products</button>
-<button onclick="showPage('orders')" id="b4">Orders</button>
+<button data-page="dashboard" class="active">Dashboard</button>
+<button data-page="users">Users</button>
+<button data-page="products">Products</button>
+<button data-page="orders">Orders</button>
 </div>
 
 <script type="module">
@@ -114,9 +155,10 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 import {
   getFirestore, collection, getDocs, doc,
   updateDoc, deleteDoc, addDoc, increment,
-  getDoc, setDoc
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* CONFIG (ISOLATED) */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -126,21 +168,25 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+/* STATE */
 let chartInstance;
-let started = false;
+let usersData = [];
+let productsData = [];
+let ordersData = [];
 
-/* AUTH FIX */
+/* DOM */
+const usersDiv = document.getElementById("users");
+const productsDiv = document.getElementById("products");
+const ordersDiv = document.getElementById("orders");
+
+/* AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(started) return;
-
   if(!user){
     setTimeout(()=>{
       if(!auth.currentUser) location.href="auth.html";
     },500);
     return;
   }
-
-  started = true;
 
   const snap = await getDoc(doc(db,"users",user.uid));
 
@@ -151,37 +197,38 @@ onAuthStateChanged(auth, async (user)=>{
 
   document.body.style.display="block";
 
-  loadDashboard();
-  loadUsers();
-  loadProducts();
-  loadOrders();
+  init();
 });
+
+/* INIT */
+async function init(){
+  await loadDashboard();
+  await loadUsers();
+  await loadProducts();
+  await loadOrders();
+}
 
 /* DASHBOARD */
 async function loadDashboard(){
   const usersSnap = await getDocs(collection(db,"users"));
   const productsSnap = await getDocs(collection(db,"products"));
-  const transSnap = await getDocs(collection(db,"transaction"));
+  const ordersSnap = await getDocs(collection(db,"orders"));
 
-  usersCount.innerText = usersSnap.size;
-  productsCount.innerText = productsSnap.size;
-  ordersCount.innerText = transSnap.size;
+  document.getElementById("usersCount").innerText = usersSnap.size;
+  document.getElementById("productsCount").innerText = productsSnap.size;
+  document.getElementById("ordersCount").innerText = ordersSnap.size;
 
   let revenue = 0;
   let days = {};
 
-  transSnap.forEach(d=>{
+  ordersSnap.forEach(d=>{
     const o = d.data();
-    const amt = Number(o.amount || 0);
-    revenue += amt;
+    revenue += Number(o.price || 0);
 
     if(o.createdAt){
-      const date = o.createdAt.seconds
-        ? new Date(o.createdAt.seconds*1000)
-        : new Date(o.createdAt);
-
+      const date = new Date(o.createdAt);
       const key = date.toLocaleDateString();
-      days[key] = (days[key]||0)+amt;
+      days[key] = (days[key]||0) + Number(o.price||0);
     }
   });
 
@@ -189,146 +236,202 @@ async function loadDashboard(){
 
   if(chartInstance) chartInstance.destroy();
 
-  chartInstance = new Chart(chart,{
+  chartInstance = new Chart(document.getElementById("chart"),{
     type:"line",
     data:{
       labels:Object.keys(days),
-      datasets:[{label:"Revenue",data:Object.values(days)}]
+      datasets:[{label:"Revenue", data:Object.values(days)}]
     }
   });
 }
 
 /* USERS */
-window.loadUsers = async ()=>{
-  users.innerHTML="";
+async function loadUsers(){
+  usersDiv.innerHTML="";
   const snap = await getDocs(collection(db,"users"));
+  usersData = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderUsers();
+}
 
-  snap.forEach(d=>{
-    const u=d.data();
-    users.innerHTML+=`
-    <div class="item">
-      ${u.email}<br>₦${u.wallet||0}
-      <div class="row">
-        <button onclick="fund('${d.id}')">+Fund</button>
-        <button onclick="deduct('${d.id}')">-Deduct</button>
-        <button onclick="deleteUser('${d.id}')">Delete</button>
-      </div>
-    </div>`;
+function renderUsers(){
+  const search = document.getElementById("userSearch").value.toLowerCase();
+
+  usersDiv.innerHTML="";
+
+  usersData
+    .filter(u => (u.email||"").toLowerCase().includes(search))
+    .forEach(u=>{
+      const div = document.createElement("div");
+      div.className="item";
+
+      div.innerHTML = `
+        ${u.email}<br>₦${u.wallet||0}
+      `;
+
+      const row = document.createElement("div");
+      row.className="row";
+
+      const fund = document.createElement("button");
+      fund.textContent="+Fund";
+      fund.onclick=()=>updateWallet(u.id,true);
+
+      const deduct = document.createElement("button");
+      deduct.textContent="-Deduct";
+      deduct.onclick=()=>updateWallet(u.id,false);
+
+      const del = document.createElement("button");
+      del.textContent="Delete";
+      del.onclick=()=>deleteUser(u.id);
+
+      row.append(fund,deduct,del);
+      div.appendChild(row);
+      usersDiv.appendChild(div);
+    });
+}
+
+/* WALLET */
+async function updateWallet(id, add){
+  const amt = Number(prompt("Amount"));
+  if(!amt) return;
+
+  await updateDoc(doc(db,"users",id),{
+    wallet: increment(add ? amt : -amt)
   });
-};
 
-window.fund = async(id)=>{
-  const amt = Number(prompt("Amount"));
-  if(!amt) return;
-  await updateDoc(doc(db,"users",id),{wallet:increment(amt)});
   loadUsers();
-};
+}
 
-window.deduct = async(id)=>{
-  const amt = Number(prompt("Amount"));
-  if(!amt) return;
-  await updateDoc(doc(db,"users",id),{wallet:increment(-amt)});
-  loadUsers();
-};
-
-window.deleteUser = async(id)=>{
+async function deleteUser(id){
   if(confirm("Delete user?")){
     await deleteDoc(doc(db,"users",id));
     loadUsers();
   }
-};
+}
 
 /* PRODUCTS */
-window.loadProducts = async ()=>{
-  products.innerHTML="";
+async function loadProducts(){
+  productsDiv.innerHTML="";
   const snap = await getDocs(collection(db,"products"));
+  productsData = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderProducts();
+}
 
-  snap.forEach(d=>{
-    const p=d.data();
+function renderProducts(){
+  const search = document.getElementById("productSearch").value.toLowerCase();
 
-    products.innerHTML+=`
-    <div class="item">
-      ${p.name} - ₦${p.price}
-      <div class="row">
-        <button onclick="editProduct('${d.id}')">Edit</button>
-        <button onclick="deleteProduct('${d.id}')">Delete</button>
-      </div>
-    </div>`;
-  });
-};
+  productsDiv.innerHTML="";
 
-window.addProduct = async ()=>{
-  const nameV = name.value.trim();
-  const cat = category.value.trim();
-  const priceV = Number(price.value);
-  const desc = prompt("Enter product description");
+  productsData
+    .filter(p => p.name.toLowerCase().includes(search))
+    .forEach(p=>{
+      const div = document.createElement("div");
+      div.className="item";
 
-  if(!nameV||!cat||!priceV) return alert("Fill fields");
+      div.innerHTML = `${p.name} - ₦${p.price}`;
+
+      const row = document.createElement("div");
+      row.className="row";
+
+      const edit = document.createElement("button");
+      edit.textContent="Edit";
+      edit.onclick=()=>editProduct(p.id);
+
+      const del = document.createElement("button");
+      del.textContent="Delete";
+      del.onclick=()=>deleteProduct(p.id);
+
+      row.append(edit,del);
+      div.appendChild(row);
+      productsDiv.appendChild(div);
+    });
+}
+
+/* ADD PRODUCT */
+document.getElementById("addProductBtn").onclick = async ()=>{
+  const name = document.getElementById("name").value.trim();
+  const category = document.getElementById("category").value.trim();
+  const price = Number(document.getElementById("price").value);
+
+  if(!name || !category || !price){
+    return alert("Fill all fields");
+  }
 
   await addDoc(collection(db,"products"),{
-    name:nameV,
-    category:cat,
-    price:priceV,
-    description: desc || ""
+    name, category, price
   });
 
   alert("Added ✅");
   loadProducts();
 };
 
-window.editProduct = async(id)=>{
-  const n = prompt("Name");
-  const c = prompt("Category");
-  const p = Number(prompt("Price"));
-  const d = prompt("Description");
+/* EDIT */
+async function editProduct(id){
+  const name = prompt("Name");
+  const category = prompt("Category");
+  const price = Number(prompt("Price"));
 
-  if(!n||!c||!p) return;
+  if(!name || !category || !price) return;
 
   await updateDoc(doc(db,"products",id),{
-    name:n,
-    category:c,
-    price:p,
-    description:d || ""
+    name, category, price
   });
 
   loadProducts();
-};
+}
 
-window.deleteProduct = async(id)=>{
+/* DELETE */
+async function deleteProduct(id){
   if(confirm("Delete?")){
     await deleteDoc(doc(db,"products",id));
     loadProducts();
   }
-};
+}
 
-/* TRANSACTIONS */
+/* ORDERS */
 async function loadOrders(){
-  orders.innerHTML="";
-  const snap = await getDocs(collection(db,"transaction"));
+  ordersDiv.innerHTML="";
+  const snap = await getDocs(collection(db,"orders"));
 
   snap.forEach(d=>{
-    const o=d.data();
-    orders.innerHTML+=`
-    <div class="item">
-      ₦${o.amount}<br>${o.userId||""}
-    </div>`;
+    const o = d.data();
+
+    const div = document.createElement("div");
+    div.className="item";
+    div.innerHTML = `
+      ₦${o.price}<br>
+      ${o.name}<br>
+      ${o.userId}
+    `;
+
+    ordersDiv.appendChild(div);
   });
 }
 
 /* NAV */
-window.showPage=(p)=>{
-  dashboard.style.display="none";
-  usersPage.style.display="none";
-  productsPage.style.display="none";
-  ordersPage.style.display="none";
+document.querySelectorAll(".nav button").forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
 
-  if(p==="dashboard") dashboard.style.display="block";
-  if(p==="users") usersPage.style.display="block";
-  if(p==="products") productsPage.style.display="block";
-  if(p==="orders") ordersPage.style.display="block";
+    const page = btn.dataset.page;
+
+    document.getElementById("dashboard").style.display="none";
+    document.getElementById("usersPage").style.display="none";
+    document.getElementById("productsPage").style.display="none";
+    document.getElementById("ordersPage").style.display="none";
+
+    document.getElementById(page + (page==="dashboard"?"":"Page")).style.display="block";
+  };
+});
+
+/* SEARCH EVENTS */
+document.getElementById("userSearch").addEventListener("input", renderUsers);
+document.getElementById("productSearch").addEventListener("input", renderProducts);
+
+/* LOGOUT */
+document.getElementById("logoutBtn").onclick = ()=>{
+  signOut(auth).then(()=>location.href="auth.html");
 };
-
-window.logout=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 
 </body>
