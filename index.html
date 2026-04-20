@@ -92,16 +92,12 @@ body {
   cursor:pointer;
 }
 
-.row button:hover {
-  opacity:0.85;
-}
-
 .modal {
   position:fixed;
   top:0; left:0;
   width:100%;
   height:100%;
-  background:rgba(0,0,0,0.8);
+  background:rgba(0,0,0,0.85);
   display:none;
   justify-content:center;
   align-items:center;
@@ -171,7 +167,7 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG */
+/* CONFIG (ISOLATED FROM ADMIN) */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -253,14 +249,14 @@ function createCatButton(label, value){
   btn.className = "cat";
   btn.textContent = label;
 
-  btn.addEventListener("click", () => {
+  btn.onclick = ()=>{
     currentCategory = value;
 
     document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active"));
     btn.classList.add("active");
 
     loadProducts();
-  });
+  };
 
   return btn;
 }
@@ -286,16 +282,17 @@ function loadProducts(){
     const row = document.createElement("div");
     row.className = "row";
 
+    /* PREVIEW BUTTON */
     const previewBtn = document.createElement("button");
     previewBtn.textContent = "Preview";
-    previewBtn.onclick = () => preview(p.id);
+    previewBtn.onclick = ()=>preview(p);
 
+    /* BUY BUTTON */
     const buyBtn = document.createElement("button");
     buyBtn.textContent = "Buy";
-    buyBtn.onclick = () => buy(p.id);
+    buyBtn.onclick = ()=>buy(p.id);
 
-    row.appendChild(previewBtn);
-    row.appendChild(buyBtn);
+    row.append(previewBtn, buyBtn);
     card.appendChild(row);
 
     productsDiv.appendChild(card);
@@ -303,32 +300,35 @@ function loadProducts(){
 }
 
 /* PREVIEW */
-async function preview(id){
-  const snap = await getDoc(doc(db,"products",id));
-  const p = snap.data();
-
+function preview(p){
   modalContent.innerHTML = `
     <img src="${p.logo || ''}" class="logo">
     <h3>${p.name}</h3>
     <p>${p.description || "No description"}</p>
-    <p>Category: ${p.category}</p>
-    <br>
+
+    ${p.previewLink ? `
+      <a href="${p.previewLink}" target="_blank">
+        <button style="margin-top:10px;background:#444">Open Preview</button>
+      </a>
+    ` : ""}
+
+    <br><br>
     <button id="closeModal">Close</button>
   `;
 
   modal.style.display = "flex";
 
-  document.getElementById("closeModal").onclick = () => {
+  document.getElementById("closeModal").onclick = ()=>{
     modal.style.display = "none";
   };
 }
 
 /* CLOSE MODAL */
-modal.addEventListener("click", (e)=>{
+modal.onclick = (e)=>{
   if(e.target === modal){
     modal.style.display = "none";
   }
-});
+};
 
 /* BUY */
 async function buy(id){
@@ -376,7 +376,11 @@ async function buy(id){
 
     await updateDoc(stockRef,{items});
 
-    alert("Purchase successful ✅");
+    alert(`✅ Purchase successful
+
+Email: ${item.email}
+Password: ${item.password}`);
+
     location.href = "orders.html";
 
   }catch(err){

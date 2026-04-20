@@ -48,8 +48,6 @@ button {
   cursor:pointer;
 }
 
-button:hover { opacity:0.85; }
-
 .item {
   display:flex;
   align-items:center;
@@ -119,12 +117,14 @@ button:hover { opacity:0.85; }
 
     <h3>Add Product</h3>
 
-    <input id="name" placeholder="Product Name (e.g Facebook Account)">
+    <input id="name" placeholder="Product Name">
     <input id="category" placeholder="Category">
     <input id="price" type="number" placeholder="Price">
-    <input id="domain" placeholder="Domain (facebook.com)">
-    <input id="logoInput" placeholder="Custom Logo URL (optional)">
     
+    <input id="domain" placeholder="Paste ANY link or domain">
+    <input id="logoInput" placeholder="Custom Logo URL (optional)">
+    <input id="previewLink" placeholder="Preview Link (optional)">
+
     <img id="logoPreview" class="logo">
 
     <textarea id="stockData" placeholder="email:password per line"></textarea>
@@ -164,7 +164,6 @@ import {
   getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -174,14 +173,7 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* STATE */
 let chartInstance;
-let usersData = [];
-let productsData = [];
-
-/* DOM */
-const usersDiv = document.getElementById("users");
-const productsDiv = document.getElementById("products");
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
@@ -211,21 +203,79 @@ async function init(){
   loadOrders();
 }
 
-/* LOGO SYSTEM */
+/* DOMAIN CLEANER */
+function cleanDomain(input){
+  if(!input) return "";
+  try {
+    const url = new URL(input);
+    return url.hostname.replace("www.","");
+  } catch {
+    return input.replace("www.","").split("/")[0];
+  }
+}
+
+/* LOGO */
 function getLogo(domain, custom){
   if(custom) return custom;
   if(!domain) return "";
   return `https://logo.clearbit.com/${domain}`;
 }
 
+/* LIVE PREVIEW */
 function updateLogoPreview(){
-  const domain = document.getElementById("domain").value;
+  const raw = document.getElementById("domain").value;
+  const clean = cleanDomain(raw);
   const custom = document.getElementById("logoInput").value;
-  document.getElementById("logoPreview").src = getLogo(domain, custom);
+  document.getElementById("logoPreview").src = getLogo(clean, custom);
 }
 
-document.getElementById("domain").addEventListener("input", updateLogoPreview);
-document.getElementById("logoInput").addEventListener("input", updateLogoPreview);
+domain.oninput = updateLogoPreview;
+logoInput.oninput = updateLogoPreview;
+
+/* ADD PRODUCT */
+addProductBtn.onclick = async ()=>{
+  const name = nameInput.value.trim();
+  const category = categoryInput.value.trim();
+  const price = Number(priceInput.value);
+  const rawDomain = domain.value.trim();
+  const custom = logoInput.value.trim();
+  const previewLink = previewLinkInput.value.trim();
+
+  if(!name || !category || !price){
+    return alert("Fill all fields");
+  }
+
+  const clean = cleanDomain(rawDomain);
+  const logo = getLogo(clean, custom);
+
+  const ref = await addDoc(collection(db,"products"),{
+    name,
+    category,
+    price,
+    domain: clean,
+    logo,
+    previewLink
+  });
+
+  const lines = stockData.value.split("\n");
+
+  const items = lines
+    .map(l => l.trim())
+    .filter(l => l.includes(":"))
+    .map(l=>{
+      const [email,password]=l.split(":");
+      return {
+        email: email.trim(),
+        password: password.trim(),
+        sold:false
+      };
+    });
+
+  await setDoc(doc(db,"productStock",ref.id),{items});
+
+  alert("Product added 🚀");
+  loadProducts();
+};
 
 /* DASHBOARD */
 async function loadDashboard(){
@@ -251,7 +301,7 @@ async function loadDashboard(){
     }
   });
 
-  revenueEl.innerText = revenue;
+  document.getElementById("revenue").innerText = revenue;
 
   if(chartInstance) chartInstance.destroy();
 
@@ -266,150 +316,31 @@ async function loadDashboard(){
 
 /* USERS */
 async function loadUsers(){
-  usersDiv.innerHTML="";
+  users.innerHTML="";
   const snap = await getDocs(collection(db,"users"));
-  usersData = snap.docs.map(d=>({id:d.id,...d.data()}));
-  renderUsers();
-}
 
-function renderUsers(){
-  const search = userSearch.value.toLowerCase();
-
-  usersDiv.innerHTML="";
-  usersData
-    .filter(u => (u.email||"").toLowerCase().includes(search))
-    .forEach(u=>{
-      const div=document.createElement("div");
-      div.className="item";
-      div.innerHTML=`${u.email}<br>₦${u.wallet||0}`;
-
-      const row=document.createElement("div");
-      row.className="row";
-
-      ["+Fund","-Deduct","Delete"].forEach((t,i)=>{
-        const b=document.createElement("button");
-        b.textContent=t;
-        b.onclick=()=> i===0?updateWallet(u.id,true):i===1?updateWallet(u.id,false):deleteUser(u.id);
-        row.appendChild(b);
-      });
-
-      div.appendChild(row);
-      usersDiv.appendChild(div);
-    });
-}
-
-async function updateWallet(id,add){
-  const amt=Number(prompt("Amount"));
-  if(!amt)return;
-  await updateDoc(doc(db,"users",id),{wallet:increment(add?amt:-amt)});
-  loadUsers();
-}
-
-async function deleteUser(id){
-  if(confirm("Delete user?")){
-    await deleteDoc(doc(db,"users",id));
-    loadUsers();
-  }
+  snap.forEach(d=>{
+    const u=d.data();
+    users.innerHTML+=`
+    <div class="item">
+      ${u.email}<br>₦${u.wallet||0}
+    </div>`;
+  });
 }
 
 /* PRODUCTS */
 async function loadProducts(){
-  productsDiv.innerHTML="";
+  products.innerHTML="";
   const snap = await getDocs(collection(db,"products"));
-  productsData = snap.docs.map(d=>({id:d.id,...d.data()}));
-  renderProducts();
-}
 
-function renderProducts(){
-  const search = productSearch.value.toLowerCase();
-
-  productsDiv.innerHTML="";
-  productsData
-    .filter(p => p.name.toLowerCase().includes(search))
-    .forEach(p=>{
-      const div=document.createElement("div");
-      div.className="item";
-
-      div.innerHTML=`
-        <img src="${p.logo||""}" class="logo">
-        <div>${p.name}<br>₦${p.price}</div>
-      `;
-
-      const row=document.createElement("div");
-      row.className="row";
-
-      const edit=document.createElement("button");
-      edit.textContent="Edit";
-      edit.onclick=()=>editProduct(p.id);
-
-      const del=document.createElement("button");
-      del.textContent="Delete";
-      del.onclick=()=>deleteProduct(p.id);
-
-      row.append(edit,del);
-      div.appendChild(row);
-
-      productsDiv.appendChild(div);
-    });
-}
-
-/* ADD PRODUCT */
-addProductBtn.onclick = async ()=>{
-  const name = document.getElementById("name").value.trim();
-  const category = document.getElementById("category").value.trim();
-  const price = Number(document.getElementById("price").value);
-  const domain = document.getElementById("domain").value.trim().toLowerCase();
-  const custom = document.getElementById("logoInput").value.trim();
-
-  if(!name || !category || !price){
-    return alert("Fill all fields");
-  }
-
-  // 🔥 AUTO CLEAN DOMAIN (VERY IMPORTANT)
-  const cleanDomain = domain
-    .replace("https://","")
-    .replace("http://","")
-    .replace("www.","")
-    .split("/")[0];
-
-  // 🔥 GENERATE LOGO
-  const logo = getLogo(cleanDomain, custom);
-
-  // ✅ SAVE PRODUCT WITH LOGO
-  const ref = await addDoc(collection(db,"products"),{
-    name,
-    category,
-    price,
-    domain: cleanDomain,
-    logo // ← THIS IS THE KEY FIELD
+  snap.forEach(d=>{
+    const p=d.data();
+    products.innerHTML+=`
+    <div class="item">
+      <img src="${p.logo||""}" class="logo">
+      <div>${p.name}<br>₦${p.price}</div>
+    </div>`;
   });
-
-  // 🔥 STOCK SYSTEM
-  const lines = document.getElementById("stockData").value.split("\n");
-
-  const items = lines
-    .filter(l => l.includes(":"))
-    .map(l=>{
-      const [email,password]=l.split(":");
-      return {
-        email: email.trim(),
-        password: password.trim(),
-        sold:false
-      };
-    });
-
-  await setDoc(doc(db,"productStock",ref.id),{items});
-
-  alert("Product added 🚀");
-  loadProducts();
-};
-
-/* DELETE */
-async function deleteProduct(id){
-  if(confirm("Delete?")){
-    await deleteDoc(doc(db,"products",id));
-    loadProducts();
-  }
 }
 
 /* ORDERS */
@@ -419,7 +350,10 @@ async function loadOrders(){
 
   snap.forEach(d=>{
     const o=d.data();
-    orders.innerHTML+=`<div class="item">₦${o.price}<br>${o.name}</div>`;
+    orders.innerHTML+=`
+    <div class="item">
+      ₦${o.price}<br>${o.name}
+    </div>`;
   });
 }
 
@@ -436,10 +370,6 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     document.getElementById(btn.dataset.page+(btn.dataset.page==="dashboard"?"":"Page")).style.display="block";
   };
 });
-
-/* SEARCH */
-userSearch.oninput=renderUsers;
-productSearch.oninput=renderProducts;
 
 /* LOGOUT */
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
