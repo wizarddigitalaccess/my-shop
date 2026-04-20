@@ -1,3 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0f0f1a;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.box {
+  background:#1c1c2e;
+  padding:25px;
+  border-radius:12px;
+  width:320px;
+  text-align:center;
+}
+
+input {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+}
+
+button {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
+  cursor:pointer;
+}
+
+.msg {
+  margin-top:10px;
+  font-size:13px;
+  color:orange;
+}
+
+.link {
+  margin-top:10px;
+  color:violet;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>Login</h2>
+
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="login()">Login</button>
+
+  <div class="link" onclick="forgotPassword()">Forgot Password?</div>
+  <div class="link" onclick="goSignup()">Create Account</div>
+
+  <div class="msg" id="msg"></div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -14,6 +91,7 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ REAL CONFIG (DO NOT CHANGE) */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -23,20 +101,18 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let checked = false;
+/* ✅ PREVENT LOOP */
+let redirected = false;
 
-// ✅ SAFE AUTH CHECK (NO LOOP)
+/* 🔐 SAFE AUTH CHECK */
 onAuthStateChanged(auth, async (user) => {
-  if (checked) return;
-  checked = true;
-
-  if (!user) return;
+  if (!user || redirected) return;
 
   try {
     const ref = doc(db, "users", user.uid);
     let snap = await getDoc(ref);
 
-    // create user if missing
+    /* CREATE USER IF NOT EXISTS */
     if (!snap.exists()) {
       await setDoc(ref, {
         email: user.email,
@@ -49,19 +125,22 @@ onAuthStateChanged(auth, async (user) => {
 
     const data = snap.data();
 
-    // 🔥 REDIRECT BASED ON ROLE
+    redirected = true; // 🚫 stop multiple redirects
+
+    /* ROLE BASED REDIRECT */
     if (data.role === "admin") {
-      window.location.href = "admin.html";
+      window.location.replace("admin.html");
     } else {
-      window.location.href = "index.html";
+      window.location.replace("index.html");
     }
 
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    document.getElementById("msg").innerText = "System error";
   }
 });
 
-// 🔐 LOGIN
+/* 🔐 LOGIN */
 window.login = async function () {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
@@ -74,26 +153,32 @@ window.login = async function () {
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    // ✅ DO NOT redirect here
-    // let onAuthStateChanged handle it
+    // 🔥 NO redirect here (handled above)
 
   } catch (error) {
     msg.innerText = error.message;
   }
 };
 
-// RESET
+/* 🔁 RESET PASSWORD */
 window.forgotPassword = async function () {
   const email = document.getElementById("email").value;
 
   if (!email) return alert("Enter email");
 
-  await sendPasswordResetEmail(auth, email);
-  alert("Reset email sent");
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("Reset email sent");
+  } catch (err) {
+    alert(err.message);
+  }
 };
 
-// SIGNUP
+/* 🔁 SIGNUP */
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
 </script>
+
+</body>
+</html>
