@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wizar Digital Access</title>
+<title>Wizard Digital Access</title>
 
 <style>
 body {
@@ -12,7 +12,6 @@ body {
   color:white;
 }
 
-/* HEADER */
 .header {
   background:#1c1c2e;
   padding:15px;
@@ -29,7 +28,6 @@ body {
   color:white;
 }
 
-/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -46,7 +44,6 @@ body {
 
 .cat.active { background:purple; }
 
-/* GRID */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
@@ -54,7 +51,6 @@ body {
   padding:15px;
 }
 
-/* CARD */
 .card {
   background:#1c1c2e;
   padding:12px;
@@ -62,9 +58,7 @@ body {
   text-align:center;
 }
 
-.icon {
-  font-size:40px;
-}
+.icon { font-size:40px; }
 
 .price {
   color:violet;
@@ -85,7 +79,6 @@ body {
   color:white;
 }
 
-/* MODAL */
 .modal {
   position:fixed;
   top:0; left:0;
@@ -104,7 +97,6 @@ body {
   width:80%;
 }
 
-/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -128,20 +120,17 @@ body {
 <body>
 
 <div class="header">
-  <b>🛒 Marketplace</b>
+  <b>🛒 Wizard Digital Access</b>
   <input id="search" placeholder="Search..." oninput="loadProducts()">
 </div>
 
 <div class="categories" id="categories"></div>
-
 <div class="grid" id="products"></div>
 
-<!-- MODAL -->
 <div class="modal" id="modal">
   <div class="modal-content" id="modalContent"></div>
 </div>
 
-<!-- NAV -->
 <div class="nav">
   <a href="index.html" class="active">🏠</a>
   <a href="wallet.html">💳</a>
@@ -171,12 +160,23 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let user, allProducts = [], currentCategory="all";
+let user = null;
+let allProducts = [];
+let currentCategory = "all";
 
-// 🔐 AUTH
-onAuthStateChanged(auth,(u)=>{
-  if(!u) location.href="auth.html";
+/* 🔐 AUTH FIX (NO LOOP) */
+onAuthStateChanged(auth, async (u) => {
+  if (!u) {
+    location.href = "auth.html";
+    return;
+  }
+
   user = u;
+
+  // ✅ LOAD ONLY AFTER AUTH
+  if (allProducts.length === 0) {
+    await init();
+  }
 });
 
 /* AUTO ICON */
@@ -190,16 +190,17 @@ function getIcon(category){
 
 /* INIT */
 async function init(){
-  allProducts=[];
-  const snap = await getDocs(collection(db,"products"));
+  allProducts = [];
 
-  let cats=new Set();
+  const snap = await getDocs(collection(db,"products"));
+  let cats = new Set();
 
   snap.forEach(d=>{
-    const p=d.data();
-    p.id=d.id;
+    const p = d.data();
+    p.id = d.id;
 
-    if(p.status!=="available") return;
+    // 🔥 STOCK SYSTEM (no more sold blocking)
+    if(p.status === "disabled") return;
 
     allProducts.push(p);
     cats.add(p.category);
@@ -208,37 +209,37 @@ async function init(){
   renderCats([...cats]);
   loadProducts();
 }
-init();
 
 /* CATEGORIES */
 function renderCats(cats){
   const div = document.getElementById("categories");
 
-  div.innerHTML=`<div class="cat active" onclick="setCat('all')">All</div>`;
+  div.innerHTML = `<div class="cat active" onclick="setCat('all')">All</div>`;
 
   cats.forEach(c=>{
-    div.innerHTML+=`<div class="cat" onclick="setCat('${c}')">${c}</div>`;
+    div.innerHTML += `<div class="cat" onclick="setCat('${c}')">${c}</div>`;
   });
 }
 
-window.setCat=(c)=>{
-  currentCategory=c;
+window.setCat = (c)=>{
+  currentCategory = c;
   document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active"));
   event.target.classList.add("active");
   loadProducts();
 };
 
 /* LOAD */
-window.loadProducts=()=>{
+window.loadProducts = ()=>{
   const search = document.getElementById("search").value.toLowerCase();
   const div = document.getElementById("products");
-  div.innerHTML="";
+
+  div.innerHTML = "";
 
   allProducts.forEach(p=>{
-    if(currentCategory!=="all" && p.category!==currentCategory) return;
+    if(currentCategory !== "all" && p.category !== currentCategory) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
-    div.innerHTML+=`
+    div.innerHTML += `
     <div class="card">
       <div class="icon">${getIcon(p.category)}</div>
       <h4>${p.name}</h4>
@@ -266,9 +267,10 @@ window.preview = async(id)=>{
   `;
 };
 
-/* BUY (SECURE) */
+/* BUY (STOCK READY) */
 window.buy = async(id)=>{
-  const pSnap = await getDoc(doc(db,"products",id));
+  const pRef = doc(db,"products",id);
+  const pSnap = await getDoc(pRef);
   const p = pSnap.data();
 
   const uRef = doc(db,"users",user.uid);
@@ -279,13 +281,10 @@ window.buy = async(id)=>{
     return alert("Insufficient balance");
   }
 
+  // 💸 deduct
   await updateDoc(uRef,{wallet:u.wallet - p.price});
 
-  await updateDoc(doc(db,"products",id),{
-    status:"sold",
-    buyer:user.uid
-  });
-
+  // 🧾 create order (NO MORE "sold" lock)
   await addDoc(collection(db,"orders"),{
     userId:user.uid,
     productId:id,
@@ -296,7 +295,6 @@ window.buy = async(id)=>{
 
   alert("Purchase successful ✅");
 
-  // 🔥 GO TO ORDERS PAGE
   location.href = "orders.html";
 };
 </script>
