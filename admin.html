@@ -1,4 +1,112 @@
-<!-- ONLY SHOWING CHANGED/IMPORTANT SCRIPT PART -->
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { margin:0; font-family: Arial; background:#0f0f1a; color:white; display:none; }
+.header { padding:15px; background:#1c1c2e; display:flex; justify-content:space-between; }
+.container { padding:15px; }
+.card { background:#1c1c2e; padding:15px; border-radius:12px; margin-bottom:15px; }
+
+input, textarea {
+  width:100%; padding:10px; margin-top:8px;
+  border:none; border-radius:8px; background:#111; color:white;
+}
+
+button {
+  width:100%; padding:10px; margin-top:8px;
+  border:none; border-radius:8px; background:purple; color:white;
+}
+
+.item { padding:10px; border-bottom:1px solid #333; }
+.row { display:flex; gap:5px; }
+.row button { flex:1; font-size:12px; }
+
+.nav {
+  position:fixed; bottom:0; width:100%;
+  display:flex; background:#111;
+}
+.nav button { flex:1; background:none; color:gray; }
+.nav button.active { color:purple; }
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+  <span>Admin Dashboard</span>
+  <button onclick="logout()" style="width:auto;background:red;">Logout</button>
+</div>
+
+<div class="container">
+
+<!-- DASHBOARD -->
+
+<div id="dashboard">
+<div class="card">
+<h3>Revenue Chart</h3>
+<canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+Users: <span id="usersCount"></span><br>
+Products: <span id="productsCount"></span><br>
+Orders: <span id="ordersCount"></span><br>
+Revenue: ₦<span id="revenue"></span>
+</div>
+</div>
+
+<!-- USERS -->
+
+<div id="usersPage" style="display:none">
+<div class="card">
+<input id="userSearch" placeholder="Search users..." oninput="loadUsers()">
+<div id="users"></div>
+</div>
+</div>
+
+<!-- PRODUCTS -->
+
+<div id="productsPage" style="display:none">
+<div class="card">
+
+<input id="productSearch" placeholder="Search products..." oninput="loadProducts()">
+
+<input id="name" placeholder="Product Name">
+<input id="category" placeholder="Category">
+<input id="price" type="number" placeholder="Price">
+
+<textarea id="stockData" placeholder="email:password"></textarea>
+
+<button onclick="addProduct()">Add Product</button>
+
+<div id="products"></div>
+</div>
+</div>
+
+<!-- ORDERS -->
+
+<div id="ordersPage" style="display:none">
+<div class="card">
+<h3>Transactions</h3>
+<div id="orders"></div>
+</div>
+</div>
+
+</div>
+
+<div class="nav">
+<button onclick="showPage('dashboard')" class="active" id="b1">Dashboard</button>
+<button onclick="showPage('users')" id="b2">Users</button>
+<button onclick="showPage('products')" id="b3">Products</button>
+<button onclick="showPage('orders')" id="b4">Orders</button>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -18,193 +126,207 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* =========================
-   🔥 FIXED ADD PRODUCT
-========================= */
-window.addProduct = async ()=>{
-  const name = document.getElementById("name").value.trim();
-  const category = document.getElementById("category").value.trim().toLowerCase();
-  const price = Number(document.getElementById("price").value);
-  const raw = document.getElementById("stockData").value.trim();
+let chartInstance;
+let started = false;
 
-  if(!name || !category || !price){
-    return alert("Fill all fields");
+/* AUTH FIX */
+onAuthStateChanged(auth, async (user)=>{
+  if(started) return;
+
+  if(!user){
+    setTimeout(()=>{
+      if(!auth.currentUser) location.href="auth.html";
+    },500);
+    return;
   }
 
-  try{
-    const ref = await addDoc(collection(db,"products"),{
-      name,
-      category,
-      price,
-      status:"active"
-    });
+  started = true;
 
-    /* 🔥 SAFE STOCK PARSE */
-    if(raw){
-      const items = raw.split("\n")
-        .map(l => l.trim())
-        .filter(l => l.includes(":"))
-        .map(l=>{
-          const [email,password] = l.split(":");
-          return {
-            email: email?.trim(),
-            password: password?.trim(),
-            sold:false
-          };
-        });
+  const snap = await getDoc(doc(db,"users",user.uid));
 
-      await setDoc(doc(db,"productStock",ref.id),{items});
+  if(!snap.exists() || snap.data().role !== "admin"){
+    location.href="index.html";
+    return;
+  }
+
+  document.body.style.display="block";
+
+  loadDashboard();
+  loadUsers();
+  loadProducts();
+  loadOrders();
+});
+
+/* DASHBOARD */
+async function loadDashboard(){
+  const usersSnap = await getDocs(collection(db,"users"));
+  const productsSnap = await getDocs(collection(db,"products"));
+  const transSnap = await getDocs(collection(db,"transaction"));
+
+  usersCount.innerText = usersSnap.size;
+  productsCount.innerText = productsSnap.size;
+  ordersCount.innerText = transSnap.size;
+
+  let revenue = 0;
+  let days = {};
+
+  transSnap.forEach(d=>{
+    const o = d.data();
+    const amt = Number(o.amount || 0);
+    revenue += amt;
+
+    if(o.createdAt){
+      const date = o.createdAt.seconds
+        ? new Date(o.createdAt.seconds*1000)
+        : new Date(o.createdAt);
+
+      const key = date.toLocaleDateString();
+      days[key] = (days[key]||0)+amt;
     }
+  });
 
-    alert("Product added ✅");
+  document.getElementById("revenue").innerText = revenue;
 
-    name.value="";
-    category.value="";
-    price.value="";
-    stockData.value="";
+  if(chartInstance) chartInstance.destroy();
 
-    loadProducts();
+  chartInstance = new Chart(chart,{
+    type:"line",
+    data:{
+      labels:Object.keys(days),
+      datasets:[{label:"Revenue",data:Object.values(days)}]
+    }
+  });
+}
 
-  }catch(err){
-    console.error(err);
-    alert("Error adding product");
-  }
-};
-
-/* =========================
-   🔥 LOAD PRODUCTS + EDIT
-========================= */
-window.loadProducts = async ()=>{
-  const search = document.getElementById("productSearch").value.toLowerCase();
-  const div = document.getElementById("products");
-  div.innerHTML="";
-
-  const snap = await getDocs(collection(db,"products"));
-
-  for(const d of snap.docs){
-    const p = d.data();
-
-    if(!p.name.toLowerCase().includes(search)) continue;
-
-    const stockSnap = await getDoc(doc(db,"productStock",d.id));
-    let left = stockSnap.exists()
-      ? stockSnap.data().items.filter(i=>!i.sold).length
-      : 0;
-
-    div.innerHTML+=`
-    <div class="item">
-      <b>${p.name}</b><br>
-      Category: ${p.category}<br>
-      ₦${p.price} | Stock: ${left}
-
-      <div class="row">
-        <button onclick="editProduct('${d.id}')">Edit</button>
-        <button onclick="deleteProduct('${d.id}')">Delete</button>
-      </div>
-    </div>`;
-  }
-};
-
-/* =========================
-   ✏️ EDIT PRODUCT
-========================= */
-window.editProduct = async (id)=>{
-  const newName = prompt("New product name:");
-  const newCategory = prompt("New category:");
-  const newPrice = Number(prompt("New price:"));
-
-  if(!newName || !newCategory || !newPrice){
-    return alert("Invalid input");
-  }
-
-  try{
-    await updateDoc(doc(db,"products",id),{
-      name:newName,
-      category:newCategory.toLowerCase(),
-      price:newPrice
-    });
-
-    alert("Product updated ✅");
-    loadProducts();
-
-  }catch(e){
-    console.error(e);
-    alert("Error updating product");
-  }
-};
-
-/* =========================
-   🗑 DELETE PRODUCT
-========================= */
-window.deleteProduct = async(id)=>{
-  if(confirm("Delete product?")){
-    await deleteDoc(doc(db,"products",id));
-    await deleteDoc(doc(db,"productStock",id));
-    loadProducts();
-  }
-};
-
-/* =========================
-   💰 USERS (ADD + DEDUCT)
-========================= */
+/* USERS */
 window.loadUsers = async ()=>{
-  const search = document.getElementById("userSearch").value.toLowerCase();
-  const div = document.getElementById("users");
-  div.innerHTML="";
-
+  users.innerHTML="";
   const snap = await getDocs(collection(db,"users"));
 
   snap.forEach(d=>{
-    const u = d.data();
-
-    if(!(u.email||"").toLowerCase().includes(search)) return;
-
-    div.innerHTML+=`
+    const u=d.data();
+    users.innerHTML+=`
     <div class="item">
-      ${u.name}<br>
-      ${u.email}<br>
-      ₦${u.wallet||0}
-
+      ${u.email}<br>₦${u.wallet||0}
       <div class="row">
-        <button onclick="fund('${d.id}')">+ Fund</button>
-        <button onclick="deduct('${d.id}')">- Deduct</button>
+        <button onclick="fund('${d.id}')">+Fund</button>
+        <button onclick="deduct('${d.id}')">-Deduct</button>
         <button onclick="deleteUser('${d.id}')">Delete</button>
       </div>
     </div>`;
   });
 };
 
-/* ADD MONEY */
-window.fund = async(uid)=>{
-  const amount = Number(prompt("Amount to add"));
-  if(!amount) return;
-
-  await updateDoc(doc(db,"users",uid),{
-    wallet:increment(amount)
-  });
-
+window.fund = async(id)=>{
+  const amt = Number(prompt("Amount"));
+  if(!amt) return;
+  await updateDoc(doc(db,"users",id),{wallet:increment(amt)});
   loadUsers();
 };
 
-/* 🔥 DEDUCT MONEY */
-window.deduct = async(uid)=>{
-  const amount = Number(prompt("Amount to deduct"));
-  if(!amount) return;
-
-  await updateDoc(doc(db,"users",uid),{
-    wallet:increment(-amount)
-  });
-
+window.deduct = async(id)=>{
+  const amt = Number(prompt("Amount"));
+  if(!amt) return;
+  await updateDoc(doc(db,"users",id),{wallet:increment(-amt)});
   loadUsers();
 };
 
-window.deleteUser = async(uid)=>{
+window.deleteUser = async(id)=>{
   if(confirm("Delete user?")){
-    await deleteDoc(doc(db,"users",uid));
+    await deleteDoc(doc(db,"users",id));
     loadUsers();
   }
 };
 
-/* LOGOUT */
+/* PRODUCTS */
+window.loadProducts = async ()=>{
+  products.innerHTML="";
+  const snap = await getDocs(collection(db,"products"));
+
+  snap.forEach(d=>{
+    const p=d.data();
+
+    products.innerHTML+=`
+    <div class="item">
+      ${p.name} - ₦${p.price}
+      <div class="row">
+        <button onclick="editProduct('${d.id}')">Edit</button>
+        <button onclick="deleteProduct('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+};
+
+window.addProduct = async ()=>{
+  const nameV = name.value.trim();
+  const cat = category.value.trim();
+  const priceV = Number(price.value);
+
+  if(!nameV||!cat||!priceV) return alert("Fill fields");
+
+  const ref = await addDoc(collection(db,"products"),{
+    name:nameV,
+    category:cat,
+    price:priceV
+  });
+
+  alert("Added ✅");
+  name.value=""; category.value=""; price.value="";
+  loadProducts();
+};
+
+window.editProduct = async(id)=>{
+  const n = prompt("Name");
+  const c = prompt("Category");
+  const p = Number(prompt("Price"));
+
+  if(!n||!c||!p) return;
+
+  await updateDoc(doc(db,"products",id),{
+    name:n,
+    category:c,
+    price:p
+  });
+
+  loadProducts();
+};
+
+window.deleteProduct = async(id)=>{
+  if(confirm("Delete?")){
+    await deleteDoc(doc(db,"products",id));
+    loadProducts();
+  }
+};
+
+/* TRANSACTIONS */
+async function loadOrders(){
+  orders.innerHTML="";
+  const snap = await getDocs(collection(db,"transaction"));
+
+  snap.forEach(d=>{
+    const o=d.data();
+    orders.innerHTML+=`
+    <div class="item">
+      ₦${o.amount}<br>${o.userId||""}
+    </div>`;
+  });
+}
+
+/* NAV */
+window.showPage=(p)=>{
+  dashboard.style.display="none";
+  usersPage.style.display="none";
+  productsPage.style.display="none";
+  ordersPage.style.display="none";
+
+  if(p==="dashboard") dashboard.style.display="block";
+  if(p==="users") usersPage.style.display="block";
+  if(p==="products") productsPage.style.display="block";
+  if(p==="orders") ordersPage.style.display="block";
+};
+
 window.logout=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
+
+</body>
+</html>
