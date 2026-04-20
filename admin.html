@@ -8,58 +8,27 @@
 
 <style>
 body { margin:0; font-family: Arial; background:#0f0f1a; color:white; display:none; }
-
-.header {
-  padding:15px;
-  background:#1c1c2e;
-  display:flex;
-  justify-content:space-between;
-}
-
+.header { padding:15px; background:#1c1c2e; display:flex; justify-content:space-between; }
 .container { padding:15px; }
+.card { background:#1c1c2e; padding:15px; border-radius:12px; margin-bottom:15px; }
 
-.card {
-  background:#1c1c2e;
-  padding:15px;
-  border-radius:12px;
-  margin-bottom:15px;
-}
-
-input {
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  border:none;
-  border-radius:8px;
-  background:#111;
-  color:white;
+input, textarea {
+  width:100%; padding:10px; margin-top:8px;
+  border:none; border-radius:8px; background:#111; color:white;
 }
 
 button {
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  border:none;
-  border-radius:8px;
-  background:purple;
-  color:white;
-  cursor:pointer;
+  width:100%; padding:10px; margin-top:8px;
+  border:none; border-radius:8px; background:purple; color:white;
 }
 
-.item {
-  padding:10px;
-  border-bottom:1px solid #333;
-}
-
+.item { padding:10px; border-bottom:1px solid #333; }
 .row { display:flex; gap:5px; }
 .row button { flex:1; font-size:12px; }
 
 .nav {
-  position:fixed;
-  bottom:0;
-  width:100%;
-  display:flex;
-  background:#111;
+  position:fixed; bottom:0; width:100%;
+  display:flex; background:#111;
 }
 .nav button { flex:1; background:none; color:gray; }
 .nav button.active { color:purple; }
@@ -108,8 +77,8 @@ Revenue: ₦<span id="revenue"></span>
 <input id="category" placeholder="Category">
 <input id="price" type="number" placeholder="Price">
 
-<input id="emailLogin" placeholder="Account Email (secret)">
-<input id="passwordLogin" placeholder="Account Password (secret)">
+<!-- 🔥 MULTI STOCK INPUT -->
+<textarea id="stockData" placeholder="email:password (one per line)"></textarea>
 
 <button onclick="addProduct()">Add Product</button>
 
@@ -138,15 +107,15 @@ Revenue: ₦<span id="revenue"></span>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 import {
   getFirestore, collection, getDocs, doc,
   updateDoc, deleteDoc, addDoc, increment,
   getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ USE REAL CONFIG */
 const app = initializeApp({
-  apiKey:"AIzaSy...",
+  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
   projectId:"wizard-shop-52a50"
 });
@@ -156,45 +125,57 @@ const db = getFirestore(app);
 
 let chartInstance;
 
-// 🔐 ADMIN CHECK
+/* 🔐 ADMIN CHECK (SAFE) */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.href="auth.html";
-
-  const snap = await getDoc(doc(db,"users",user.uid));
-  if(!snap.exists() || snap.data().role !== "admin"){
-    return location.href="index.html";
+  if(!user){
+    location.href="auth.html";
+    return;
   }
 
-  document.body.style.display="block";
+  try{
+    const snap = await getDoc(doc(db,"users",user.uid));
 
-  loadDashboard();
-  loadUsers();
-  loadProducts();
-  loadOrders();
+    if(!snap.exists() || snap.data().role !== "admin"){
+      location.href="index.html";
+      return;
+    }
+
+    document.body.style.display="block";
+
+    loadDashboard();
+    loadUsers();
+    loadProducts();
+    loadOrders();
+
+  }catch(e){
+    console.error(e);
+    alert("Admin error");
+  }
 });
 
-// 📊 DASHBOARD
+/* DASHBOARD */
 async function loadDashboard(){
-  const users = await getDocs(collection(db,"users"));
-  const products = await getDocs(collection(db,"products"));
-  const orders = await getDocs(collection(db,"orders"));
+  const usersSnap = await getDocs(collection(db,"users"));
+  const productsSnap = await getDocs(collection(db,"products"));
+  const ordersSnap = await getDocs(collection(db,"orders"));
 
-  usersCount.innerText = users.size;
-  productsCount.innerText = products.size;
-  ordersCount.innerText = orders.size;
+  usersCount.innerText = usersSnap.size;
+  productsCount.innerText = productsSnap.size;
+  ordersCount.innerText = ordersSnap.size;
 
-  let revenue = 0;
-  let days = {};
+  let revenue=0, days={};
 
-  orders.forEach(d=>{
-    const data = d.data();
-    revenue += data.price;
+  ordersSnap.forEach(d=>{
+    const o=d.data();
+    revenue+=o.price||0;
 
-    let date = new Date(data.createdAt.seconds * 1000).toLocaleDateString();
-    days[date] = (days[date]||0)+data.price;
+    if(o.createdAt){
+      const date = new Date(o.createdAt.seconds*1000).toLocaleDateString();
+      days[date]=(days[date]||0)+o.price;
+    }
   });
 
-  document.getElementById("revenue").innerText = revenue;
+  revenueEl.innerText = revenue;
 
   if(chartInstance) chartInstance.destroy();
 
@@ -207,10 +188,11 @@ async function loadDashboard(){
   });
 }
 
-// 👤 USERS
+/* USERS */
 window.loadUsers = async ()=>{
-  const search = userSearch.value.toLowerCase();
-  users.innerHTML="";
+  const search = document.getElementById("userSearch").value.toLowerCase();
+  const div = document.getElementById("users");
+  div.innerHTML="";
 
   const snap = await getDocs(collection(db,"users"));
 
@@ -218,10 +200,9 @@ window.loadUsers = async ()=>{
     const u=d.data();
     if(!(u.email||"").toLowerCase().includes(search)) return;
 
-    users.innerHTML+=`
+    div.innerHTML+=`
     <div class="item">
       ${u.name}<br>${u.email}<br>₦${u.wallet||0}
-
       <div class="row">
         <button onclick="fund('${d.id}')">Fund</button>
         <button onclick="deleteUser('${d.id}')">Delete</button>
@@ -244,94 +225,98 @@ window.deleteUser = async(uid)=>{
   }
 };
 
-// 📦 PRODUCTS
+/* PRODUCTS (WITH STOCK COUNT) */
 window.loadProducts = async ()=>{
-  const search = productSearch.value.toLowerCase();
-  products.innerHTML="";
+  const search = document.getElementById("productSearch").value.toLowerCase();
+  const div = document.getElementById("products");
+  div.innerHTML="";
 
   const snap = await getDocs(collection(db,"products"));
 
-  snap.forEach(d=>{
-    const p=d.data();
-    if(!p.name.toLowerCase().includes(search)) return;
+  for(const d of snap.docs){
+    const p = d.data();
 
-    products.innerHTML+=`
+    if(!p.name.toLowerCase().includes(search)) continue;
+
+    const stockSnap = await getDoc(doc(db,"productStock",d.id));
+    let left = 0;
+
+    if(stockSnap.exists()){
+      left = stockSnap.data().items.filter(i=>!i.sold).length;
+    }
+
+    div.innerHTML+=`
     <div class="item">
-      ${p.name} (${p.category}) - ₦${p.price} [${p.status}]
-
+      ${p.name} - ₦${p.price} | Stock: ${left}
       <div class="row">
         <button onclick="deleteProduct('${d.id}')">Delete</button>
       </div>
     </div>`;
-  });
+  }
 };
 
-// ➕ ADD PRODUCT
+/* ADD PRODUCT (MULTI STOCK) */
 window.addProduct = async ()=>{
-  const nameV = name.value.trim();
-  const categoryV = category.value.trim().toLowerCase();
-  const priceV = Number(price.value);
-  const emailV = emailLogin.value.trim();
-  const passV = passwordLogin.value.trim();
+  const name = document.getElementById("name").value.trim();
+  const category = document.getElementById("category").value.trim().toLowerCase();
+  const price = Number(document.getElementById("price").value);
+  const raw = document.getElementById("stockData").value.trim();
 
-  if(!nameV||!categoryV||!priceV||!emailV||!passV){
+  if(!name||!category||!price||!raw){
     return alert("Fill all fields");
   }
 
   const ref = await addDoc(collection(db,"products"),{
-    name:nameV,
-    category:categoryV,
-    price:priceV,
-    status:"available"
+    name, category, price, status:"active"
   });
 
-  await setDoc(doc(db,"productSecrets",ref.id),{
-    email:emailV,
-    password:passV
+  const items = raw.split("\n").map(line=>{
+    const [email,password] = line.split(":");
+    return {email,password,sold:false};
   });
 
-  alert("Product added ✅");
+  await setDoc(doc(db,"productStock",ref.id),{items});
 
-  name.value="";
-  category.value="";
-  price.value="";
-  emailLogin.value="";
-  passwordLogin.value="";
+  alert("Product added with stock ✅");
+
+  document.getElementById("name").value="";
+  document.getElementById("category").value="";
+  document.getElementById("price").value="";
+  document.getElementById("stockData").value="";
 
   loadProducts();
 };
 
-// DELETE
+/* DELETE */
 window.deleteProduct = async(id)=>{
   if(confirm("Delete product?")){
     await deleteDoc(doc(db,"products",id));
-    await deleteDoc(doc(db,"productSecrets",id));
+    await deleteDoc(doc(db,"productStock",id));
     loadProducts();
   }
 };
 
-// 📦 ORDERS
+/* ORDERS */
 async function loadOrders(){
-  orders.innerHTML="";
+  const div = document.getElementById("orders");
+  div.innerHTML="";
 
   const snap = await getDocs(collection(db,"orders"));
 
   snap.forEach(d=>{
     const o=d.data();
 
-    orders.innerHTML+=`
+    div.innerHTML+=`
     <div class="item">
-      ${o.name}<br>
-      ₦${o.price}<br>
-      User: ${o.userId}
+      ${o.name}<br>₦${o.price}<br>User: ${o.userId}
     </div>`;
   });
 }
 
-// 🚪 LOGOUT
-window.logout=()=> signOut(auth).then(()=>location.href="auth.html");
+/* LOGOUT */
+window.logout=()=>signOut(auth).then(()=>location.href="auth.html");
 
-// NAV
+/* NAV */
 window.showPage=(p)=>{
   dashboard.style.display="none";
   usersPage.style.display="none";
