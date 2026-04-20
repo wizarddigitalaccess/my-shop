@@ -355,28 +355,52 @@ function renderProducts(){
 
 /* ADD PRODUCT */
 addProductBtn.onclick = async ()=>{
-  const name=nameInput.value.trim();
-  const category=categoryInput.value.trim();
-  const price=Number(priceInput.value);
-  const domain=domainInput.value.trim();
-  const custom=logoInput.value.trim();
+  const name = document.getElementById("name").value.trim();
+  const category = document.getElementById("category").value.trim();
+  const price = Number(document.getElementById("price").value);
+  const domain = document.getElementById("domain").value.trim().toLowerCase();
+  const custom = document.getElementById("logoInput").value.trim();
 
-  if(!name||!category||!price)return alert("Fill fields");
+  if(!name || !category || !price){
+    return alert("Fill all fields");
+  }
 
-  const logo=getLogo(domain,custom);
+  // 🔥 AUTO CLEAN DOMAIN (VERY IMPORTANT)
+  const cleanDomain = domain
+    .replace("https://","")
+    .replace("http://","")
+    .replace("www.","")
+    .split("/")[0];
 
-  const ref=await addDoc(collection(db,"products"),{
-    name,category,price,domain,logo
+  // 🔥 GENERATE LOGO
+  const logo = getLogo(cleanDomain, custom);
+
+  // ✅ SAVE PRODUCT WITH LOGO
+  const ref = await addDoc(collection(db,"products"),{
+    name,
+    category,
+    price,
+    domain: cleanDomain,
+    logo // ← THIS IS THE KEY FIELD
   });
 
-  const items = stockData.value.split("\n").map(l=>{
-    const [email,password]=l.split(":");
-    return {email,password,sold:false};
-  });
+  // 🔥 STOCK SYSTEM
+  const lines = document.getElementById("stockData").value.split("\n");
+
+  const items = lines
+    .filter(l => l.includes(":"))
+    .map(l=>{
+      const [email,password]=l.split(":");
+      return {
+        email: email.trim(),
+        password: password.trim(),
+        sold:false
+      };
+    });
 
   await setDoc(doc(db,"productStock",ref.id),{items});
 
-  alert("Added 🚀");
+  alert("Product added 🚀");
   loadProducts();
 };
 
