@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Marketplace</title>
+<title>MarketplacWizar Digital Access</title>
 
 <style>
 body {
@@ -12,6 +12,7 @@ body {
   color:white;
 }
 
+/* HEADER */
 .header {
   background:#1c1c2e;
   padding:15px;
@@ -28,6 +29,7 @@ body {
   color:white;
 }
 
+/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -44,6 +46,7 @@ body {
 
 .cat.active { background:purple; }
 
+/* GRID */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
@@ -51,6 +54,7 @@ body {
   padding:15px;
 }
 
+/* CARD */
 .card {
   background:#1c1c2e;
   padding:12px;
@@ -74,6 +78,11 @@ body {
 
 .row button {
   flex:1;
+  padding:8px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
 }
 
 /* MODAL */
@@ -164,16 +173,18 @@ const db = getFirestore(app);
 
 let user, allProducts = [], currentCategory="all";
 
+// 🔐 AUTH
 onAuthStateChanged(auth,(u)=>{
   if(!u) location.href="auth.html";
   user = u;
 });
 
-/* ICON SYSTEM */
+/* AUTO ICON */
 function getIcon(category){
   if(category.includes("facebook")) return "📘";
   if(category.includes("instagram")) return "📸";
   if(category.includes("tiktok")) return "🎵";
+  if(category.includes("twitter")) return "🐦";
   return "📦";
 }
 
@@ -217,7 +228,7 @@ window.setCat=(c)=>{
   loadProducts();
 };
 
-/* LOAD PRODUCTS */
+/* LOAD */
 window.loadProducts=()=>{
   const search = document.getElementById("search").value.toLowerCase();
   const div = document.getElementById("products");
@@ -241,7 +252,7 @@ window.loadProducts=()=>{
   });
 };
 
-/* SAFE PREVIEW (NO LINK!) */
+/* PREVIEW */
 window.preview = async(id)=>{
   const snap = await getDoc(doc(db,"products",id));
   const p = snap.data();
@@ -250,12 +261,12 @@ window.preview = async(id)=>{
   modalContent.innerHTML=`
     <h3>${p.name}</h3>
     <p>Category: ${p.category}</p>
-    <p>Secure product. Details revealed after purchase.</p>
+    <p><a href="${p.link}" target="_blank">View Product</a></p>
     <button onclick="modal.style.display='none'">Close</button>
   `;
 };
 
-/* SECURE BUY */
+/* BUY (SECURE) */
 window.buy = async(id)=>{
   const pSnap = await getDoc(doc(db,"products",id));
   const p = pSnap.data();
@@ -268,28 +279,25 @@ window.buy = async(id)=>{
     return alert("Insufficient balance");
   }
 
-  // deduct
   await updateDoc(uRef,{wallet:u.wallet - p.price});
 
-  // mark sold
   await updateDoc(doc(db,"products",id),{
     status:"sold",
     buyer:user.uid
   });
 
-  // create order WITH SECRET DATA
   await addDoc(collection(db,"orders"),{
     userId:user.uid,
     productId:id,
     name:p.name,
     price:p.price,
-    access:p.link, // 🔐 ONLY HERE
     createdAt:new Date()
   });
 
-  alert("Purchase successful ✅\nCheck 'My Orders' to access product");
+  alert("Purchase successful ✅");
 
-  init();
+  // 🔥 GO TO ORDERS PAGE
+  location.href = "orders.html";
 };
 </script>
 
