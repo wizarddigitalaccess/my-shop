@@ -1,143 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wizard Digital Access</title>
-
-<style>
-body {
-  margin:0;
-  font-family: Arial;
-  background:#0f0f1a;
-  color:white;
-}
-
-.header {
-  background:#1c1c2e;
-  padding:15px;
-  display:flex;
-  justify-content:space-between;
-}
-
-.header input {
-  width:60%;
-  padding:10px;
-  border:none;
-  border-radius:8px;
-  background:#111;
-  color:white;
-}
-
-.categories {
-  display:flex;
-  overflow-x:auto;
-  padding:10px;
-  gap:10px;
-}
-
-.cat {
-  background:#1c1c2e;
-  padding:8px 12px;
-  border-radius:20px;
-  cursor:pointer;
-}
-
-.cat.active { background:purple; }
-
-.grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
-  gap:15px;
-  padding:15px;
-}
-
-.card {
-  background:#1c1c2e;
-  padding:12px;
-  border-radius:12px;
-  text-align:center;
-}
-
-.icon { font-size:40px; }
-
-.price {
-  color:violet;
-  font-weight:bold;
-}
-
-.row {
-  display:flex;
-  gap:5px;
-}
-
-.row button {
-  flex:1;
-  padding:8px;
-  border:none;
-  border-radius:8px;
-  background:purple;
-  color:white;
-}
-
-.modal {
-  position:fixed;
-  top:0; left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.8);
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
-
-.modal-content {
-  background:#1c1c2e;
-  padding:20px;
-  border-radius:12px;
-  width:80%;
-}
-
-.nav {
-  position:fixed;
-  bottom:0;
-  width:100%;
-  display:flex;
-  background:#111;
-}
-
-.nav a {
-  flex:1;
-  text-align:center;
-  padding:10px;
-  color:gray;
-  text-decoration:none;
-}
-
-.nav a.active { color:purple; }
-</style>
-</head>
-
-<body>
-
-<div class="header">
-  <b>🛒 Wizard Digital Access</b>
-  <input id="search" placeholder="Search..." oninput="loadProducts()">
-</div>
-
-<div class="categories" id="categories"></div>
-<div class="grid" id="products"></div>
-
-<div class="modal" id="modal">
-  <div class="modal-content" id="modalContent"></div>
-</div>
-
-<div class="nav">
-  <a href="index.html" class="active">🏠</a>
-  <a href="wallet.html">💳</a>
-  <a href="orders.html">📦</a>
-  <a href="profile.html">👤</a>
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -151,30 +11,37 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ USE REAL CONFIG (VERY IMPORTANT) */
 const app = initializeApp({
-  apiKey:"AIzaSy...",
-  authDomain:"wizard-shop-52a50.firebaseapp.com",
-  projectId:"wizard-shop-52a50"
+  apiKey: "YOUR_REAL_API_KEY",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 let user = null;
+let initialized = false;
 let allProducts = [];
 let currentCategory = "all";
 
-/* 🔐 AUTH FIX (NO LOOP) */
+/* 🔐 SAFE AUTH (NO LOOP, NO BLINK) */
 onAuthStateChanged(auth, async (u) => {
   if (!u) {
-    location.href = "auth.html";
+    // wait a bit before redirect (prevents flicker)
+    setTimeout(() => {
+      if (!auth.currentUser) {
+        location.href = "auth.html";
+      }
+    }, 800);
     return;
   }
 
   user = u;
 
-  // ✅ LOAD ONLY AFTER AUTH
-  if (allProducts.length === 0) {
+  if (!initialized) {
+    initialized = true;
     await init();
   }
 });
@@ -199,7 +66,6 @@ async function init(){
     const p = d.data();
     p.id = d.id;
 
-    // 🔥 STOCK SYSTEM (no more sold blocking)
     if(p.status === "disabled") return;
 
     allProducts.push(p);
@@ -262,42 +128,44 @@ window.preview = async(id)=>{
   modalContent.innerHTML=`
     <h3>${p.name}</h3>
     <p>Category: ${p.category}</p>
-    <p><a href="${p.link}" target="_blank">View Product</a></p>
+    <p><a href="${p.link || '#'}" target="_blank">View Product</a></p>
     <button onclick="modal.style.display='none'">Close</button>
   `;
 };
 
-/* BUY (STOCK READY) */
+/* BUY (STOCK SYSTEM READY) */
 window.buy = async(id)=>{
-  const pRef = doc(db,"products",id);
-  const pSnap = await getDoc(pRef);
-  const p = pSnap.data();
+  try {
+    const pRef = doc(db,"products",id);
+    const pSnap = await getDoc(pRef);
+    const p = pSnap.data();
 
-  const uRef = doc(db,"users",user.uid);
-  const uSnap = await getDoc(uRef);
-  const u = uSnap.data();
+    const uRef = doc(db,"users",user.uid);
+    const uSnap = await getDoc(uRef);
+    const u = uSnap.data();
 
-  if((u.wallet||0) < p.price){
-    return alert("Insufficient balance");
+    if((u.wallet||0) < p.price){
+      return alert("Insufficient balance");
+    }
+
+    // deduct wallet
+    await updateDoc(uRef,{wallet:u.wallet - p.price});
+
+    // create order
+    await addDoc(collection(db,"orders"),{
+      userId:user.uid,
+      productId:id,
+      name:p.name,
+      price:p.price,
+      createdAt:new Date()
+    });
+
+    alert("Purchase successful ✅");
+    location.href = "orders.html";
+
+  } catch(err){
+    console.error(err);
+    alert("Error processing purchase");
   }
-
-  // 💸 deduct
-  await updateDoc(uRef,{wallet:u.wallet - p.price});
-
-  // 🧾 create order (NO MORE "sold" lock)
-  await addDoc(collection(db,"orders"),{
-    userId:user.uid,
-    productId:id,
-    name:p.name,
-    price:p.price,
-    createdAt:new Date()
-  });
-
-  alert("Purchase successful ✅");
-
-  location.href = "orders.html";
 };
 </script>
-
-</body>
-</html>
