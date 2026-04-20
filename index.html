@@ -262,13 +262,12 @@ window.preview = async(id)=>{
   const snap = await getDoc(doc(db,"products",id));
   const p = snap.data();
 
-  modal.style.display="flex";
-  modalContent.innerHTML=`
-    <h3>${p.name}</h3>
-    <p>Category: ${p.category}</p>
-    <button onclick="modal.style.display='none'">Close</button>
-  `;
-};
+  modalContent.innerHTML = `
+  <h3>${p.name}</h3>
+  <p>${p.description || "No description"}</p>
+  <p>Category: ${p.category}</p>
+  <button onclick="modal.style.display='none'">Close</button>
+`;
 
 /* 🔥 BUY WITH STOCK DELIVERY */
 window.buy = async(id)=>{
