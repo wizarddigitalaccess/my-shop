@@ -174,9 +174,14 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import {
   getFirestore,
   collection,
-  getDocs
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* CONFIG */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -186,119 +191,203 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let user=null;
 let allProducts=[];
 let currentCategory="all";
 
 /* AUTH */
-onAuthStateChanged(auth,(user)=>{
-  if(!user){
+onAuthStateChanged(auth, async (u)=>{
+  if(!u){
     location.href="auth.html";
     return;
   }
 
-  // show UI immediately
-  document.getElementById("loader").style.display="none";
+  user = u;
 
-  // load data async (no blocking)
-  loadData();
+  try{
+    await init();
+  }catch(e){
+    alert("Error loading app");
+    console.error(e);
+  }
+
+  document.getElementById("loader").style.display="none";
+  document.body.style.display="block";
 });
 
-/* LOAD DATA */
-async function loadData(){
-  try {
-    const prodSnap = await getDocs(collection(db,"products"));
-    const catSnap = await getDocs(collection(db,"categories"));
+/* INIT */
+async function init(){
+  const snap = await getDocs(collection(db,"products"));
+  const catSnap = await getDocs(collection(db,"categories"));
 
-    const map = new Map();
-    allProducts=[];
+  const catMap = new Map();
+  allProducts=[];
 
-    prodSnap.forEach(d=>{
-      const p=d.data();
-      p.id=d.id;
-      allProducts.push(p);
-      if(!map.has(p.category)) map.set(p.category,true);
-    });
+  snap.forEach(d=>{
+    const p=d.data();
+    p.id=d.id;
 
-    catSnap.forEach(d=>{
-      const c=d.data();
-      if(!map.has(c.name)) map.set(c.name,true);
-    });
+    allProducts.push(p);
 
-    renderCats(map);
-    renderProducts();
+    if(!catMap.has(p.category)){
+      catMap.set(p.category, p.logo || "");
+    }
+  });
 
-  } catch(err){
-    console.error(err);
+  catSnap.forEach(d=>{
+    const c=d.data();
+    if(!catMap.has(c.name)){
+      catMap.set(c.name,"");
+    }
+  });
 
-    // fallback UI
-    products.innerHTML = "<p style='padding:20px'>Failed to load products</p>";
-  }
+  renderCats(catMap);
+  loadProducts();
 }
 
 /* CATEGORY */
 function renderCats(map){
   categories.innerHTML="";
 
-  const all=createCat("All","all");
+  const all=createCat("All","all","");
   all.classList.add("active");
   categories.appendChild(all);
 
-  map.forEach((_,name)=>{
-    categories.appendChild(createCat(name,name));
+  map.forEach((logo,name)=>{
+    categories.appendChild(createCat(name,name,logo));
   });
 }
 
-function createCat(label,value){
+function createCat(label,value,logo){
   const div=document.createElement("div");
   div.className="cat";
-  div.innerText=label;
+
+  div.innerHTML=`
+    ${logo?`<img src="${fixLogo(logo)}" onerror="this.remove()">`:""}
+    <span>${label}</span>
+  `;
 
   div.onclick=()=>{
     currentCategory=value;
+
     document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
     div.classList.add("active");
-    renderProducts();
+
+    loadProducts();
   };
 
   return div;
 }
 
-/* LOGO FIX */
-function logo(url){
+/* 🔥 LOGO FIX */
+function fixLogo(url){
   if(!url) return "https://via.placeholder.com/50?text=Logo";
-  try{
-    return `https://logo.clearbit.com/${new URL(url).hostname}`;
-  }catch{
-    return url;
-  }
+
+  if(url.startsWith("http")) return url;
+
+  return `https://logo.clearbit.com/${url}`;
 }
 
 /* PRODUCTS */
-function renderProducts(){
-  const search = document.getElementById("search").value.toLowerCase();
+function loadProducts(){
+  const search = search.value.toLowerCase();
   products.innerHTML="";
-
-  if(allProducts.length === 0){
-    products.innerHTML = "<p style='padding:20px'>No products yet</p>";
-    return;
-  }
 
   allProducts.forEach(p=>{
     if(currentCategory!=="all" && p.category!==currentCategory) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
-    const div=document.createElement("div");
-    div.className="card";
+    const card=document.createElement("div");
+    card.className="card";
 
-    div.innerHTML=`
-      <img src="${logo(p.logo)}" class="logo">
+    card.innerHTML=`
+      <img src="${fixLogo(p.logo)}" class="logo"
+      onerror="this.src='https://via.placeholder.com/50?text=Logo'">
+
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
-      <button>Buy</button>
     `;
 
-    products.appendChild(div);
+    const row=document.createElement("div");
+    row.className="row";
+
+    /* PREVIEW BUTTON */
+    if(p.previewLink){
+      const previewBtn=document.createElement("button");
+      previewBtn.textContent="Preview";
+      previewBtn.onclick=()=>window.open(p.previewLink,"_blank");
+      row.appendChild(previewBtn);
+    }
+
+    /* BUY BUTTON */
+    const buyBtn=document.createElement("button");
+    buyBtn.textContent="Buy";
+    buyBtn.onclick=()=>buy(p.id);
+
+    row.appendChild(buyBtn);
+    card.appendChild(row);
+
+    products.appendChild(card);
   });
+}
+
+/* BUY */
+async function buy(id){
+  try{
+    const pDoc = await getDoc(doc(db,"products",id));
+    if(!pDoc.exists()) return alert("Product not found");
+
+    const p = pDoc.data();
+
+    const uRef=doc(db,"users",user.uid);
+    const uSnap=await getDoc(uRef);
+    const u=uSnap.data();
+
+    if((u.wallet||0) < p.price){
+      alert("Insufficient balance");
+      return;
+    }
+
+    const stockRef=doc(db,"productStock",id);
+    const stockSnap=await getDoc(stockRef);
+
+    if(!stockSnap.exists()){
+      alert("No stock found");
+      return;
+    }
+
+    let items=stockSnap.data().items || [];
+    const index=items.findIndex(i=>!i.sold);
+
+    if(index === -1){
+      alert("Out of stock");
+      return;
+    }
+
+    const item=items[index];
+    items[index].sold=true;
+
+    await updateDoc(uRef,{wallet:u.wallet - p.price});
+
+    await addDoc(collection(db,"orders"),{
+      userId:user.uid,
+      productId:id,
+      name:p.name,
+      price:p.price,
+      email:item.email,
+      password:item.password,
+      logo:p.logo || "",
+      createdAt:new Date()
+    });
+
+    await updateDoc(stockRef,{items});
+
+    alert(`✅ Success\n\nEmail: ${item.email}\nPassword: ${item.password}`);
+
+  }catch(err){
+    console.error(err);
+    alert("Purchase failed");
+  }
 }
 </script>
 
