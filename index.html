@@ -12,7 +12,6 @@ body {
   color:white;
 }
 
-/* HEADER */
 .header {
   background:#1c1c2e;
   padding:15px;
@@ -29,7 +28,6 @@ body {
   color:white;
 }
 
-/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -46,7 +44,6 @@ body {
 
 .cat.active { background:purple; }
 
-/* GRID */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
@@ -54,7 +51,6 @@ body {
   padding:15px;
 }
 
-/* CARD */
 .card {
   background:#1c1c2e;
   padding:12px;
@@ -140,7 +136,7 @@ body {
 <div class="nav">
   <a href="index.html" class="active">🏠</a>
   <a href="wallet.html">💳</a>
-  <a href="#">☰</a>
+  <a href="orders.html">📦</a>
   <a href="profile.html">👤</a>
 </div>
 
@@ -173,12 +169,11 @@ onAuthStateChanged(auth,(u)=>{
   user = u;
 });
 
-/* AUTO ICON */
+/* ICON SYSTEM */
 function getIcon(category){
   if(category.includes("facebook")) return "📘";
   if(category.includes("instagram")) return "📸";
   if(category.includes("tiktok")) return "🎵";
-  if(category.includes("twitter")) return "🐦";
   return "📦";
 }
 
@@ -222,9 +217,9 @@ window.setCat=(c)=>{
   loadProducts();
 };
 
-/* LOAD */
+/* LOAD PRODUCTS */
 window.loadProducts=()=>{
-  const search = searchEl.value.toLowerCase();
+  const search = document.getElementById("search").value.toLowerCase();
   const div = document.getElementById("products");
   div.innerHTML="";
 
@@ -246,7 +241,7 @@ window.loadProducts=()=>{
   });
 };
 
-/* PREVIEW */
+/* SAFE PREVIEW (NO LINK!) */
 window.preview = async(id)=>{
   const snap = await getDoc(doc(db,"products",id));
   const p = snap.data();
@@ -255,12 +250,12 @@ window.preview = async(id)=>{
   modalContent.innerHTML=`
     <h3>${p.name}</h3>
     <p>Category: ${p.category}</p>
-    <p><a href="${p.link}" target="_blank">Open Profile</a></p>
+    <p>Secure product. Details revealed after purchase.</p>
     <button onclick="modal.style.display='none'">Close</button>
   `;
 };
 
-/* BUY */
+/* SECURE BUY */
 window.buy = async(id)=>{
   const pSnap = await getDoc(doc(db,"products",id));
   const p = pSnap.data();
@@ -273,25 +268,26 @@ window.buy = async(id)=>{
     return alert("Insufficient balance");
   }
 
+  // deduct
   await updateDoc(uRef,{wallet:u.wallet - p.price});
-  await updateDoc(doc(db,"products",id),{status:"sold",buyer:user.uid});
 
+  // mark sold
+  await updateDoc(doc(db,"products",id),{
+    status:"sold",
+    buyer:user.uid
+  });
+
+  // create order WITH SECRET DATA
   await addDoc(collection(db,"orders"),{
     userId:user.uid,
     productId:id,
     name:p.name,
     price:p.price,
-    link:p.link,
+    access:p.link, // 🔐 ONLY HERE
     createdAt:new Date()
   });
 
-  modal.style.display="flex";
-  modalContent.innerHTML=`
-    <h3>Purchase Successful ✅</h3>
-    <p>Here are your details:</p>
-    <p><a href="${p.link}" target="_blank">${p.link}</a></p>
-    <button onclick="modal.style.display='none'">Close</button>
-  `;
+  alert("Purchase successful ✅\nCheck 'My Orders' to access product");
 
   init();
 };
