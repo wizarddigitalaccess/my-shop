@@ -19,6 +19,7 @@ html, body {
   overflow-x:hidden;
 }
 
+/* HEADER */
 .header {
   padding:15px;
   background:#1c1c2e;
@@ -27,8 +28,10 @@ html, body {
   align-items:center;
 }
 
+/* CONTAINER */
 .container { padding:15px; }
 
+/* CARD */
 .card {
   background:#1c1c2e;
   padding:15px;
@@ -36,6 +39,7 @@ html, body {
   margin-bottom:15px;
 }
 
+/* INPUT */
 input, textarea {
   width:100%;
   padding:12px;
@@ -47,6 +51,7 @@ input, textarea {
   font-size:16px;
 }
 
+/* BUTTON */
 button {
   padding:8px;
   border:none;
@@ -56,6 +61,7 @@ button {
   cursor:pointer;
 }
 
+/* ITEM */
 .item {
   display:flex;
   align-items:center;
@@ -65,6 +71,7 @@ button {
   border-bottom:1px solid #333;
 }
 
+/* LOGO FIX */
 .logo {
   width:40px;
   height:40px;
@@ -74,6 +81,7 @@ button {
   padding:4px;
 }
 
+/* BUTTON ROW */
 .row {
   display:flex;
   gap:5px;
@@ -83,6 +91,7 @@ button {
   font-size:12px;
 }
 
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -90,11 +99,13 @@ button {
   display:flex;
   background:#111;
 }
+
 .nav button {
   flex:1;
   background:none;
   color:gray;
 }
+
 .nav button.active {
   color:purple;
 }
@@ -126,6 +137,20 @@ button {
   </div>
 </div>
 
+<!-- CATEGORIES -->
+<div id="categoriesPage" style="display:none">
+  <div class="card">
+    <h3>Categories</h3>
+
+    <input id="newCategory" placeholder="New category name">
+    <button id="addCategoryBtn">Add Category</button>
+
+    <hr>
+
+    <div id="categories"></div>
+  </div>
+</div>
+
 <!-- PRODUCTS -->
 <div id="productsPage" style="display:none">
   <div class="card">
@@ -149,10 +174,10 @@ button {
 
     <h3>Edit Product</h3>
 
-    <input id="editName">
-    <input id="editCategory">
-    <input id="editPrice" type="number">
-    <input id="editLogo">
+    <input id="editName" placeholder="Name">
+    <input id="editCategory" placeholder="Category">
+    <input id="editPrice" type="number" placeholder="Price">
+    <input id="editLogo" placeholder="Logo URL">
 
     <button id="saveEditBtn">Save Changes</button>
 
@@ -175,6 +200,7 @@ button {
 <div class="nav">
 <button data-page="dashboard" class="active">Dashboard</button>
 <button data-page="users">Users</button>
+<button data-page="categories">Categories</button>
 <button data-page="products">Products</button>
 <button data-page="orders">Orders</button>
 </div>
@@ -188,7 +214,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  apiKey:"AIzaSy...",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
   projectId:"wizard-shop-52a50"
 });
@@ -200,13 +226,9 @@ let editingId = null;
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    location.href="auth.html";
-    return;
-  }
+  if(!user) return location.href="auth.html";
 
   const snap = await getDoc(doc(db,"users",user.uid));
-
   if(!snap.exists() || snap.data().role !== "admin"){
     location.href="index.html";
     return;
@@ -222,6 +244,7 @@ function init(){
   loadUsers();
   loadProducts();
   loadOrders();
+  loadCategories();
 }
 
 /* USERS */
@@ -235,61 +258,82 @@ async function loadUsers(){
     const div = document.createElement("div");
     div.className="item";
 
-    div.innerHTML = `
-      <div>
-        ${u.email}<br>₦${u.wallet||0}
-      </div>
-    `;
+    div.innerHTML = `${u.email}<br>₦${u.wallet||0}`;
 
     const row = document.createElement("div");
     row.className="row";
 
-    const add = document.createElement("button");
-    add.textContent="+";
-    add.onclick=async()=>{
-      const amt = Number(prompt("Amount"));
-      if(!amt) return;
-      await updateDoc(doc(db,"users",d.id),{wallet:(u.wallet||0)+amt});
-      loadUsers();
-    };
+    row.innerHTML = `
+      <button onclick="updateWallet('${d.id}',1)">+</button>
+      <button onclick="updateWallet('${d.id}',-1)">-</button>
+      <button onclick="deleteUser('${d.id}')">X</button>
+    `;
 
-    const sub = document.createElement("button");
-    sub.textContent="-";
-    sub.onclick=async()=>{
-      const amt = Number(prompt("Amount"));
-      if(!amt) return;
-      await updateDoc(doc(db,"users",d.id),{wallet:(u.wallet||0)-amt});
-      loadUsers();
-    };
-
-    const del = document.createElement("button");
-    del.textContent="X";
-    del.onclick=async()=>{
-      if(confirm("Delete user?")){
-        await deleteDoc(doc(db,"users",d.id));
-        loadUsers();
-      }
-    };
-
-    row.append(add,sub,del);
     div.appendChild(row);
     users.appendChild(div);
   });
 }
 
-/* LOGO */
+window.updateWallet = async (id,type)=>{
+  const amt = Number(prompt("Amount"));
+  if(!amt) return;
+
+  const ref = doc(db,"users",id);
+  const u = (await getDoc(ref)).data();
+
+  await updateDoc(ref,{
+    wallet: (u.wallet||0) + (type*amt)
+  });
+
+  loadUsers();
+};
+
+window.deleteUser = async (id)=>{
+  if(confirm("Delete user?")){
+    await deleteDoc(doc(db,"users",id));
+    loadUsers();
+  }
+};
+
+/* CATEGORIES */
+addCategoryBtn.onclick = async ()=>{
+  const name = newCategory.value.trim();
+  if(!name) return;
+
+  await addDoc(collection(db,"categories"),{name});
+  newCategory.value="";
+  loadCategories();
+};
+
+async function loadCategories(){
+  categories.innerHTML="";
+  const snap = await getDocs(collection(db,"categories"));
+
+  snap.forEach(d=>{
+    const c = d.data();
+
+    const div = document.createElement("div");
+    div.className="item";
+
+    div.innerHTML = c.name;
+
+    const del = document.createElement("button");
+    del.textContent="Delete";
+    del.onclick=async()=>{
+      await deleteDoc(doc(db,"categories",d.id));
+      loadCategories();
+    };
+
+    div.appendChild(del);
+    categories.appendChild(div);
+  });
+}
+
+/* PRODUCT LOGO */
 function getLogo(domain, custom){
   if(custom) return custom;
   if(!domain) return "";
   return `https://logo.clearbit.com/${domain}`;
-}
-
-function cleanDomain(input){
-  try {
-    return new URL(input).hostname.replace("www.","");
-  } catch {
-    return input.split("/")[0];
-  }
 }
 
 /* ADD PRODUCT */
@@ -300,7 +344,7 @@ addProductBtn.onclick = async ()=>{
 
   if(!name || !category || !price) return alert("Fill all");
 
-  const logo = getLogo(cleanDomain(domain.value), logoInput.value);
+  const logo = getLogo(domain.value, logoInput.value);
 
   const ref = await addDoc(collection(db,"products"),{
     name, category, price, logo
@@ -310,7 +354,7 @@ addProductBtn.onclick = async ()=>{
     .filter(l=>l.includes(":"))
     .map(l=>{
       const [email,password]=l.split(":");
-      return {email:email.trim(),password:password.trim(),sold:false};
+      return {email,password,sold:false};
     });
 
   await setDoc(doc(db,"productStock",ref.id),{items});
@@ -330,8 +374,9 @@ async function loadProducts(){
     const div = document.createElement("div");
     div.className="item";
 
-    div.innerHTML=`
-      <img src="${p.logo||""}" class="logo">
+    div.innerHTML = `
+      <img src="${p.logo||""}" class="logo"
+      onerror="this.src='https://via.placeholder.com/40'">
       <div>${p.name}<br>₦${p.price}</div>
     `;
 
@@ -359,7 +404,6 @@ async function loadProducts(){
 
     row.append(edit,del);
     div.appendChild(row);
-
     products.appendChild(div);
   });
 }
@@ -394,9 +438,7 @@ async function loadOrders(){
 
   snap.forEach(d=>{
     const o=d.data();
-    orders.innerHTML+=`
-      <div class="item">₦${o.price} - ${o.name}</div>
-    `;
+    orders.innerHTML+=`<div class="item">₦${o.price} - ${o.name}</div>`;
   });
 }
 
@@ -406,9 +448,8 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
 
-    ["dashboard","usersPage","productsPage","ordersPage"].forEach(id=>{
-      document.getElementById(id).style.display="none";
-    });
+    ["dashboard","usersPage","categoriesPage","productsPage","ordersPage"]
+    .forEach(id=> document.getElementById(id).style.display="none");
 
     document.getElementById(btn.dataset.page+(btn.dataset.page==="dashboard"?"":"Page")).style.display="block";
   };
