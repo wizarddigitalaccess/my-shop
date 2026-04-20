@@ -180,21 +180,46 @@ async function loadDashboard(){
   const productsSnap = await getDocs(collection(db,"products"));
   const ordersSnap = await getDocs(collection(db,"orders"));
 
-  usersCount.innerText = usersSnap.size;
-  productsCount.innerText = productsSnap.size;
-  ordersCount.innerText = ordersSnap.size;
+  document.getElementById("usersCount").innerText = usersSnap.size;
+  document.getElementById("productsCount").innerText = productsSnap.size;
+  document.getElementById("ordersCount").innerText = ordersSnap.size;
 
-  let revenue=0, days={};
+  let totalRevenue = 0;
+  let days = {};
 
   ordersSnap.forEach(d=>{
-    const o=d.data();
-    revenue += o.price || 0;
+    const o = d.data();
+
+    totalRevenue += Number(o.price) || 0;
 
     if(o.createdAt){
-      const date = new Date(o.createdAt.seconds*1000).toLocaleDateString();
-      days[date]=(days[date]||0)+o.price;
+      let date;
+
+      if (o.createdAt.seconds) {
+        date = new Date(o.createdAt.seconds * 1000).toLocaleDateString();
+      } else {
+        date = new Date(o.createdAt).toLocaleDateString();
+      }
+
+      days[date] = (days[date] || 0) + (Number(o.price) || 0);
     }
   });
+
+  document.getElementById("revenue").innerText = totalRevenue;
+
+  if(chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(document.getElementById("chart"),{
+    type:"line",
+    data:{
+      labels:Object.keys(days),
+      datasets:[{
+        label:"Revenue",
+        data:Object.values(days)
+      }]
+    }
+  });
+}
 
   revenue.innerText = revenue;
 
