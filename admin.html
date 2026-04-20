@@ -2,13 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Premium Admin Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { margin:0; font-family: Arial; background:#0f0f1a; color:white; display:none; }
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0f0f1a;
+  color:white;
+  display:none;
+}
+
+/* 🔥 FIX ZOOM / APP FEEL */
+html, body {
+  height:100%;
+  overflow-x:hidden;
+}
 
 .header {
   padding:15px;
@@ -29,12 +41,18 @@ body { margin:0; font-family: Arial; background:#0f0f1a; color:white; display:no
 
 input, textarea {
   width:100%;
-  padding:10px;
+  padding:12px;
   margin-top:8px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:#111;
   color:white;
+  font-size:16px;
+}
+
+/* 🔥 STOP MOBILE ZOOM ON INPUT */
+input, textarea, select {
+  font-size:16px;
 }
 
 button {
@@ -42,7 +60,7 @@ button {
   padding:10px;
   margin-top:8px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:purple;
   color:white;
   cursor:pointer;
@@ -103,27 +121,19 @@ button {
   </div>
 </div>
 
-<!-- USERS -->
-<div id="usersPage" style="display:none">
-  <div class="card">
-    <input id="userSearch" placeholder="Search users...">
-    <div id="users"></div>
-  </div>
-</div>
-
 <!-- PRODUCTS -->
 <div id="productsPage" style="display:none">
   <div class="card">
 
     <h3>Add Product</h3>
 
-    <input id="name" placeholder="Product Name">
-    <input id="category" placeholder="Category">
-    <input id="price" type="number" placeholder="Price">
-    
-    <input id="domain" placeholder="Paste ANY link or domain">
+    <input id="nameInput" placeholder="Product Name">
+    <input id="categoryInput" placeholder="Category">
+    <input id="priceInput" type="number" placeholder="Price">
+
+    <input id="domain" placeholder="Paste ANY link (facebook / instagram)">
     <input id="logoInput" placeholder="Custom Logo URL (optional)">
-    <input id="previewLink" placeholder="Preview Link (optional)">
+    <input id="previewLinkInput" placeholder="Preview Link (optional)">
 
     <img id="logoPreview" class="logo">
 
@@ -133,7 +143,6 @@ button {
 
     <hr>
 
-    <input id="productSearch" placeholder="Search products...">
     <div id="products"></div>
   </div>
 </div>
@@ -150,7 +159,6 @@ button {
 
 <div class="nav">
 <button data-page="dashboard" class="active">Dashboard</button>
-<button data-page="users">Users</button>
 <button data-page="products">Products</button>
 <button data-page="orders">Orders</button>
 </div>
@@ -160,8 +168,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, doc,
-  updateDoc, deleteDoc, addDoc, increment,
-  getDoc, setDoc
+  addDoc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -178,9 +185,7 @@ let chartInstance;
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
-    setTimeout(()=>{
-      if (!auth.currentUser) location.href="auth.html";
-    },500);
+    location.href="auth.html";
     return;
   }
 
@@ -196,21 +201,22 @@ onAuthStateChanged(auth, async (user)=>{
 });
 
 /* INIT */
-async function init(){
+function init(){
   loadDashboard();
-  loadUsers();
   loadProducts();
   loadOrders();
 }
 
-/* DOMAIN CLEANER */
+/* DOMAIN CLEAN */
 function cleanDomain(input){
-  if(!input) return "";
   try {
     const url = new URL(input);
     return url.hostname.replace("www.","");
   } catch {
-    return input.replace("www.","").split("/")[0];
+    return input.replace("https://","")
+      .replace("http://","")
+      .replace("www.","")
+      .split("/")[0];
   }
 }
 
@@ -221,12 +227,10 @@ function getLogo(domain, custom){
   return `https://logo.clearbit.com/${domain}`;
 }
 
-/* LIVE PREVIEW */
+/* PREVIEW LOGO */
 function updateLogoPreview(){
-  const raw = document.getElementById("domain").value;
-  const clean = cleanDomain(raw);
-  const custom = document.getElementById("logoInput").value;
-  document.getElementById("logoPreview").src = getLogo(clean, custom);
+  const clean = cleanDomain(domain.value);
+  logoPreview.src = getLogo(clean, logoInput.value);
 }
 
 domain.oninput = updateLogoPreview;
@@ -237,16 +241,14 @@ addProductBtn.onclick = async ()=>{
   const name = nameInput.value.trim();
   const category = categoryInput.value.trim();
   const price = Number(priceInput.value);
-  const rawDomain = domain.value.trim();
-  const custom = logoInput.value.trim();
   const previewLink = previewLinkInput.value.trim();
 
   if(!name || !category || !price){
     return alert("Fill all fields");
   }
 
-  const clean = cleanDomain(rawDomain);
-  const logo = getLogo(clean, custom);
+  const clean = cleanDomain(domain.value);
+  const logo = getLogo(clean, logoInput.value);
 
   const ref = await addDoc(collection(db,"products"),{
     name,
@@ -257,18 +259,11 @@ addProductBtn.onclick = async ()=>{
     previewLink
   });
 
-  const lines = stockData.value.split("\n");
-
-  const items = lines
-    .map(l => l.trim())
+  const items = stockData.value.split("\n")
     .filter(l => l.includes(":"))
     .map(l=>{
       const [email,password]=l.split(":");
-      return {
-        email: email.trim(),
-        password: password.trim(),
-        sold:false
-      };
+      return { email:email.trim(), password:password.trim(), sold:false };
     });
 
   await setDoc(doc(db,"productStock",ref.id),{items});
@@ -279,53 +274,15 @@ addProductBtn.onclick = async ()=>{
 
 /* DASHBOARD */
 async function loadDashboard(){
-  const usersSnap = await getDocs(collection(db,"users"));
-  const productsSnap = await getDocs(collection(db,"products"));
   const ordersSnap = await getDocs(collection(db,"orders"));
 
-  usersCount.innerText = usersSnap.size;
-  productsCount.innerText = productsSnap.size;
-  ordersCount.innerText = ordersSnap.size;
-
   let revenue = 0;
-  let days = {};
 
   ordersSnap.forEach(d=>{
-    const o = d.data();
-    revenue += Number(o.price||0);
-
-    if(o.createdAt){
-      const date = new Date(o.createdAt);
-      const key = date.toLocaleDateString();
-      days[key]=(days[key]||0)+Number(o.price||0);
-    }
+    revenue += Number(d.data().price||0);
   });
 
   document.getElementById("revenue").innerText = revenue;
-
-  if(chartInstance) chartInstance.destroy();
-
-  chartInstance = new Chart(chart,{
-    type:"line",
-    data:{
-      labels:Object.keys(days),
-      datasets:[{label:"Revenue",data:Object.values(days)}]
-    }
-  });
-}
-
-/* USERS */
-async function loadUsers(){
-  users.innerHTML="";
-  const snap = await getDocs(collection(db,"users"));
-
-  snap.forEach(d=>{
-    const u=d.data();
-    users.innerHTML+=`
-    <div class="item">
-      ${u.email}<br>₦${u.wallet||0}
-    </div>`;
-  });
 }
 
 /* PRODUCTS */
@@ -337,7 +294,7 @@ async function loadProducts(){
     const p=d.data();
     products.innerHTML+=`
     <div class="item">
-      <img src="${p.logo||""}" class="logo">
+      <img src="${p.logo||""}" class="logo" onerror="this.style.display='none'">
       <div>${p.name}<br>₦${p.price}</div>
     </div>`;
   });
@@ -363,7 +320,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
     document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
 
-    ["dashboard","usersPage","productsPage","ordersPage"].forEach(id=>{
+    ["dashboard","productsPage","ordersPage"].forEach(id=>{
       document.getElementById(id).style.display="none";
     });
 

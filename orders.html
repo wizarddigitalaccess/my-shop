@@ -29,15 +29,20 @@ body {
   padding:15px;
   border-radius:12px;
   margin-bottom:15px;
+  display:flex;
+  gap:12px;
 }
 
 .logo {
-  width:50px;
-  height:50px;
+  width:55px;
+  height:55px;
   object-fit:contain;
   border-radius:10px;
   background:#222;
-  margin-bottom:10px;
+}
+
+.content {
+  flex:1;
 }
 
 .title {
@@ -81,6 +86,12 @@ button:hover { opacity:0.85; }
   font-size:12px;
   color:gray;
   margin-top:8px;
+}
+
+.empty {
+  text-align:center;
+  color:gray;
+  margin-top:40px;
 }
 
 .nav {
@@ -127,7 +138,7 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG (ISOLATED FROM ADMIN) */
+/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -161,37 +172,47 @@ async function loadOrders(uid){
   ordersDiv.innerHTML = "";
 
   if(snap.empty){
-    ordersDiv.innerHTML = "<p>No orders yet</p>";
+    ordersDiv.innerHTML = `<div class="empty">No orders yet 🛒</div>`;
     return;
   }
 
-  snap.forEach(doc=>{
-    const o = doc.data();
+  snap.forEach(docSnap=>{
+    const o = docSnap.data();
 
-    const date = o.createdAt
-      ? new Date(o.createdAt).toLocaleString()
-      : "";
+    // FIX DATE (supports timestamp + string)
+    let date = "";
+    if(o.createdAt){
+      if(o.createdAt.seconds){
+        date = new Date(o.createdAt.seconds * 1000).toLocaleString();
+      } else {
+        date = new Date(o.createdAt).toLocaleString();
+      }
+    }
 
     const div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
-      <img src="${o.logo || ''}" class="logo">
-      <div class="title">${o.name}</div>
-      <div class="price">₦${o.price}</div>
+      <img src="${o.logo || ''}" class="logo"
+        onerror="this.src='https://via.placeholder.com/50?text=No+Logo'">
 
-      <div class="field">Email: ${o.email}</div>
+      <div class="content">
+        <div class="title">${o.name || 'Product'}</div>
+        <div class="price">₦${o.price || 0}</div>
 
-      <div class="field" id="pass-${doc.id}">
-        Password: ••••••••
+        <div class="field">Email: ${o.email || ''}</div>
+
+        <div class="field" id="pass-${docSnap.id}">
+          Password: ••••••••
+        </div>
+
+        <div class="row">
+          <button onclick="toggle('${docSnap.id}','${o.password}')">Show</button>
+          <button onclick="copyLogin('${o.email}','${o.password}')">Copy</button>
+        </div>
+
+        <div class="date">${date}</div>
       </div>
-
-      <div class="row">
-        <button onclick="toggle('${doc.id}','${o.password}')">Show</button>
-        <button onclick="copyLogin('${o.email}','${o.password}')">Copy</button>
-      </div>
-
-      <div class="date">${date}</div>
     `;
 
     ordersDiv.appendChild(div);

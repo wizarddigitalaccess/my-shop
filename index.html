@@ -31,6 +31,7 @@ body {
   color:white;
 }
 
+/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -44,10 +45,20 @@ body {
   border-radius:20px;
   cursor:pointer;
   white-space:nowrap;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.cat img {
+  width:20px;
+  height:20px;
+  border-radius:4px;
 }
 
 .cat.active { background:purple; }
 
+/* PRODUCTS */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
@@ -92,6 +103,7 @@ body {
   cursor:pointer;
 }
 
+/* MODAL */
 .modal {
   position:fixed;
   top:0; left:0;
@@ -101,7 +113,6 @@ body {
   display:none;
   justify-content:center;
   align-items:center;
-  z-index:999;
 }
 
 .modal-content {
@@ -113,6 +124,7 @@ body {
   text-align:center;
 }
 
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -167,7 +179,6 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG (ISOLATED FROM ADMIN) */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -177,13 +188,10 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* STATE */
 let user = null;
 let allProducts = [];
 let currentCategory = "all";
-let loaded = false;
 
-/* DOM */
 const searchInput = document.getElementById("search");
 const productsDiv = document.getElementById("products");
 const categoriesDiv = document.getElementById("categories");
@@ -191,108 +199,107 @@ const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
 /* AUTH */
-onAuthStateChanged(auth, async (u) => {
-  if (!u) {
+onAuthStateChanged(auth, async (u)=>{
+  if(!u){
     setTimeout(()=>{
-      if (!auth.currentUser) location.href = "auth.html";
+      if(!auth.currentUser) location.href="auth.html";
     },500);
     return;
   }
 
   user = u;
-
-  if (!loaded) {
-    loaded = true;
-    await init();
-  }
+  init();
 });
-
-/* SEARCH */
-searchInput.addEventListener("input", loadProducts);
 
 /* INIT */
 async function init(){
-  allProducts = [];
-
   const snap = await getDocs(collection(db,"products"));
-  let cats = new Set();
+  const cats = new Map();
+
+  allProducts = [];
 
   snap.forEach(d=>{
     const p = d.data();
     p.id = d.id;
 
-    if(p.status === "disabled") return;
-
     allProducts.push(p);
-    cats.add(p.category);
+
+    // 🔥 assign category logo from first product
+    if(!cats.has(p.category)){
+      cats.set(p.category, p.logo || "");
+    }
   });
 
-  renderCats([...cats]);
+  renderCats(cats);
   loadProducts();
 }
 
-/* CATEGORIES */
-function renderCats(cats){
+/* CATEGORY RENDER */
+function renderCats(catMap){
   categoriesDiv.innerHTML = "";
 
-  const allBtn = createCatButton("All", "all");
-  allBtn.classList.add("active");
-  categoriesDiv.appendChild(allBtn);
+  const all = createCat("All","all","");
+  all.classList.add("active");
+  categoriesDiv.appendChild(all);
 
-  cats.forEach(c=>{
-    categoriesDiv.appendChild(createCatButton(c, c));
+  catMap.forEach((logo, name)=>{
+    categoriesDiv.appendChild(createCat(name,name,logo));
   });
 }
 
-function createCatButton(label, value){
-  const btn = document.createElement("div");
-  btn.className = "cat";
-  btn.textContent = label;
+function createCat(label,value,logo){
+  const div = document.createElement("div");
+  div.className="cat";
 
-  btn.onclick = ()=>{
-    currentCategory = value;
+  div.innerHTML = `
+    ${logo ? `<img src="${logo}" onerror="this.remove()">` : ""}
+    <span>${label}</span>
+  `;
 
-    document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active"));
-    btn.classList.add("active");
+  div.onclick=()=>{
+    currentCategory=value;
+
+    document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
+    div.classList.add("active");
 
     loadProducts();
   };
 
-  return btn;
+  return div;
 }
 
-/* LOAD PRODUCTS */
+/* PRODUCTS */
 function loadProducts(){
   const search = searchInput.value.toLowerCase();
-  productsDiv.innerHTML = "";
+  productsDiv.innerHTML="";
 
   allProducts.forEach(p=>{
-    if(currentCategory !== "all" && p.category !== currentCategory) return;
+    if(currentCategory!=="all" && p.category!==currentCategory) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
     const card = document.createElement("div");
-    card.className = "card";
+    card.className="card";
 
-    const logo = p.logo || "";
+    card.innerHTML=`
+      <img src="${p.logo || ''}" class="logo"
+        onerror="this.src='https://via.placeholder.com/50?text=Logo'">
 
-    card.innerHTML = `
-      <img src="${logo}" class="logo" onerror="this.style.display='none'">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
 
-    const row = document.createElement("div");
-    row.className = "row";
+    const row=document.createElement("div");
+    row.className="row";
 
-    const previewBtn = document.createElement("button");
-    previewBtn.textContent = "Preview";
-    previewBtn.onclick = ()=>preview(p);
+    const previewBtn=document.createElement("button");
+    previewBtn.textContent="Preview";
+    previewBtn.onclick=()=>preview(p);
 
-    const buyBtn = document.createElement("button");
-    buyBtn.textContent = "Buy";
-    buyBtn.onclick = ()=>buy(p.id);
+    const buyBtn=document.createElement("button");
+    buyBtn.textContent="Buy";
+    buyBtn.onclick=()=>buy(p.id);
 
-    row.append(previewBtn, buyBtn);
+    row.append(previewBtn,buyBtn);
     card.appendChild(row);
 
     productsDiv.appendChild(card);
@@ -301,8 +308,8 @@ function loadProducts(){
 
 /* PREVIEW */
 function preview(p){
-  modalContent.innerHTML = `
-    <img src="${p.logo || ''}" class="logo" onerror="this.style.display='none'">
+  modalContent.innerHTML=`
+    <img src="${p.logo || ''}" class="logo">
     <h3>${p.name}</h3>
     <p>${p.description || "No description"}</p>
 
@@ -313,82 +320,52 @@ function preview(p){
     ` : ""}
 
     <br><br>
-    <button id="closeModal">Close</button>
+    <button onclick="document.getElementById('modal').style.display='none'">Close</button>
   `;
 
-  modal.style.display = "flex";
-
-  document.getElementById("closeModal").onclick = ()=>{
-    modal.style.display = "none";
-  };
+  modal.style.display="flex";
 }
-
-/* CLOSE MODAL */
-modal.onclick = (e)=>{
-  if(e.target === modal){
-    modal.style.display = "none";
-  }
-};
 
 /* BUY */
 async function buy(id){
-  try{
-    const pRef = doc(db,"products",id);
-    const pSnap = await getDoc(pRef);
-    const p = pSnap.data();
+  const p = (await getDoc(doc(db,"products",id))).data();
+  const uRef = doc(db,"users",user.uid);
+  const u = (await getDoc(uRef)).data();
 
-    const uRef = doc(db,"users",user.uid);
-    const uSnap = await getDoc(uRef);
-    const u = uSnap.data();
+  if((u.wallet||0) < p.price) return alert("Insufficient balance");
 
-    if((u.wallet||0) < p.price){
-      return alert("Insufficient balance");
-    }
+  const stockRef = doc(db,"productStock",id);
+  const stockSnap = await getDoc(stockRef);
 
-    const stockRef = doc(db,"productStock",id);
-    const stockSnap = await getDoc(stockRef);
+  let items = stockSnap.data().items;
+  const index = items.findIndex(i=>!i.sold);
 
-    if(!stockSnap.exists()){
-      return alert("No stock available");
-    }
+  if(index === -1) return alert("Out of stock");
 
-    let items = stockSnap.data().items;
-    const index = items.findIndex(i => !i.sold);
+  const item = items[index];
+  items[index].sold = true;
 
-    if(index === -1){
-      return alert("Out of stock");
-    }
+  await updateDoc(uRef,{wallet:u.wallet - p.price});
 
-    const item = items[index];
-    items[index].sold = true;
+  await addDoc(collection(db,"orders"),{
+    userId:user.uid,
+    productId:id,
+    name:p.name,
+    price:p.price,
+    email:item.email,
+    password:item.password,
+    logo:p.logo || "",
+    createdAt:new Date()
+  });
 
-    await updateDoc(uRef,{wallet:u.wallet - p.price});
+  await updateDoc(stockRef,{items});
 
-    /* 🔥 FIXED: NOW SAVES LOGO */
-    await addDoc(collection(db,"orders"),{
-      userId:user.uid,
-      productId:id,
-      name:p.name,
-      price:p.price,
-      email:item.email,
-      password:item.password,
-      logo: p.logo || "",
-      createdAt:new Date()
-    });
-
-    await updateDoc(stockRef,{items});
-
-    alert(`✅ Purchase successful
+  alert(`✅ Success
 
 Email: ${item.email}
 Password: ${item.password}`);
 
-    location.href = "orders.html";
-
-  }catch(err){
-    console.error(err);
-    alert("Error processing purchase");
-  }
+  location.href="orders.html";
 }
 </script>
 
