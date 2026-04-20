@@ -11,7 +11,25 @@ body {
   font-family: Arial;
   background:#0f0f1a;
   color:white;
-  display:none; /* 🔥 prevents flash */
+}
+
+/* 🔥 SAFE LOADER (NOT display:none anymore) */
+#app {
+  display:none;
+}
+
+.loader {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#0f0f1a;
+  color:white;
+  font-size:16px;
 }
 
 .header {
@@ -46,12 +64,7 @@ body {
 
 .content { flex:1; }
 
-.title { font-size:16px; margin-bottom:5px; }
-
-.price {
-  color:violet;
-  font-weight:bold;
-}
+.price { color:violet; font-weight:bold; }
 
 .field {
   background:#111;
@@ -78,24 +91,6 @@ button {
   cursor:pointer;
 }
 
-.date {
-  font-size:12px;
-  color:gray;
-  margin-top:8px;
-}
-
-.empty {
-  text-align:center;
-  color:gray;
-  margin-top:40px;
-}
-
-.loader {
-  text-align:center;
-  margin-top:50px;
-  color:gray;
-}
-
 .nav {
   position:fixed;
   bottom:0;
@@ -118,17 +113,22 @@ button {
 
 <body>
 
-<div class="header">📦 My Orders</div>
+<!-- 🔥 LOADER -->
+<div class="loader" id="loader">Loading...</div>
 
-<div class="container" id="orders">
-  <div class="loader">Loading orders...</div>
-</div>
+<!-- 🔥 REAL APP -->
+<div id="app">
+
+<div class="header">📦 My Orders</div>
+<div class="container" id="orders"></div>
 
 <div class="nav">
   <a href="index.html">🏠</a>
   <a href="wallet.html">💳</a>
   <a href="orders.html" class="active">📦</a>
   <a href="profile.html">👤</a>
+</div>
+
 </div>
 
 <script type="module">
@@ -152,37 +152,47 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const loader = document.getElementById("loader");
+const appDiv = document.getElementById("app");
 const ordersDiv = document.getElementById("orders");
 
-/* 🔐 AUTH (FIXED - no flicker, no skip) */
+/* 🔐 AUTH (SAFE VERSION) */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    location.href="auth.html";
-    return;
-  }
+  try {
 
-  document.body.style.display = "block";
-  loadOrders(user.uid);
+    if(!user){
+      location.href = "auth.html";
+      return;
+    }
+
+    loader.style.display = "none";
+    appDiv.style.display = "block";
+
+    loadOrders(user.uid);
+
+  } catch(err){
+    loader.innerText = "Error loading app";
+    console.error(err);
+  }
 });
 
 /* LOAD ORDERS */
 async function loadOrders(uid){
-  ordersDiv.innerHTML = `<div class="loader">Loading orders...</div>`;
+  ordersDiv.innerHTML = "Loading orders...";
 
   const q = query(collection(db,"orders"), where("userId","==",uid));
   const snap = await getDocs(q);
 
-  ordersDiv.innerHTML = "";
-
   if(snap.empty){
-    ordersDiv.innerHTML = `<div class="empty">No orders yet 🛒</div>`;
+    ordersDiv.innerHTML = "No orders yet 🛒";
     return;
   }
+
+  ordersDiv.innerHTML = "";
 
   snap.forEach(docSnap=>{
     const o = docSnap.data();
 
-    /* 🔥 FIX DATE */
     let date = "";
     if(o.createdAt){
       if(o.createdAt.seconds){
@@ -197,24 +207,21 @@ async function loadOrders(uid){
 
     div.innerHTML = `
       <img src="${o.logo || ''}" class="logo"
-        onerror="this.src='https://via.placeholder.com/55?text=No+Logo'">
+      onerror="this.src='https://via.placeholder.com/55?text=Logo'">
 
       <div class="content">
-        <div class="title">${o.name || 'Product'}</div>
-        <div class="price">₦${o.price || 0}</div>
+        <div>${o.name}</div>
+        <div class="price">₦${o.price}</div>
 
-        <div class="field">Email: ${o.email || ''}</div>
-
-        <div class="field" id="pass-${docSnap.id}">
-          Password: ••••••••
-        </div>
+        <div class="field">Email: ${o.email}</div>
+        <div class="field" id="p-${docSnap.id}">Password: •••••</div>
 
         <div class="row">
           <button onclick="toggle('${docSnap.id}','${o.password}')">Show</button>
           <button onclick="copyLogin('${o.email}','${o.password}')">Copy</button>
         </div>
 
-        <div class="date">${date}</div>
+        <div style="font-size:12px;color:gray">${date}</div>
       </div>
     `;
 
@@ -222,21 +229,16 @@ async function loadOrders(uid){
   });
 }
 
-/* TOGGLE PASSWORD */
 window.toggle = (id, pass)=>{
-  const el = document.getElementById("pass-"+id);
-
-  if(el.innerText.includes("•••")){
-    el.innerText = "Password: " + pass;
-  } else {
-    el.innerText = "Password: ••••••••";
-  }
+  const el = document.getElementById("p-"+id);
+  el.innerText = el.innerText.includes("•")
+    ? "Password: "+pass
+    : "Password: •••••";
 };
 
-/* COPY LOGIN */
 window.copyLogin = (email, pass)=>{
   navigator.clipboard.writeText(`Email: ${email}\nPassword: ${pass}`);
-  alert("Copied ✅");
+  alert("Copied");
 };
 </script>
 
