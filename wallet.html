@@ -15,11 +15,25 @@ body {
   display: none;
 }
 
+/* 🔥 LOADER (FIX WHITE FLASH) */
+.loader {
+  position: fixed;
+  inset: 0;
+  background:#0f0f1a;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+  font-size:14px;
+  opacity:0.7;
+}
+
 .container {
   padding: 20px;
   padding-bottom: 80px;
 }
 
+/* CARD */
 .card {
   background: #1c1c2e;
   padding: 20px;
@@ -27,11 +41,13 @@ body {
   margin-bottom: 15px;
 }
 
+/* BALANCE */
 .balance {
-  font-size: 30px;
+  font-size: 32px;
   font-weight: bold;
 }
 
+/* INPUT */
 input {
   width: 100%;
   padding: 12px;
@@ -42,6 +58,7 @@ input {
   color: white;
 }
 
+/* BUTTON */
 button {
   width: 100%;
   padding: 12px;
@@ -53,21 +70,26 @@ button {
   cursor: pointer;
 }
 
+/* TX */
 .tx {
   padding: 10px;
   border-bottom: 1px solid #333;
   font-size: 14px;
+  display:flex;
+  justify-content:space-between;
 }
+
+/* STATUS COLORS */
+.status-pending { color: orange; }
+.status-approved { color: lightgreen; }
+.status-rejected { color: red; }
 
 .small {
   font-size: 12px;
   opacity: 0.7;
 }
 
-.status-pending { color: orange; }
-.status-approved { color: lightgreen; }
-.status-rejected { color: red; }
-
+/* NAV */
 .nav {
   position: fixed;
   bottom: 0;
@@ -84,6 +106,9 @@ button {
 </head>
 
 <body>
+
+<!-- 🔥 LOADING SCREEN -->
+<div class="loader" id="loader">Loading wallet...</div>
 
 <div class="container">
 
@@ -118,7 +143,7 @@ button {
 </div>
 
 <script>
-setTimeout(() => feather.replace(), 500);
+setTimeout(() => feather.replace(), 300);
 </script>
 
 <script type="module">
@@ -135,7 +160,8 @@ import {
   where,
   onSnapshot as onSnapshotCol,
   getDoc,
-  setDoc
+  setDoc,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
@@ -149,95 +175,92 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 AUTH
+/* AUTH */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "auth.html";
-    return;
-  }
 
-  // 🔥 ADMIN REDIRECT
+  if (!user) return location.href="auth.html";
+
+  // 🔥 ADMIN FIX (NO BREAK)
   if (user.email === ADMIN_EMAIL) {
-    window.location.href = "admin.html";
+    location.href="admin.html";
     return;
   }
 
   const userRef = doc(db, "users", user.uid);
   let snap = await getDoc(userRef);
 
-  // ✅ AUTO FIX USER DATA
+  // AUTO CREATE USER
   if (!snap.exists()) {
-    await setDoc(userRef, {
-      name: user.email.split("@")[0],
-      email: user.email,
-      wallet: 0,
-      verified: true
+    await setDoc(userRef,{
+      name:user.email.split("@")[0],
+      email:user.email,
+      wallet:0
     });
   }
 
-  // 💰 LIVE BALANCE
-  onSnapshot(userRef, (snap) => {
-    if (snap.exists()) {
-      document.getElementById("balance").innerText =
-        snap.data().wallet || 0;
+  /* 💰 LIVE BALANCE */
+  onSnapshot(userRef,(snap)=>{
+    if(snap.exists()){
+      balance.innerText = snap.data().wallet || 0;
     }
   });
 
-  // 📜 TRANSACTIONS
+  /* 📜 TRANSACTIONS (SORTED + STABLE) */
   const q = query(
-    collection(db, "transactions"),
-    where("uid", "==", user.uid)
+    collection(db,"transactions"),
+    where("uid","==",user.uid),
+    orderBy("createdAt","desc")
   );
 
-  onSnapshotCol(q, (snapshot) => {
-    const history = document.getElementById("history");
-    history.innerHTML = "";
+  onSnapshotCol(q,(snapshot)=>{
+    history.innerHTML="";
 
-    if (snapshot.empty) {
-      history.innerHTML = "No transactions yet";
+    if(snapshot.empty){
+      history.innerHTML="No transactions yet";
       return;
     }
 
-    snapshot.forEach(doc => {
+    snapshot.forEach(doc=>{
       const tx = doc.data();
 
       history.innerHTML += `
         <div class="tx">
-          ₦${tx.amount} 
-          <span class="status-${tx.status}">(${tx.status})</span>
+          <span>₦${tx.amount}</span>
+          <span class="status-${tx.status}">
+            ${tx.status}
+          </span>
         </div>
       `;
     });
   });
 
-  document.body.style.display = "block";
+  /* 🔥 SHOW UI SMOOTHLY */
+  setTimeout(()=>{
+    document.getElementById("loader").style.display="none";
+    document.body.style.display="block";
+  },300);
 });
 
-// 💳 SUBMIT PAYMENT
-window.submitPayment = async function () {
+/* PAYMENT */
+window.submitPayment = async ()=>{
   const user = auth.currentUser;
-  const amount = Number(document.getElementById("amount").value);
+  const amount = Number(amountInput.value);
 
-  if (!amount || amount <= 0) {
+  if(!amount || amount <= 0){
     alert("Enter valid amount");
     return;
   }
 
-  try {
-    await addDoc(collection(db, "transactions"), {
-      uid: user.uid,
-      amount: amount,
-      status: "pending",
-      createdAt: new Date()
-    });
+  await addDoc(collection(db,"transactions"),{
+    uid:user.uid,
+    amount,
+    status:"pending",
+    createdAt:new Date()
+  });
 
-    document.getElementById("amount").value = "";
+  amountInput.value="";
 
-    alert("Payment submitted ✔️ Waiting for admin approval");
-
-  } catch (err) {
-    alert(err.message);
-  }
+  alert("Submitted ✔️ Waiting for admin");
 };
 </script>
 

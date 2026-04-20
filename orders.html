@@ -11,6 +11,7 @@ body {
   font-family: Arial;
   background:#0f0f1a;
   color:white;
+  display:none; /* 🔥 prevents flash */
 }
 
 .header {
@@ -22,6 +23,7 @@ body {
 
 .container {
   padding:15px;
+  padding-bottom:80px;
 }
 
 .card {
@@ -38,17 +40,13 @@ body {
   height:55px;
   object-fit:contain;
   border-radius:10px;
-  background:#222;
+  background:white;
+  padding:5px;
 }
 
-.content {
-  flex:1;
-}
+.content { flex:1; }
 
-.title {
-  font-size:16px;
-  margin-bottom:5px;
-}
+.title { font-size:16px; margin-bottom:5px; }
 
 .price {
   color:violet;
@@ -80,8 +78,6 @@ button {
   cursor:pointer;
 }
 
-button:hover { opacity:0.85; }
-
 .date {
   font-size:12px;
   color:gray;
@@ -92,6 +88,12 @@ button:hover { opacity:0.85; }
   text-align:center;
   color:gray;
   margin-top:40px;
+}
+
+.loader {
+  text-align:center;
+  margin-top:50px;
+  color:gray;
 }
 
 .nav {
@@ -118,7 +120,9 @@ button:hover { opacity:0.85; }
 
 <div class="header">📦 My Orders</div>
 
-<div class="container" id="orders"></div>
+<div class="container" id="orders">
+  <div class="loader">Loading orders...</div>
+</div>
 
 <div class="nav">
   <a href="index.html">🏠</a>
@@ -150,21 +154,20 @@ const db = getFirestore(app);
 
 const ordersDiv = document.getElementById("orders");
 
-/* AUTH */
+/* 🔐 AUTH (FIXED - no flicker, no skip) */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
-    setTimeout(()=>{
-      if(!auth.currentUser) location.href="auth.html";
-    },500);
+    location.href="auth.html";
     return;
   }
 
+  document.body.style.display = "block";
   loadOrders(user.uid);
 });
 
 /* LOAD ORDERS */
 async function loadOrders(uid){
-  ordersDiv.innerHTML = "Loading...";
+  ordersDiv.innerHTML = `<div class="loader">Loading orders...</div>`;
 
   const q = query(collection(db,"orders"), where("userId","==",uid));
   const snap = await getDocs(q);
@@ -179,7 +182,7 @@ async function loadOrders(uid){
   snap.forEach(docSnap=>{
     const o = docSnap.data();
 
-    // FIX DATE (supports timestamp + string)
+    /* 🔥 FIX DATE */
     let date = "";
     if(o.createdAt){
       if(o.createdAt.seconds){
@@ -194,7 +197,7 @@ async function loadOrders(uid){
 
     div.innerHTML = `
       <img src="${o.logo || ''}" class="logo"
-        onerror="this.src='https://via.placeholder.com/50?text=No+Logo'">
+        onerror="this.src='https://via.placeholder.com/55?text=No+Logo'">
 
       <div class="content">
         <div class="title">${o.name || 'Product'}</div>
