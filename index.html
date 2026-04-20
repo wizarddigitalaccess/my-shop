@@ -273,8 +273,10 @@ function loadProducts(){
     const card = document.createElement("div");
     card.className = "card";
 
+    const logo = p.logo || "";
+
     card.innerHTML = `
-      <img src="${p.logo || ''}" class="logo">
+      <img src="${logo}" class="logo" onerror="this.style.display='none'">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
@@ -282,12 +284,10 @@ function loadProducts(){
     const row = document.createElement("div");
     row.className = "row";
 
-    /* PREVIEW BUTTON */
     const previewBtn = document.createElement("button");
     previewBtn.textContent = "Preview";
     previewBtn.onclick = ()=>preview(p);
 
-    /* BUY BUTTON */
     const buyBtn = document.createElement("button");
     buyBtn.textContent = "Buy";
     buyBtn.onclick = ()=>buy(p.id);
@@ -302,7 +302,7 @@ function loadProducts(){
 /* PREVIEW */
 function preview(p){
   modalContent.innerHTML = `
-    <img src="${p.logo || ''}" class="logo">
+    <img src="${p.logo || ''}" class="logo" onerror="this.style.display='none'">
     <h3>${p.name}</h3>
     <p>${p.description || "No description"}</p>
 
@@ -364,6 +364,7 @@ async function buy(id){
 
     await updateDoc(uRef,{wallet:u.wallet - p.price});
 
+    /* 🔥 FIXED: NOW SAVES LOGO */
     await addDoc(collection(db,"orders"),{
       userId:user.uid,
       productId:id,
@@ -371,6 +372,7 @@ async function buy(id){
       price:p.price,
       email:item.email,
       password:item.password,
+      logo: p.logo || "",
       createdAt:new Date()
     });
 
