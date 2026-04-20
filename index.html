@@ -13,18 +13,15 @@ body {
   color:white;
 }
 
-/* LOADER OVERLAY */
+/* LOADER */
 .loader {
   position:fixed;
-  top:0;left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:#0f0f1a;
   display:flex;
   justify-content:center;
   align-items:center;
   z-index:999;
-  transition:opacity .3s;
 }
 
 .spinner {
@@ -36,15 +33,14 @@ body {
   animation:spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to { transform:rotate(360deg); }
-}
+@keyframes spin { to { transform:rotate(360deg);} }
 
 /* HEADER */
 .header {
   background:#1c1c2e;
   padding:12px;
   display:flex;
+  align-items:center;
   gap:10px;
 }
 
@@ -54,6 +50,10 @@ body {
   border-radius:6px;
   background:white;
   padding:4px;
+}
+
+.title {
+  font-weight:bold;
 }
 
 .header input {
@@ -111,15 +111,10 @@ body {
   font-weight:bold;
 }
 
-.row {
-  display:flex;
-  gap:5px;
-  margin-top:10px;
-}
-
-.row button {
-  flex:1;
+button {
+  width:100%;
   padding:8px;
+  margin-top:10px;
   border:none;
   border-radius:8px;
   background:purple;
@@ -157,6 +152,7 @@ body {
 
 <div class="header">
   <img src="https://logo.clearbit.com/google.com" class="site-logo">
+  <div class="title">Wizard Digital Access</div>
   <input id="search" placeholder="Search...">
 </div>
 
@@ -178,11 +174,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import {
   getFirestore,
   collection,
-  getDocs,
-  doc,
-  getDoc,
-  updateDoc,
-  addDoc
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -194,63 +186,53 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let user=null;
 let allProducts=[];
 let currentCategory="all";
 
-/* ⚡ FAST AUTH */
-onAuthStateChanged(auth, (u)=>{
-  if(!u){
-    window.location.href="auth.html";
+/* AUTH */
+onAuthStateChanged(auth,(user)=>{
+  if(!user){
+    location.href="auth.html";
     return;
   }
 
-  user = u;
+  // show UI immediately
+  document.getElementById("loader").style.display="none";
 
-  // 🔥 SHOW UI IMMEDIATELY (no wait)
-  hideLoader();
-
-  // 🔄 LOAD DATA IN BACKGROUND
-  init();
+  // load data async (no blocking)
+  loadData();
 });
 
-/* INIT (SAFE) */
-async function init(){
+/* LOAD DATA */
+async function loadData(){
   try {
-    const snap = await getDocs(collection(db,"products"));
+    const prodSnap = await getDocs(collection(db,"products"));
     const catSnap = await getDocs(collection(db,"categories"));
 
     const map = new Map();
     allProducts=[];
 
-    snap.forEach(d=>{
+    prodSnap.forEach(d=>{
       const p=d.data();
       p.id=d.id;
       allProducts.push(p);
-      if(!map.has(p.category)) map.set(p.category,p.logo||"");
+      if(!map.has(p.category)) map.set(p.category,true);
     });
 
     catSnap.forEach(d=>{
       const c=d.data();
-      if(!map.has(c.name)) map.set(c.name,"");
+      if(!map.has(c.name)) map.set(c.name,true);
     });
 
     renderCats(map);
-    loadProducts();
+    renderProducts();
 
-  } catch (err) {
-    console.error("Load failed:", err);
+  } catch(err){
+    console.error(err);
 
-    // ❌ NO USER ERROR MESSAGE
-    // just fail silently
+    // fallback UI
+    products.innerHTML = "<p style='padding:20px'>Failed to load products</p>";
   }
-}
-
-/* HIDE LOADER */
-function hideLoader(){
-  const loader = document.getElementById("loader");
-  loader.style.opacity = "0";
-  setTimeout(()=> loader.style.display="none",300);
 }
 
 /* CATEGORY */
@@ -273,18 +255,16 @@ function createCat(label,value){
 
   div.onclick=()=>{
     currentCategory=value;
-
     document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
     div.classList.add("active");
-
-    loadProducts();
+    renderProducts();
   };
 
   return div;
 }
 
 /* LOGO FIX */
-function fixLogo(url){
+function logo(url){
   if(!url) return "https://via.placeholder.com/50?text=Logo";
   try{
     return `https://logo.clearbit.com/${new URL(url).hostname}`;
@@ -294,76 +274,31 @@ function fixLogo(url){
 }
 
 /* PRODUCTS */
-function loadProducts(){
+function renderProducts(){
   const search = document.getElementById("search").value.toLowerCase();
   products.innerHTML="";
+
+  if(allProducts.length === 0){
+    products.innerHTML = "<p style='padding:20px'>No products yet</p>";
+    return;
+  }
 
   allProducts.forEach(p=>{
     if(currentCategory!=="all" && p.category!==currentCategory) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
-    const card=document.createElement("div");
-    card.className="card";
+    const div=document.createElement("div");
+    div.className="card";
 
-    card.innerHTML=`
-      <img src="${fixLogo(p.logo)}" class="logo"
-      onerror="this.src='https://via.placeholder.com/50?text=Logo'">
-
+    div.innerHTML=`
+      <img src="${logo(p.logo)}" class="logo">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
+      <button>Buy</button>
     `;
 
-    const btn=document.createElement("button");
-    btn.textContent="Buy";
-    btn.onclick=()=>buy(p.id);
-
-    const row=document.createElement("div");
-    row.className="row";
-    row.appendChild(btn);
-
-    card.appendChild(row);
-    products.appendChild(card);
+    products.appendChild(div);
   });
-}
-
-/* BUY */
-async function buy(id){
-  try{
-    const p=(await getDoc(doc(db,"products",id))).data();
-    const uRef=doc(db,"users",user.uid);
-    const u=(await getDoc(uRef)).data();
-
-    if((u.wallet||0)<p.price) return alert("Insufficient balance");
-
-    const stockRef=doc(db,"productStock",id);
-    const stockSnap=await getDoc(stockRef);
-
-    let items=stockSnap.data().items;
-    const i=items.findIndex(x=>!x.sold);
-    if(i===-1) return alert("Out of stock");
-
-    const item=items[i];
-    items[i].sold=true;
-
-    await updateDoc(uRef,{wallet:u.wallet-p.price});
-
-    await addDoc(collection(db,"orders"),{
-      userId:user.uid,
-      productId:id,
-      name:p.name,
-      price:p.price,
-      email:item.email,
-      password:item.password,
-      createdAt:new Date()
-    });
-
-    await updateDoc(stockRef,{items});
-
-    alert(`Email: ${item.email}\nPassword: ${item.password}`);
-
-  }catch(err){
-    console.error(err);
-  }
 }
 </script>
 
