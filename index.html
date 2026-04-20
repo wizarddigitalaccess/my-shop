@@ -13,7 +13,7 @@ body {
   color:white;
 }
 
-/* LOADER */
+/* LOADER OVERLAY */
 .loader {
   position:fixed;
   top:0;left:0;
@@ -24,6 +24,7 @@ body {
   justify-content:center;
   align-items:center;
   z-index:999;
+  transition:opacity .3s;
 }
 
 .spinner {
@@ -44,7 +45,6 @@ body {
   background:#1c1c2e;
   padding:12px;
   display:flex;
-  align-items:center;
   gap:10px;
 }
 
@@ -53,7 +53,6 @@ body {
   height:30px;
   border-radius:6px;
   background:white;
-  object-fit:contain;
   padding:4px;
 }
 
@@ -79,8 +78,6 @@ body {
   padding:8px 12px;
   border-radius:20px;
   cursor:pointer;
-  display:flex;
-  gap:6px;
 }
 
 .cat.active { background:purple; }
@@ -152,13 +149,11 @@ body {
 
 <body>
 
-<!-- LOADER -->
 <div class="loader" id="loader">
   <div class="spinner"></div>
 </div>
 
-<!-- APP -->
-<div id="app" style="display:none;">
+<div id="app">
 
 <div class="header">
   <img src="https://logo.clearbit.com/google.com" class="site-logo">
@@ -203,8 +198,8 @@ let user=null;
 let allProducts=[];
 let currentCategory="all";
 
-/* 🔥 FAST AUTH (NO WHITE SCREEN) */
-onAuthStateChanged(auth, async (u)=>{
+/* ⚡ FAST AUTH */
+onAuthStateChanged(auth, (u)=>{
   if(!u){
     window.location.href="auth.html";
     return;
@@ -212,44 +207,50 @@ onAuthStateChanged(auth, async (u)=>{
 
   user = u;
 
-  try {
-    await init();
-  } catch (err) {
-    console.error("INIT ERROR:", err);
-    alert("Error loading app. Check console.");
-  }
+  // 🔥 SHOW UI IMMEDIATELY (no wait)
+  hideLoader();
 
-  document.getElementById("loader").style.display="none";
-  document.getElementById("app").style.display="block";
+  // 🔄 LOAD DATA IN BACKGROUND
+  init();
 });
 
-/* INIT */
+/* INIT (SAFE) */
 async function init(){
-  const snap = await getDocs(collection(db,"products"));
-  const catSnap = await getDocs(collection(db,"categories"));
+  try {
+    const snap = await getDocs(collection(db,"products"));
+    const catSnap = await getDocs(collection(db,"categories"));
 
-  const catMap = new Map();
-  allProducts=[];
+    const map = new Map();
+    allProducts=[];
 
-  snap.forEach(d=>{
-    const p=d.data();
-    p.id=d.id;
-    allProducts.push(p);
+    snap.forEach(d=>{
+      const p=d.data();
+      p.id=d.id;
+      allProducts.push(p);
+      if(!map.has(p.category)) map.set(p.category,p.logo||"");
+    });
 
-    if(!catMap.has(p.category)){
-      catMap.set(p.category, p.logo || "");
-    }
-  });
+    catSnap.forEach(d=>{
+      const c=d.data();
+      if(!map.has(c.name)) map.set(c.name,"");
+    });
 
-  catSnap.forEach(d=>{
-    const c=d.data();
-    if(!catMap.has(c.name)){
-      catMap.set(c.name,"");
-    }
-  });
+    renderCats(map);
+    loadProducts();
 
-  renderCats(catMap);
-  loadProducts();
+  } catch (err) {
+    console.error("Load failed:", err);
+
+    // ❌ NO USER ERROR MESSAGE
+    // just fail silently
+  }
+}
+
+/* HIDE LOADER */
+function hideLoader(){
+  const loader = document.getElementById("loader");
+  loader.style.opacity = "0";
+  setTimeout(()=> loader.style.display="none",300);
 }
 
 /* CATEGORY */
@@ -260,7 +261,7 @@ function renderCats(map){
   all.classList.add("active");
   categories.appendChild(all);
 
-  map.forEach((logo,name)=>{
+  map.forEach((_,name)=>{
     categories.appendChild(createCat(name,name));
   });
 }
@@ -268,7 +269,7 @@ function renderCats(map){
 function createCat(label,value){
   const div=document.createElement("div");
   div.className="cat";
-  div.innerHTML=`<span>${label}</span>`;
+  div.innerText=label;
 
   div.onclick=()=>{
     currentCategory=value;
@@ -285,10 +286,8 @@ function createCat(label,value){
 /* LOGO FIX */
 function fixLogo(url){
   if(!url) return "https://via.placeholder.com/50?text=Logo";
-
   try{
-    const domain = new URL(url).hostname;
-    return `https://logo.clearbit.com/${domain}`;
+    return `https://logo.clearbit.com/${new URL(url).hostname}`;
   }catch{
     return url;
   }
@@ -314,23 +313,22 @@ function loadProducts(){
       <div class="price">₦${p.price}</div>
     `;
 
+    const btn=document.createElement("button");
+    btn.textContent="Buy";
+    btn.onclick=()=>buy(p.id);
+
     const row=document.createElement("div");
     row.className="row";
+    row.appendChild(btn);
 
-    const buyBtn=document.createElement("button");
-    buyBtn.textContent="Buy";
-    buyBtn.onclick=()=>buy(p.id);
-
-    row.appendChild(buyBtn);
     card.appendChild(row);
-
     products.appendChild(card);
   });
 }
 
 /* BUY */
 async function buy(id){
-  try {
+  try{
     const p=(await getDoc(doc(db,"products",id))).data();
     const uRef=doc(db,"users",user.uid);
     const u=(await getDoc(uRef)).data();
@@ -341,12 +339,11 @@ async function buy(id){
     const stockSnap=await getDoc(stockRef);
 
     let items=stockSnap.data().items;
-    const index=items.findIndex(i=>!i.sold);
+    const i=items.findIndex(x=>!x.sold);
+    if(i===-1) return alert("Out of stock");
 
-    if(index===-1) return alert("Out of stock");
-
-    const item=items[index];
-    items[index].sold=true;
+    const item=items[i];
+    items[i].sold=true;
 
     await updateDoc(uRef,{wallet:u.wallet-p.price});
 
@@ -364,9 +361,8 @@ async function buy(id){
 
     alert(`Email: ${item.email}\nPassword: ${item.password}`);
 
-  } catch (err) {
+  }catch(err){
     console.error(err);
-    alert("Purchase failed");
   }
 }
 </script>
