@@ -151,25 +151,31 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ USE YOUR REAL CONFIG */
+/* ✅ REAL CONFIG (MUST MATCH ALL FILES) */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-authDomain: "wizard-shop-52a50.firebaseapp.com",
-projectId: "wizard-shop-52a50"
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 let user = null;
-let allProducts = [];
-let currentCategory = "all";
 let loaded = false;
 
-/* 🔐 FIXED AUTH (NO LOOP / NO BLINK) */
+/* 🔐 STABLE AUTH (NO LOOP / NO BLINK) */
 onAuthStateChanged(auth, async (u) => {
+
+  // wait for firebase to settle
+  if (u === undefined) return;
+
   if (!u) {
-    location.href = "auth.html";
+    setTimeout(() => {
+      if (!auth.currentUser) {
+        location.href = "auth.html";
+      }
+    }, 500);
     return;
   }
 
