@@ -91,7 +91,7 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ REAL CONFIG (DO NOT CHANGE) */
+/* 🔥 YOUR REAL CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -101,18 +101,21 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ✅ PREVENT LOOP */
-let redirected = false;
+/* ✅ FIX: Only run once */
+let handled = false;
 
-/* 🔐 SAFE AUTH CHECK */
 onAuthStateChanged(auth, async (user) => {
-  if (!user || redirected) return;
+  if (handled) return;
+
+  if (!user) return;
+
+  handled = true;
 
   try {
     const ref = doc(db, "users", user.uid);
     let snap = await getDoc(ref);
 
-    /* CREATE USER IF NOT EXISTS */
+    // create user if missing
     if (!snap.exists()) {
       await setDoc(ref, {
         email: user.email,
@@ -125,18 +128,16 @@ onAuthStateChanged(auth, async (user) => {
 
     const data = snap.data();
 
-    redirected = true; // 🚫 stop multiple redirects
-
-    /* ROLE BASED REDIRECT */
+    // 🚀 CLEAN REDIRECT (NO LOOP)
     if (data.role === "admin") {
-      window.location.replace("admin.html");
+      window.location.href = "admin.html";
     } else {
-      window.location.replace("index.html");
+      window.location.href = "index.html";
     }
 
   } catch (err) {
     console.error(err);
-    document.getElementById("msg").innerText = "System error";
+    document.getElementById("msg").innerText = "Error loading account";
   }
 });
 
@@ -152,15 +153,15 @@ window.login = async function () {
   }
 
   try {
+    msg.innerText = "Logging in...";
     await signInWithEmailAndPassword(auth, email, password);
-    // 🔥 NO redirect here (handled above)
 
   } catch (error) {
     msg.innerText = error.message;
   }
 };
 
-/* 🔁 RESET PASSWORD */
+/* RESET */
 window.forgotPassword = async function () {
   const email = document.getElementById("email").value;
 
@@ -174,7 +175,7 @@ window.forgotPassword = async function () {
   }
 };
 
-/* 🔁 SIGNUP */
+/* SIGNUP */
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
