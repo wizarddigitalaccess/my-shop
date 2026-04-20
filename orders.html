@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Orders</title>
 
 <style>
 body {
   margin:0;
-  font-family:Arial;
+  font-family: Arial;
   background:#0f0f1a;
   color:white;
 }
@@ -15,120 +16,204 @@ body {
 .header {
   padding:15px;
   background:#1c1c2e;
+  text-align:center;
   font-weight:bold;
 }
 
-.container { padding:15px; }
+.container {
+  padding:15px;
+}
 
 .card {
   background:#1c1c2e;
   padding:15px;
   border-radius:12px;
+  margin-bottom:15px;
+}
+
+.logo {
+  width:50px;
+  height:50px;
+  object-fit:contain;
+  border-radius:10px;
+  background:#222;
   margin-bottom:10px;
 }
 
+.title {
+  font-size:16px;
+  margin-bottom:5px;
+}
+
+.price {
+  color:violet;
+  font-weight:bold;
+}
+
+.field {
+  background:#111;
+  padding:10px;
+  border-radius:8px;
+  margin-top:8px;
+  font-size:13px;
+  word-break:break-all;
+}
+
+.row {
+  display:flex;
+  gap:5px;
+  margin-top:8px;
+}
+
 button {
+  flex:1;
   padding:8px;
-  margin-top:10px;
-  width:100%;
   border:none;
   border-radius:8px;
   background:purple;
   color:white;
+  cursor:pointer;
 }
+
+button:hover { opacity:0.85; }
+
+.date {
+  font-size:12px;
+  color:gray;
+  margin-top:8px;
+}
+
+.nav {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  background:#111;
+}
+
+.nav a {
+  flex:1;
+  text-align:center;
+  padding:10px;
+  color:gray;
+  text-decoration:none;
+}
+
+.nav a.active { color:purple; }
 </style>
 </head>
 
 <body>
 
 <div class="header">📦 My Orders</div>
+
 <div class="container" id="orders"></div>
+
+<div class="nav">
+  <a href="index.html">🏠</a>
+  <a href="wallet.html">💳</a>
+  <a href="orders.html" class="active">📦</a>
+  <a href="profile.html">👤</a>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 import {
   getFirestore,
   collection,
-  query,
-  where,
   getDocs,
-  doc,
-  getDoc
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ CONFIG */
+/* CONFIG (ISOLATED FROM ADMIN) */
 const app = initializeApp({
-  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain:"wizard-shop-52a50.firebaseapp.com",
-  projectId:"wizard-shop-52a50"
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* 🔐 AUTH */
+const ordersDiv = document.getElementById("orders");
+
+/* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
-    location.href="auth.html";
+    setTimeout(()=>{
+      if(!auth.currentUser) location.href="auth.html";
+    },500);
     return;
   }
 
-  const div = document.getElementById("orders");
-  div.innerHTML = "Loading...";
+  loadOrders(user.uid);
+});
 
-  try{
-    const q = query(
-      collection(db,"orders"),
-      where("userId","==",user.uid)
-    );
+/* LOAD ORDERS */
+async function loadOrders(uid){
+  ordersDiv.innerHTML = "Loading...";
 
-    const snap = await getDocs(q);
+  const q = query(collection(db,"orders"), where("userId","==",uid));
+  const snap = await getDocs(q);
 
-    div.innerHTML = "";
+  ordersDiv.innerHTML = "";
 
-    if (snap.empty) {
-      div.innerHTML = "<p>No orders yet</p>";
-      return;
-    }
-
-    snap.forEach(d=>{
-      const o = d.data();
-
-      div.innerHTML += `
-        <div class="card">
-          <b>${o.name}</b><br>
-          ₦${o.price}<br>
-
-          <button onclick="viewOrder('${d.id}')">
-            View Details
-          </button>
-        </div>
-      `;
-    });
-
-  }catch(err){
-    console.error(err);
-    div.innerHTML = "Error loading orders";
+  if(snap.empty){
+    ordersDiv.innerHTML = "<p>No orders yet</p>";
+    return;
   }
 
-  /* 🔥 VIEW ORDER (NOW USES ORDER DATA DIRECTLY) */
-  window.viewOrder = async(id)=>{
-    const orderSnap = await getDoc(doc(db,"orders",id));
-    const order = orderSnap.data();
+  snap.forEach(doc=>{
+    const o = doc.data();
 
-    if(!order.email || !order.password){
-      return alert("No login details found");
-    }
+    const date = o.createdAt
+      ? new Date(o.createdAt).toLocaleString()
+      : "";
 
-    alert(
-      "LOGIN DETAILS:\n\n" +
-      "Email: " + order.email + "\n" +
-      "Password: " + order.password
-    );
-  };
-});
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <img src="${o.logo || ''}" class="logo">
+      <div class="title">${o.name}</div>
+      <div class="price">₦${o.price}</div>
+
+      <div class="field">Email: ${o.email}</div>
+
+      <div class="field" id="pass-${doc.id}">
+        Password: ••••••••
+      </div>
+
+      <div class="row">
+        <button onclick="toggle('${doc.id}','${o.password}')">Show</button>
+        <button onclick="copyLogin('${o.email}','${o.password}')">Copy</button>
+      </div>
+
+      <div class="date">${date}</div>
+    `;
+
+    ordersDiv.appendChild(div);
+  });
+}
+
+/* TOGGLE PASSWORD */
+window.toggle = (id, pass)=>{
+  const el = document.getElementById("pass-"+id);
+
+  if(el.innerText.includes("•••")){
+    el.innerText = "Password: " + pass;
+  } else {
+    el.innerText = "Password: ••••••••";
+  }
+};
+
+/* COPY LOGIN */
+window.copyLogin = (email, pass)=>{
+  navigator.clipboard.writeText(`Email: ${email}\nPassword: ${pass}`);
+  alert("Copied ✅");
+};
 </script>
 
 </body>
