@@ -1,3 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wizard Digital Access</title>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0f0f1a;
+  color:white;
+}
+
+.header {
+  background:#1c1c2e;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+}
+
+.header input {
+  width:60%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+}
+
+.categories {
+  display:flex;
+  overflow-x:auto;
+  padding:10px;
+  gap:10px;
+}
+
+.cat {
+  background:#1c1c2e;
+  padding:8px 12px;
+  border-radius:20px;
+  cursor:pointer;
+}
+
+.cat.active { background:purple; }
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  gap:15px;
+  padding:15px;
+}
+
+.card {
+  background:#1c1c2e;
+  padding:12px;
+  border-radius:12px;
+  text-align:center;
+}
+
+.icon { font-size:40px; }
+
+.price {
+  color:violet;
+  font-weight:bold;
+}
+
+.row {
+  display:flex;
+  gap:5px;
+}
+
+.row button {
+  flex:1;
+  padding:8px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
+}
+
+.modal {
+  position:fixed;
+  top:0; left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.8);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content {
+  background:#1c1c2e;
+  padding:20px;
+  border-radius:12px;
+  width:80%;
+}
+
+.nav {
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  background:#111;
+}
+
+.nav a {
+  flex:1;
+  text-align:center;
+  padding:10px;
+  color:gray;
+  text-decoration:none;
+}
+
+.nav a.active { color:purple; }
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <b>🛒 Wizard Digital Access</b>
+  <input id="search" placeholder="Search..." oninput="loadProducts()">
+</div>
+
+<div class="categories" id="categories"></div>
+<div class="grid" id="products"></div>
+
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<div class="nav">
+  <a href="index.html" class="active">🏠</a>
+  <a href="wallet.html">💳</a>
+  <a href="orders.html">📦</a>
+  <a href="profile.html">👤</a>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -11,9 +151,9 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ USE REAL CONFIG (VERY IMPORTANT) */
+/* ✅ USE YOUR REAL CONFIG */
 const app = initializeApp({
-apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  apiKey: "YOUR_REAL_API_KEY",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -22,53 +162,26 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let user = null;
-let initialized = false;
 let allProducts = [];
 let currentCategory = "all";
+let loaded = false;
 
-/* 🔐 SAFE AUTH (NO LOOP, NO BLINK) */
-let authChecked = false;
-
+/* 🔐 FIXED AUTH (NO LOOP / NO BLINK) */
 onAuthStateChanged(auth, async (u) => {
-  // prevent multiple triggers
-  if (authChecked) return;
-
   if (!u) {
-    // wait small delay to avoid flicker
-    setTimeout(() => {
-      if (!auth.currentUser) {
-        location.href = "auth.html";
-      }
-    }, 500);
-    return;
-  }
-
-  authChecked = true;
-  user = u;
-
-  // load app AFTER auth is confirmed
-  await init();
-});
-
-  if (!u) {
-    // wait a bit before redirect (prevents flicker)
-    setTimeout(() => {
-      if (!auth.currentUser) {
-        location.href = "auth.html";
-      }
-    }, 800);
+    location.href = "auth.html";
     return;
   }
 
   user = u;
 
-  if (!initialized) {
-    initialized = true;
+  if (!loaded) {
+    loaded = true;
     await init();
   }
 });
 
-/* AUTO ICON */
+/* ICON */
 function getIcon(category){
   if(category.includes("facebook")) return "📘";
   if(category.includes("instagram")) return "📸";
@@ -150,7 +263,6 @@ window.preview = async(id)=>{
   modalContent.innerHTML=`
     <h3>${p.name}</h3>
     <p>Category: ${p.category}</p>
-    <p><a href="${p.link || '#'}" target="_blank">View Product</a></p>
     <button onclick="modal.style.display='none'">Close</button>
   `;
 };
@@ -170,10 +282,8 @@ window.buy = async(id)=>{
       return alert("Insufficient balance");
     }
 
-    // deduct wallet
     await updateDoc(uRef,{wallet:u.wallet - p.price});
 
-    // create order
     await addDoc(collection(db,"orders"),{
       userId:user.uid,
       productId:id,
@@ -191,3 +301,6 @@ window.buy = async(id)=>{
   }
 };
 </script>
+
+</body>
+</html>
