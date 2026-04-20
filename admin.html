@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Premium Admin Dashboard</title>
+<title>Admin Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -16,12 +16,12 @@ body {
   display:none;
 }
 
-/* 🔥 FIX ZOOM / APP FEEL */
 html, body {
   height:100%;
   overflow-x:hidden;
 }
 
+/* HEADER */
 .header {
   padding:15px;
   background:#1c1c2e;
@@ -30,8 +30,10 @@ html, body {
   align-items:center;
 }
 
+/* CONTAINER */
 .container { padding:15px; }
 
+/* CARD */
 .card {
   background:#1c1c2e;
   padding:15px;
@@ -39,6 +41,7 @@ html, body {
   margin-bottom:15px;
 }
 
+/* INPUT */
 input, textarea {
   width:100%;
   padding:12px;
@@ -50,11 +53,7 @@ input, textarea {
   font-size:16px;
 }
 
-/* 🔥 STOP MOBILE ZOOM ON INPUT */
-input, textarea, select {
-  font-size:16px;
-}
-
+/* BUTTON */
 button {
   width:100%;
   padding:10px;
@@ -66,25 +65,37 @@ button {
   cursor:pointer;
 }
 
+/* ITEM */
 .item {
   display:flex;
   align-items:center;
+  justify-content:space-between;
   gap:10px;
   padding:10px;
   border-bottom:1px solid #333;
 }
 
+/* LOGO */
 .logo {
   width:40px;
   height:40px;
   border-radius:8px;
-  background:#222;
+  background:white; /* 🔥 FIX LOGO VISIBILITY */
   object-fit:contain;
+  padding:4px;
 }
 
-.row { display:flex; gap:5px; }
-.row button { flex:1; font-size:12px; }
+/* BUTTON ROW */
+.row {
+  display:flex;
+  gap:5px;
+}
+.row button {
+  font-size:12px;
+  padding:6px;
+}
 
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -92,15 +103,21 @@ button {
   display:flex;
   background:#111;
 }
-.nav button { flex:1; background:none; color:gray; }
-.nav button.active { color:purple; }
+.nav button {
+  flex:1;
+  background:none;
+  color:gray;
+}
+.nav button.active {
+  color:purple;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <span>💎 Premium Admin</span>
+  <span>💎 Admin Panel</span>
   <button id="logoutBtn" style="width:auto;background:red;">Logout</button>
 </div>
 
@@ -109,15 +126,8 @@ button {
 <!-- DASHBOARD -->
 <div id="dashboard">
   <div class="card">
-    <h3>Revenue Chart</h3>
-    <canvas id="chart"></canvas>
-  </div>
-
-  <div class="card">
-    Users: <span id="usersCount"></span><br>
-    Products: <span id="productsCount"></span><br>
-    Orders: <span id="ordersCount"></span><br>
-    Revenue: ₦<span id="revenue"></span>
+    <h3>Revenue</h3>
+    ₦<span id="revenue"></span>
   </div>
 </div>
 
@@ -133,7 +143,6 @@ button {
 
     <input id="domain" placeholder="Paste ANY link (facebook / instagram)">
     <input id="logoInput" placeholder="Custom Logo URL (optional)">
-    <input id="previewLinkInput" placeholder="Preview Link (optional)">
 
     <img id="logoPreview" class="logo">
 
@@ -150,7 +159,7 @@ button {
 <!-- ORDERS -->
 <div id="ordersPage" style="display:none">
   <div class="card">
-    <h3>Transactions</h3>
+    <h3>Orders</h3>
     <div id="orders"></div>
   </div>
 </div>
@@ -168,7 +177,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, doc,
-  addDoc, getDoc, setDoc
+  addDoc, getDoc, setDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -179,8 +188,6 @@ const app = initializeApp({
 
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-let chartInstance;
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
@@ -207,7 +214,7 @@ function init(){
   loadOrders();
 }
 
-/* DOMAIN CLEAN */
+/* CLEAN DOMAIN */
 function cleanDomain(input){
   try {
     const url = new URL(input);
@@ -220,14 +227,14 @@ function cleanDomain(input){
   }
 }
 
-/* LOGO */
+/* LOGO FIX */
 function getLogo(domain, custom){
   if(custom) return custom;
   if(!domain) return "";
   return `https://logo.clearbit.com/${domain}`;
 }
 
-/* PREVIEW LOGO */
+/* PREVIEW */
 function updateLogoPreview(){
   const clean = cleanDomain(domain.value);
   logoPreview.src = getLogo(clean, logoInput.value);
@@ -241,7 +248,6 @@ addProductBtn.onclick = async ()=>{
   const name = nameInput.value.trim();
   const category = categoryInput.value.trim();
   const price = Number(priceInput.value);
-  const previewLink = previewLinkInput.value.trim();
 
   if(!name || !category || !price){
     return alert("Fill all fields");
@@ -255,8 +261,7 @@ addProductBtn.onclick = async ()=>{
     category,
     price,
     domain: clean,
-    logo,
-    previewLink
+    logo
   });
 
   const items = stockData.value.split("\n")
@@ -272,32 +277,51 @@ addProductBtn.onclick = async ()=>{
   loadProducts();
 };
 
-/* DASHBOARD */
-async function loadDashboard(){
-  const ordersSnap = await getDocs(collection(db,"orders"));
-
-  let revenue = 0;
-
-  ordersSnap.forEach(d=>{
-    revenue += Number(d.data().price||0);
-  });
-
-  document.getElementById("revenue").innerText = revenue;
-}
-
-/* PRODUCTS */
+/* LOAD PRODUCTS */
 async function loadProducts(){
   products.innerHTML="";
   const snap = await getDocs(collection(db,"products"));
 
   snap.forEach(d=>{
     const p=d.data();
-    products.innerHTML+=`
-    <div class="item">
-      <img src="${p.logo||""}" class="logo" onerror="this.style.display='none'">
+
+    const div = document.createElement("div");
+    div.className="item";
+
+    div.innerHTML = `
+      <img src="${p.logo||""}" class="logo">
       <div>${p.name}<br>₦${p.price}</div>
-    </div>`;
+    `;
+
+    const row = document.createElement("div");
+    row.className="row";
+
+    const del = document.createElement("button");
+    del.textContent="Delete";
+    del.onclick = async ()=>{
+      if(confirm("Delete product?")){
+        await deleteDoc(doc(db,"products",d.id));
+        loadProducts();
+      }
+    };
+
+    row.appendChild(del);
+    div.appendChild(row);
+
+    products.appendChild(div);
   });
+}
+
+/* DASHBOARD */
+async function loadDashboard(){
+  const snap = await getDocs(collection(db,"orders"));
+  let revenue = 0;
+
+  snap.forEach(d=>{
+    revenue += Number(d.data().price||0);
+  });
+
+  revenueEl.innerText = revenue;
 }
 
 /* ORDERS */
@@ -308,9 +332,9 @@ async function loadOrders(){
   snap.forEach(d=>{
     const o=d.data();
     orders.innerHTML+=`
-    <div class="item">
-      ₦${o.price}<br>${o.name}
-    </div>`;
+      <div class="item">
+        ₦${o.price} - ${o.name}
+      </div>`;
   });
 }
 
