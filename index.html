@@ -13,7 +13,7 @@ import {
 
 /* ✅ USE REAL CONFIG (VERY IMPORTANT) */
 const app = initializeApp({
-  apiKey: "YOUR_REAL_API_KEY",
+apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -27,7 +27,29 @@ let allProducts = [];
 let currentCategory = "all";
 
 /* 🔐 SAFE AUTH (NO LOOP, NO BLINK) */
+let authChecked = false;
+
 onAuthStateChanged(auth, async (u) => {
+  // prevent multiple triggers
+  if (authChecked) return;
+
+  if (!u) {
+    // wait small delay to avoid flicker
+    setTimeout(() => {
+      if (!auth.currentUser) {
+        location.href = "auth.html";
+      }
+    }, 500);
+    return;
+  }
+
+  authChecked = true;
+  user = u;
+
+  // load app AFTER auth is confirmed
+  await init();
+});
+
   if (!u) {
     // wait a bit before redirect (prevents flicker)
     setTimeout(() => {
