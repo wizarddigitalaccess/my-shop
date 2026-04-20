@@ -57,12 +57,19 @@ body {
 
 .card {
   background:#1c1c2e;
-  padding:12px;
+  padding:15px;
   border-radius:12px;
   text-align:center;
 }
 
-.icon { font-size:40px; }
+.logo {
+  width:50px;
+  height:50px;
+  object-fit:contain;
+  border-radius:10px;
+  margin-bottom:10px;
+  background:#222;
+}
 
 .price {
   color:violet;
@@ -107,6 +114,7 @@ body {
   border-radius:12px;
   width:90%;
   max-width:400px;
+  text-align:center;
 }
 
 .nav {
@@ -163,7 +171,7 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* 🔐 CONFIG (SAFE: isolated from admin panel) */
+/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -186,7 +194,7 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* 🔐 AUTH */
+/* AUTH */
 onAuthStateChanged(auth, async (u) => {
   if (!u) {
     setTimeout(()=>{
@@ -205,16 +213,6 @@ onAuthStateChanged(auth, async (u) => {
 
 /* SEARCH */
 searchInput.addEventListener("input", loadProducts);
-
-/* ICON */
-function getIcon(category){
-  const c = category.toLowerCase();
-  if(c.includes("facebook")) return "📘";
-  if(c.includes("instagram")) return "📸";
-  if(c.includes("tiktok")) return "🎵";
-  if(c.includes("twitter")) return "🐦";
-  return "📦";
-}
 
 /* INIT */
 async function init(){
@@ -280,7 +278,7 @@ function loadProducts(){
     card.className = "card";
 
     card.innerHTML = `
-      <div class="icon">${getIcon(p.category)}</div>
+      <img src="${p.logo || ''}" class="logo">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
@@ -310,6 +308,7 @@ async function preview(id){
   const p = snap.data();
 
   modalContent.innerHTML = `
+    <img src="${p.logo || ''}" class="logo">
     <h3>${p.name}</h3>
     <p>${p.description || "No description"}</p>
     <p>Category: ${p.category}</p>
@@ -324,7 +323,7 @@ async function preview(id){
   };
 }
 
-/* CLOSE MODAL ON OUTSIDE CLICK */
+/* CLOSE MODAL */
 modal.addEventListener("click", (e)=>{
   if(e.target === modal){
     modal.style.display = "none";

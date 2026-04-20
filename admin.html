@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
+<title>Premium Admin Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -51,19 +51,23 @@ button {
 button:hover { opacity:0.85; }
 
 .item {
+  display:flex;
+  align-items:center;
+  gap:10px;
   padding:10px;
   border-bottom:1px solid #333;
 }
 
-.row {
-  display:flex;
-  gap:5px;
+.logo {
+  width:40px;
+  height:40px;
+  border-radius:8px;
+  background:#222;
+  object-fit:contain;
 }
 
-.row button {
-  flex:1;
-  font-size:12px;
-}
+.row { display:flex; gap:5px; }
+.row button { flex:1; font-size:12px; }
 
 .nav {
   position:fixed;
@@ -72,13 +76,7 @@ button:hover { opacity:0.85; }
   display:flex;
   background:#111;
 }
-
-.nav button {
-  flex:1;
-  background:none;
-  color:gray;
-}
-
+.nav button { flex:1; background:none; color:gray; }
 .nav button.active { color:purple; }
 </style>
 </head>
@@ -86,7 +84,7 @@ button:hover { opacity:0.85; }
 <body>
 
 <div class="header">
-  <span>Admin Dashboard</span>
+  <span>💎 Premium Admin</span>
   <button id="logoutBtn" style="width:auto;background:red;">Logout</button>
 </div>
 
@@ -119,15 +117,23 @@ button:hover { opacity:0.85; }
 <div id="productsPage" style="display:none">
   <div class="card">
 
-    <input id="productSearch" placeholder="Search products...">
+    <h3>Add Product</h3>
 
-    <input id="name" placeholder="Product Name">
+    <input id="name" placeholder="Product Name (e.g Facebook Account)">
     <input id="category" placeholder="Category">
     <input id="price" type="number" placeholder="Price">
-    <textarea id="stockData" placeholder="email:password"></textarea>
+    <input id="domain" placeholder="Domain (facebook.com)">
+    <input id="logoInput" placeholder="Custom Logo URL (optional)">
+    
+    <img id="logoPreview" class="logo">
+
+    <textarea id="stockData" placeholder="email:password per line"></textarea>
 
     <button id="addProductBtn">Add Product</button>
 
+    <hr>
+
+    <input id="productSearch" placeholder="Search products...">
     <div id="products"></div>
   </div>
 </div>
@@ -155,10 +161,10 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 import {
   getFirestore, collection, getDocs, doc,
   updateDoc, deleteDoc, addDoc, increment,
-  getDoc
+  getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG (ISOLATED) */
+/* CONFIG */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -172,18 +178,16 @@ const db = getFirestore(app);
 let chartInstance;
 let usersData = [];
 let productsData = [];
-let ordersData = [];
 
 /* DOM */
 const usersDiv = document.getElementById("users");
 const productsDiv = document.getElementById("products");
-const ordersDiv = document.getElementById("orders");
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     setTimeout(()=>{
-      if(!auth.currentUser) location.href="auth.html";
+      if (!auth.currentUser) location.href="auth.html";
     },500);
     return;
   }
@@ -196,17 +200,32 @@ onAuthStateChanged(auth, async (user)=>{
   }
 
   document.body.style.display="block";
-
   init();
 });
 
 /* INIT */
 async function init(){
-  await loadDashboard();
-  await loadUsers();
-  await loadProducts();
-  await loadOrders();
+  loadDashboard();
+  loadUsers();
+  loadProducts();
+  loadOrders();
 }
+
+/* LOGO SYSTEM */
+function getLogo(domain, custom){
+  if(custom) return custom;
+  if(!domain) return "";
+  return `https://logo.clearbit.com/${domain}`;
+}
+
+function updateLogoPreview(){
+  const domain = document.getElementById("domain").value;
+  const custom = document.getElementById("logoInput").value;
+  document.getElementById("logoPreview").src = getLogo(domain, custom);
+}
+
+document.getElementById("domain").addEventListener("input", updateLogoPreview);
+document.getElementById("logoInput").addEventListener("input", updateLogoPreview);
 
 /* DASHBOARD */
 async function loadDashboard(){
@@ -214,33 +233,33 @@ async function loadDashboard(){
   const productsSnap = await getDocs(collection(db,"products"));
   const ordersSnap = await getDocs(collection(db,"orders"));
 
-  document.getElementById("usersCount").innerText = usersSnap.size;
-  document.getElementById("productsCount").innerText = productsSnap.size;
-  document.getElementById("ordersCount").innerText = ordersSnap.size;
+  usersCount.innerText = usersSnap.size;
+  productsCount.innerText = productsSnap.size;
+  ordersCount.innerText = ordersSnap.size;
 
   let revenue = 0;
   let days = {};
 
   ordersSnap.forEach(d=>{
     const o = d.data();
-    revenue += Number(o.price || 0);
+    revenue += Number(o.price||0);
 
     if(o.createdAt){
       const date = new Date(o.createdAt);
       const key = date.toLocaleDateString();
-      days[key] = (days[key]||0) + Number(o.price||0);
+      days[key]=(days[key]||0)+Number(o.price||0);
     }
   });
 
-  document.getElementById("revenue").innerText = revenue;
+  revenueEl.innerText = revenue;
 
   if(chartInstance) chartInstance.destroy();
 
-  chartInstance = new Chart(document.getElementById("chart"),{
+  chartInstance = new Chart(chart,{
     type:"line",
     data:{
       labels:Object.keys(days),
-      datasets:[{label:"Revenue", data:Object.values(days)}]
+      datasets:[{label:"Revenue",data:Object.values(days)}]
     }
   });
 }
@@ -254,50 +273,35 @@ async function loadUsers(){
 }
 
 function renderUsers(){
-  const search = document.getElementById("userSearch").value.toLowerCase();
+  const search = userSearch.value.toLowerCase();
 
   usersDiv.innerHTML="";
-
   usersData
     .filter(u => (u.email||"").toLowerCase().includes(search))
     .forEach(u=>{
-      const div = document.createElement("div");
+      const div=document.createElement("div");
       div.className="item";
+      div.innerHTML=`${u.email}<br>₦${u.wallet||0}`;
 
-      div.innerHTML = `
-        ${u.email}<br>₦${u.wallet||0}
-      `;
-
-      const row = document.createElement("div");
+      const row=document.createElement("div");
       row.className="row";
 
-      const fund = document.createElement("button");
-      fund.textContent="+Fund";
-      fund.onclick=()=>updateWallet(u.id,true);
+      ["+Fund","-Deduct","Delete"].forEach((t,i)=>{
+        const b=document.createElement("button");
+        b.textContent=t;
+        b.onclick=()=> i===0?updateWallet(u.id,true):i===1?updateWallet(u.id,false):deleteUser(u.id);
+        row.appendChild(b);
+      });
 
-      const deduct = document.createElement("button");
-      deduct.textContent="-Deduct";
-      deduct.onclick=()=>updateWallet(u.id,false);
-
-      const del = document.createElement("button");
-      del.textContent="Delete";
-      del.onclick=()=>deleteUser(u.id);
-
-      row.append(fund,deduct,del);
       div.appendChild(row);
       usersDiv.appendChild(div);
     });
 }
 
-/* WALLET */
-async function updateWallet(id, add){
-  const amt = Number(prompt("Amount"));
-  if(!amt) return;
-
-  await updateDoc(doc(db,"users",id),{
-    wallet: increment(add ? amt : -amt)
-  });
-
+async function updateWallet(id,add){
+  const amt=Number(prompt("Amount"));
+  if(!amt)return;
+  await updateDoc(doc(db,"users",id),{wallet:increment(add?amt:-amt)});
   loadUsers();
 }
 
@@ -317,67 +321,64 @@ async function loadProducts(){
 }
 
 function renderProducts(){
-  const search = document.getElementById("productSearch").value.toLowerCase();
+  const search = productSearch.value.toLowerCase();
 
   productsDiv.innerHTML="";
-
   productsData
     .filter(p => p.name.toLowerCase().includes(search))
     .forEach(p=>{
-      const div = document.createElement("div");
+      const div=document.createElement("div");
       div.className="item";
 
-      div.innerHTML = `${p.name} - ₦${p.price}`;
+      div.innerHTML=`
+        <img src="${p.logo||""}" class="logo">
+        <div>${p.name}<br>₦${p.price}</div>
+      `;
 
-      const row = document.createElement("div");
+      const row=document.createElement("div");
       row.className="row";
 
-      const edit = document.createElement("button");
+      const edit=document.createElement("button");
       edit.textContent="Edit";
       edit.onclick=()=>editProduct(p.id);
 
-      const del = document.createElement("button");
+      const del=document.createElement("button");
       del.textContent="Delete";
       del.onclick=()=>deleteProduct(p.id);
 
       row.append(edit,del);
       div.appendChild(row);
+
       productsDiv.appendChild(div);
     });
 }
 
 /* ADD PRODUCT */
-document.getElementById("addProductBtn").onclick = async ()=>{
-  const name = document.getElementById("name").value.trim();
-  const category = document.getElementById("category").value.trim();
-  const price = Number(document.getElementById("price").value);
+addProductBtn.onclick = async ()=>{
+  const name=nameInput.value.trim();
+  const category=categoryInput.value.trim();
+  const price=Number(priceInput.value);
+  const domain=domainInput.value.trim();
+  const custom=logoInput.value.trim();
 
-  if(!name || !category || !price){
-    return alert("Fill all fields");
-  }
+  if(!name||!category||!price)return alert("Fill fields");
 
-  await addDoc(collection(db,"products"),{
-    name, category, price
+  const logo=getLogo(domain,custom);
+
+  const ref=await addDoc(collection(db,"products"),{
+    name,category,price,domain,logo
   });
 
-  alert("Added ✅");
+  const items = stockData.value.split("\n").map(l=>{
+    const [email,password]=l.split(":");
+    return {email,password,sold:false};
+  });
+
+  await setDoc(doc(db,"productStock",ref.id),{items});
+
+  alert("Added 🚀");
   loadProducts();
 };
-
-/* EDIT */
-async function editProduct(id){
-  const name = prompt("Name");
-  const category = prompt("Category");
-  const price = Number(prompt("Price"));
-
-  if(!name || !category || !price) return;
-
-  await updateDoc(doc(db,"products",id),{
-    name, category, price
-  });
-
-  loadProducts();
-}
 
 /* DELETE */
 async function deleteProduct(id){
@@ -389,49 +390,35 @@ async function deleteProduct(id){
 
 /* ORDERS */
 async function loadOrders(){
-  ordersDiv.innerHTML="";
+  orders.innerHTML="";
   const snap = await getDocs(collection(db,"orders"));
 
   snap.forEach(d=>{
-    const o = d.data();
-
-    const div = document.createElement("div");
-    div.className="item";
-    div.innerHTML = `
-      ₦${o.price}<br>
-      ${o.name}<br>
-      ${o.userId}
-    `;
-
-    ordersDiv.appendChild(div);
+    const o=d.data();
+    orders.innerHTML+=`<div class="item">₦${o.price}<br>${o.name}</div>`;
   });
 }
 
 /* NAV */
 document.querySelectorAll(".nav button").forEach(btn=>{
-  btn.onclick = ()=>{
+  btn.onclick=()=>{
     document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
 
-    const page = btn.dataset.page;
+    ["dashboard","usersPage","productsPage","ordersPage"].forEach(id=>{
+      document.getElementById(id).style.display="none";
+    });
 
-    document.getElementById("dashboard").style.display="none";
-    document.getElementById("usersPage").style.display="none";
-    document.getElementById("productsPage").style.display="none";
-    document.getElementById("ordersPage").style.display="none";
-
-    document.getElementById(page + (page==="dashboard"?"":"Page")).style.display="block";
+    document.getElementById(btn.dataset.page+(btn.dataset.page==="dashboard"?"":"Page")).style.display="block";
   };
 });
 
-/* SEARCH EVENTS */
-document.getElementById("userSearch").addEventListener("input", renderUsers);
-document.getElementById("productSearch").addEventListener("input", renderProducts);
+/* SEARCH */
+userSearch.oninput=renderUsers;
+productSearch.oninput=renderProducts;
 
 /* LOGOUT */
-document.getElementById("logoutBtn").onclick = ()=>{
-  signOut(auth).then(()=>location.href="auth.html");
-};
+logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 
 </body>
