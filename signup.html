@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>Sign Up</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <style>
 body {
@@ -22,18 +22,17 @@ body {
   width: 320px;
 }
 
-h2 {
-  text-align: center;
-}
+h2 { text-align: center; }
 
 input {
   width: 100%;
   padding: 12px;
   margin: 8px 0;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   background: #111;
   color: white;
+  font-size:16px;
 }
 
 button {
@@ -42,7 +41,7 @@ button {
   background: purple;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
 }
 
@@ -52,7 +51,6 @@ button {
   margin-top: 10px;
 }
 </style>
-
 </head>
 
 <body>
@@ -86,50 +84,45 @@ import {
   setDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
+const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50",
-};
+  projectId: "wizard-shop-52a50"
+});
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🔐 SIGNUP
+/* SIGNUP */
 window.signup = async function () {
-  const name = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
 
   if (!name || !email || !password) {
-    alert("Fill all fields");
-    return;
+    return alert("Fill all fields");
   }
 
   if (password.length < 6) {
-    alert("Password must be at least 6 characters");
-    return;
+    return alert("Password must be at least 6 characters");
   }
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const user = cred.user;
 
-    // ✅ CREATE USER RECORD (NO MORE MISSING DATA EVER)
     await setDoc(doc(db, "users", user.uid), {
-      name: name,
-      email: email,
+      name,
+      email,
       wallet: 0,
+      role: "user", // 🔥 IMPORTANT FIX
       createdAt: new Date()
     });
 
-    // ✅ SEND EMAIL VERIFICATION
     await sendEmailVerification(user);
 
-    alert("Account created! Check your email to verify ✔️");
-
-    window.location.href = "verify.html";
+    alert("Account created! Verify your email ✔️");
+    location.href = "verify.html";
 
   } catch (err) {
     alert(err.message);
