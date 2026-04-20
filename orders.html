@@ -58,6 +58,7 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ CONFIG */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -67,52 +68,64 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+/* 🔐 AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.href="auth.html";
-
-  const q = query(collection(db,"orders"), where("userId","==",user.uid));
-  const snap = await getDocs(q);
-
-  const div = document.getElementById("orders");
-  div.innerHTML = "";
-
-  if (snap.empty) {
-    div.innerHTML = "<p>No orders yet</p>";
+  if(!user){
+    location.href="auth.html";
     return;
   }
 
-  snap.forEach(d=>{
-    const o = d.data();
+  const div = document.getElementById("orders");
+  div.innerHTML = "Loading...";
 
-    div.innerHTML += `
-      <div class="card">
-        <b>${o.name}</b><br>
-        ₦${o.price}<br>
+  try{
+    const q = query(
+      collection(db,"orders"),
+      where("userId","==",user.uid)
+    );
 
-        <button onclick="viewOrder('${d.id}')">
-          View Details
-        </button>
-      </div>
-    `;
-  });
+    const snap = await getDocs(q);
 
+    div.innerHTML = "";
+
+    if (snap.empty) {
+      div.innerHTML = "<p>No orders yet</p>";
+      return;
+    }
+
+    snap.forEach(d=>{
+      const o = d.data();
+
+      div.innerHTML += `
+        <div class="card">
+          <b>${o.name}</b><br>
+          ₦${o.price}<br>
+
+          <button onclick="viewOrder('${d.id}')">
+            View Details
+          </button>
+        </div>
+      `;
+    });
+
+  }catch(err){
+    console.error(err);
+    div.innerHTML = "Error loading orders";
+  }
+
+  /* 🔥 VIEW ORDER (NOW USES ORDER DATA DIRECTLY) */
   window.viewOrder = async(id)=>{
     const orderSnap = await getDoc(doc(db,"orders",id));
     const order = orderSnap.data();
 
-    // 🔐 GET SECRET DATA
-    const secretSnap = await getDoc(doc(db,"productSecrets",order.productId));
-
-    if(!secretSnap.exists()){
-      return alert("No access data found");
+    if(!order.email || !order.password){
+      return alert("No login details found");
     }
-
-    const secret = secretSnap.data();
 
     alert(
       "LOGIN DETAILS:\n\n" +
-      "Email: " + secret.email + "\n" +
-      "Password: " + secret.password
+      "Email: " + order.email + "\n" +
+      "Password: " + order.password
     );
   };
 });

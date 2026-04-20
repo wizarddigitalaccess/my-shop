@@ -151,7 +151,7 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ REAL CONFIG (MUST MATCH ALL FILES) */
+/* ✅ CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -161,21 +161,18 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+/* STATE */
 let user = null;
+let allProducts = [];
+let currentCategory = "all";
 let loaded = false;
 
-/* 🔐 STABLE AUTH (NO LOOP / NO BLINK) */
+/* 🔐 AUTH */
 onAuthStateChanged(auth, async (u) => {
-
-  // wait for firebase to settle
-  if (u === undefined) return;
-
   if (!u) {
-    setTimeout(() => {
-      if (!auth.currentUser) {
-        location.href = "auth.html";
-      }
-    }, 500);
+    setTimeout(()=>{
+      if (!auth.currentUser) location.href = "auth.html";
+    },500);
     return;
   }
 
@@ -273,9 +270,9 @@ window.preview = async(id)=>{
   `;
 };
 
-/* BUY (STOCK SYSTEM READY) */
+/* 🔥 BUY WITH STOCK DELIVERY */
 window.buy = async(id)=>{
-  try {
+  try{
     const pRef = doc(db,"products",id);
     const pSnap = await getDoc(pRef);
     const p = pSnap.data();
@@ -288,20 +285,46 @@ window.buy = async(id)=>{
       return alert("Insufficient balance");
     }
 
+    // 🔥 GET STOCK
+    const stockRef = doc(db,"productStock",id);
+    const stockSnap = await getDoc(stockRef);
+
+    if(!stockSnap.exists()){
+      return alert("No stock available");
+    }
+
+    let items = stockSnap.data().items;
+
+    const index = items.findIndex(i => !i.sold);
+
+    if(index === -1){
+      return alert("Out of stock");
+    }
+
+    const item = items[index];
+    items[index].sold = true;
+
+    // 💸 deduct wallet
     await updateDoc(uRef,{wallet:u.wallet - p.price});
 
+    // 🧾 create order WITH credentials
     await addDoc(collection(db,"orders"),{
       userId:user.uid,
       productId:id,
       name:p.name,
       price:p.price,
+      email:item.email,
+      password:item.password,
       createdAt:new Date()
     });
+
+    // 💾 update stock
+    await updateDoc(stockRef,{items});
 
     alert("Purchase successful ✅");
     location.href = "orders.html";
 
-  } catch(err){
+  }catch(err){
     console.error(err);
     alert("Error processing purchase");
   }

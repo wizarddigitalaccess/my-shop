@@ -81,7 +81,9 @@ import {
   getAuth,
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 import {
@@ -91,23 +93,25 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* 🔥 YOUR REAL CONFIG */
+/* ✅ YOUR CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-authDomain: "wizard-shop-52a50.firebaseapp.com",
-projectId: "wizard-shop-52a50"
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ✅ FIX: Only run once */
+/* 🔥 KEEP USER LOGGED IN */
+setPersistence(auth, browserLocalPersistence);
+
+/* ✅ PREVENT MULTIPLE REDIRECTS */
 let handled = false;
 
+/* 🔐 AUTH STATE */
 onAuthStateChanged(auth, async (user) => {
-  if (handled) return;
-
-  if (!user) return;
+  if (!user || handled) return;
 
   handled = true;
 
@@ -115,7 +119,7 @@ onAuthStateChanged(auth, async (user) => {
     const ref = doc(db, "users", user.uid);
     let snap = await getDoc(ref);
 
-    // create user if missing
+    /* 🔥 AUTO CREATE USER */
     if (!snap.exists()) {
       await setDoc(ref, {
         email: user.email,
@@ -128,16 +132,16 @@ onAuthStateChanged(auth, async (user) => {
 
     const data = snap.data();
 
-    // 🚀 CLEAN REDIRECT (NO LOOP)
+    /* 🚀 CLEAN REDIRECT */
     if (data.role === "admin") {
-      window.location.href = "admin.html";
+      window.location.replace("admin.html");
     } else {
-      window.location.href = "index.html";
+      window.location.replace("index.html");
     }
 
   } catch (err) {
     console.error(err);
-    document.getElementById("msg").innerText = "Error loading account";
+    document.getElementById("msg").innerText = "Account load error";
   }
 });
 
@@ -156,12 +160,15 @@ window.login = async function () {
     msg.innerText = "Logging in...";
     await signInWithEmailAndPassword(auth, email, password);
 
+    // 🔥 DO NOTHING HERE
+    // onAuthStateChanged handles redirect
+
   } catch (error) {
     msg.innerText = error.message;
   }
 };
 
-/* RESET */
+/* 🔁 RESET PASSWORD */
 window.forgotPassword = async function () {
   const email = document.getElementById("email").value;
 
@@ -175,7 +182,7 @@ window.forgotPassword = async function () {
   }
 };
 
-/* SIGNUP */
+/* 🔁 SIGNUP */
 window.goSignup = function () {
   window.location.href = "signup.html";
 };
