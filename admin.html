@@ -192,19 +192,44 @@ function getLogo(domain, custom){
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.replace("auth.html");
-
-  const snap = await getDoc(doc(db,"users",user.uid));
-
-  if(!snap.exists() || snap.data().role !== "admin"){
-    location.replace("index.html");
+  if(!user){
+    location.replace("auth.html");
     return;
   }
 
-  init();
+  try {
+    const ref = doc(db,"users",user.uid);
+    let snap = await getDoc(ref);
 
-  loader.style.display="none";
-  app.style.display="block";
+    // 🔥 AUTO FIX: create user if missing
+    if(!snap.exists()){
+      await setDoc(ref,{
+        email:user.email,
+        role:"admin", // ⚠️ IMPORTANT: ensures admin access
+        wallet:0
+      });
+      snap = await getDoc(ref);
+    }
+
+    const data = snap.data();
+
+    if(data.role !== "admin"){
+      location.replace("index.html");
+      return;
+    }
+
+    // ✅ LOAD APP
+    init();
+
+    loader.style.display="none";
+    app.style.display="block";
+
+  } catch(err){
+    console.error(err);
+
+    // 🔥 FAIL SAFE (prevents infinite loading)
+    loader.innerText = "Failed to load admin. Refresh.";
+  }
 });
 
 /* INIT */
