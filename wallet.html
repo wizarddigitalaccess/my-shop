@@ -12,6 +12,7 @@ body {
   color:white;
 }
 
+/* LOADER */
 .loader {
   position:fixed;
   inset:0;
@@ -19,8 +20,10 @@ body {
   justify-content:center;
   align-items:center;
   background:#0f0f1a;
+  z-index:9999;
 }
 
+/* CONTENT */
 .container { padding:20px; }
 
 .card {
@@ -30,6 +33,28 @@ body {
   margin-bottom:12px;
 }
 
+input {
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+  margin-top:10px;
+}
+
+button {
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
+  cursor:pointer;
+}
+
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -41,8 +66,9 @@ body {
 .nav a {
   flex:1;
   text-align:center;
-  padding:10px;
+  padding:12px;
   color:gray;
+  text-decoration:none;
 }
 
 .nav a.active { color:purple; }
@@ -62,7 +88,8 @@ body {
 </div>
 
 <div class="card">
-<input id="amount" placeholder="Amount">
+<h3>Fund Wallet</h3>
+<input id="amount" placeholder="Enter amount">
 <button onclick="submitPayment()">Submit</button>
 </div>
 
@@ -79,35 +106,70 @@ body {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, onSnapshot, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFirestore,
+  doc,
+  onSnapshot,
+  addDoc,
+  collection
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const app = initializeApp({ apiKey:"AIzaSy...", authDomain:"wizard-shop-52a50.firebaseapp.com", projectId:"wizard-shop-52a50" });
+/* ✅ CORRECT CONFIG */
+const app = initializeApp({
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
+});
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-onAuthStateChanged(auth, async(user)=>{
-  if(!user) return location.href="auth.html";
+const loader = document.getElementById("loader");
+const appDiv = document.getElementById("app");
+const balanceEl = document.getElementById("balance");
+
+/* 🔐 AUTH (FIXED STABLE) */
+onAuthStateChanged(auth, (user)=>{
+  if(!user){
+    loader.innerText = "Redirecting...";
+    setTimeout(()=>location.href="auth.html",500);
+    return;
+  }
 
   const ref = doc(db,"users",user.uid);
 
-  onSnapshot(ref,(s)=>{
-    balance.innerText = s.data()?.wallet || 0;
+  /* 💰 LIVE BALANCE */
+  onSnapshot(ref,(snap)=>{
+    if(snap.exists()){
+      balanceEl.innerText = snap.data().wallet || 0;
+    }
   });
 
   loader.style.display="none";
-  app.style.display="block";
+  appDiv.style.display="block";
 });
 
+/* 💳 SUBMIT PAYMENT */
 window.submitPayment = async ()=>{
+  const user = auth.currentUser;
   const amt = Number(document.getElementById("amount").value);
-  if(!amt) return alert("Enter amount");
 
-  await addDoc(collection(db,"transactions"),{
-    amount:amt,
-    status:"pending"
-  });
+  if(!amt || amt <= 0) return alert("Enter valid amount");
 
-  alert("Submitted");
+  try{
+    await addDoc(collection(db,"transactions"),{
+      uid: user.uid,
+      amount: amt,
+      status: "pending",
+      createdAt: new Date()
+    });
+
+    document.getElementById("amount").value = "";
+
+    alert("Payment submitted ✔️ Waiting for admin approval");
+  }catch(err){
+    alert(err.message);
+  }
 };
 </script>
 

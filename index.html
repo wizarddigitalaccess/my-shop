@@ -43,9 +43,7 @@ body {
   padding:4px;
 }
 
-.title {
-  font-weight:bold;
-}
+.title { font-weight:bold; }
 
 .header input {
   flex:1;
@@ -149,7 +147,7 @@ body {
   text-align:center;
 }
 
-/* NAV */
+/* NAV (TEXT ONLY ✅) */
 .nav {
   position:fixed;
   bottom:0;
@@ -161,9 +159,10 @@ body {
 .nav a {
   flex:1;
   text-align:center;
-  padding:10px;
+  padding:12px;
   color:gray;
   text-decoration:none;
+  font-size:14px;
 }
 
 .nav a.active { color:purple; }
@@ -177,7 +176,8 @@ body {
 <div id="app" style="display:none;">
 
 <div class="header">
-  <img src="https://logo.clearbit.com/google.com" class="site-logo">
+  <img src="https://logo.clearbit.com/google.com" class="site-logo"
+       onerror="this.src='https://via.placeholder.com/30'">
   <div class="title">Wizard Digital Access</div>
   <input id="search" placeholder="Search...">
 </div>
@@ -190,10 +190,10 @@ body {
 </div>
 
 <div class="nav">
-  <a href="index.html" class="active">🏠</a>
-  <a href="wallet.html">💳</a>
-  <a href="orders.html">📦</a>
-  <a href="profile.html">👤</a>
+  <a href="index.html" class="active">Home</a>
+  <a href="wallet.html">Wallet</a>
+  <a href="orders.html">Orders</a>
+  <a href="profile.html">Profile</a>
 </div>
 
 </div>
@@ -220,7 +220,9 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let user, allProducts=[], currentCategory="all";
+let user = null;
+let allProducts = [];
+let currentCategory = "all";
 
 const loader = document.getElementById("loader");
 const appDiv = document.getElementById("app");
@@ -231,15 +233,23 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* AUTH */
+/* 🔐 AUTH (FIXED NO WHITE FLASH) */
 onAuthStateChanged(auth, async (u)=>{
   if(!u){
-    location.replace("auth.html");
+    loader.innerText = "Redirecting...";
+    setTimeout(()=>location.href="auth.html",500);
     return;
   }
 
   user = u;
-  await init();
+
+  try {
+    await init();
+  } catch(err){
+    console.error(err);
+    loader.innerText = "Failed to load app";
+    return;
+  }
 
   loader.style.display="none";
   appDiv.style.display="block";
@@ -247,12 +257,15 @@ onAuthStateChanged(auth, async (u)=>{
 
 /* INIT */
 async function init(){
+  allProducts = [];
+
   const snap = await getDocs(collection(db,"products"));
   const cats = new Map();
 
   snap.forEach(d=>{
     const p = d.data();
     p.id = d.id;
+
     allProducts.push(p);
 
     if(!cats.has(p.category)){
