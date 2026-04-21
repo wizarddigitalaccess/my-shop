@@ -13,6 +13,7 @@ body {
   color:white;
 }
 
+/* LOADER */
 #loader {
   position:fixed;
   inset:0;
@@ -23,6 +24,7 @@ body {
   z-index:9999;
 }
 
+/* HEADER */
 .header {
   background:#1c1c2e;
   padding:12px;
@@ -32,14 +34,12 @@ body {
 }
 
 .site-logo {
-  width:30px;
-  height:30px;
-  border-radius:6px;
-  background:white;
+  width:32px;
+  height:32px;
   object-fit:contain;
-  padding:4px;
 }
 
+/* SEARCH */
 .header input {
   flex:1;
   padding:10px;
@@ -49,6 +49,7 @@ body {
   color:white;
 }
 
+/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -68,38 +69,40 @@ body {
 
 .cat.active { background:purple; }
 
+/* PRODUCTS */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-  gap:12px;
+  gap:14px;
   padding:12px;
 }
 
 .card {
   background:#1c1c2e;
-  padding:12px;
-  border-radius:12px;
+  padding:14px;
+  border-radius:14px;
   text-align:center;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
 }
 
+/* 🔥 FIXED LOGO STYLE */
 .logo {
-  width:50px;
-  height:50px;
-  background:white;
-  padding:6px;
-  border-radius:10px;
+  width:48px;
+  height:48px;
   object-fit:contain;
   margin-bottom:10px;
 }
 
+/* PRICE */
 .price {
   color:violet;
   font-weight:bold;
 }
 
+/* BUTTON ROW */
 .row {
   display:flex;
-  gap:5px;
+  gap:6px;
   margin-top:10px;
 }
 
@@ -113,6 +116,7 @@ body {
   cursor:pointer;
 }
 
+/* MODAL */
 .modal {
   position:fixed;
   inset:0;
@@ -131,6 +135,7 @@ body {
   text-align:center;
 }
 
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -192,6 +197,7 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -212,7 +218,7 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* ✅ YOUR SITE LOGO (LOCAL FILE) */
+/* ✅ SITE LOGO */
 document.getElementById("siteLogo").src = "fallback.png";
 
 /* 🔥 CLEAN DOMAIN */
@@ -225,7 +231,7 @@ function cleanDomain(input){
   }
 }
 
-/* 🔥 REAL PRODUCT LOGO */
+/* 🔥 REAL LOGO SYSTEM */
 function getLogo(logo){
   if(!logo) return "fallback.png";
 
@@ -298,7 +304,7 @@ function createCat(label,value,logo){
   div.className="cat";
 
   div.innerHTML=`
-    ${logo ? `<img src="${logo}" width="20" onerror="this.remove()">` : ""}
+    ${logo ? `<img src="${logo}" width="18" onerror="this.remove()">` : ""}
     <span>${label}</span>
   `;
 
