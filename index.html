@@ -13,7 +13,6 @@ body {
   color:white;
 }
 
-/* LOADER */
 #loader {
   position:fixed;
   inset:0;
@@ -24,7 +23,6 @@ body {
   z-index:9999;
 }
 
-/* HEADER */
 .header {
   background:#1c1c2e;
   padding:12px;
@@ -51,7 +49,6 @@ body {
   color:white;
 }
 
-/* CATEGORY */
 .categories {
   display:flex;
   overflow-x:auto;
@@ -71,7 +68,6 @@ body {
 
 .cat.active { background:purple; }
 
-/* PRODUCTS */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
@@ -117,7 +113,6 @@ body {
   cursor:pointer;
 }
 
-/* MODAL */
 .modal {
   position:fixed;
   inset:0;
@@ -136,7 +131,6 @@ body {
   text-align:center;
 }
 
-/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -198,7 +192,6 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -208,7 +201,6 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* GLOBAL */
 let user, allProducts=[], currentCategory="all";
 
 const loader = document.getElementById("loader");
@@ -220,9 +212,28 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* SAFE SITE LOGO */
-document.getElementById("siteLogo").src =
-  "https://via.placeholder.com/30";
+/* ✅ YOUR SITE LOGO (LOCAL FILE) */
+document.getElementById("siteLogo").src = "fallback.png";
+
+/* 🔥 CLEAN DOMAIN */
+function cleanDomain(input){
+  try{
+    return new URL(input.startsWith("http") ? input : "https://" + input)
+      .hostname.replace("www.","");
+  }catch{
+    return "";
+  }
+}
+
+/* 🔥 REAL PRODUCT LOGO */
+function getLogo(logo){
+  if(!logo) return "fallback.png";
+
+  if(logo.startsWith("http")) return logo;
+
+  const d = cleanDomain(logo);
+  return d ? `https://logo.clearbit.com/${d}` : "fallback.png";
+}
 
 /* AUTH */
 onAuthStateChanged(auth, async (u)=>{
@@ -256,10 +267,7 @@ async function init(){
     const p=d.data();
     p.id=d.id;
 
-    /* SAFE LOGO */
-    if(!p.logo){
-      p.logo = "https://via.placeholder.com/50";
-    }
+    p.logo = getLogo(p.logo);
 
     allProducts.push(p);
 
@@ -318,7 +326,7 @@ function loadProducts(){
 
     card.innerHTML=`
       <img src="${p.logo}" class="logo"
-      onerror="this.src='https://via.placeholder.com/50'">
+      onerror="this.src='fallback.png'">
 
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
