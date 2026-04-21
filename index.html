@@ -8,20 +8,24 @@
 <style>
 body {
   margin:0;
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   background:#0f0f1a;
   color:white;
 }
 
-/* LOADER */
-.loader {
+/* LOADER (fix white flash) */
+#loader {
   position:fixed;
-  inset:0;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
   background:#0f0f1a;
   display:flex;
   justify-content:center;
   align-items:center;
   z-index:999;
+  font-size:18px;
 }
 
 /* HEADER */
@@ -29,11 +33,23 @@ body {
   background:#1c1c2e;
   padding:12px;
   display:flex;
-  gap:10px;
   align-items:center;
+  gap:10px;
 }
 
-.title { font-weight:bold; }
+.site-logo {
+  width:30px;
+  height:30px;
+  border-radius:6px;
+  background:white;
+  object-fit:contain;
+  padding:4px;
+}
+
+.title {
+  font-weight:bold;
+  font-size:16px;
+}
 
 .header input {
   flex:1;
@@ -43,6 +59,34 @@ body {
   background:#111;
   color:white;
 }
+
+/* CATEGORY */
+.categories {
+  display:flex;
+  overflow-x:auto;
+  padding:10px;
+  gap:10px;
+}
+
+.cat {
+  background:#1c1c2e;
+  padding:8px 12px;
+  border-radius:20px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.cat img {
+  width:18px;
+  height:18px;
+  border-radius:4px;
+  background:white;
+  padding:2px;
+}
+
+.cat.active { background:purple; }
 
 /* PRODUCTS */
 .grid {
@@ -62,11 +106,57 @@ body {
 .logo {
   width:50px;
   height:50px;
+  object-fit:contain;
+  border-radius:10px;
+  margin-bottom:10px;
   background:white;
-  border-radius:8px;
+  padding:6px;
 }
 
-/* NAV (TEXT ONLY FIXED) */
+.price {
+  color:violet;
+  font-weight:bold;
+}
+
+.row {
+  display:flex;
+  gap:5px;
+  margin-top:10px;
+}
+
+.row button {
+  flex:1;
+  padding:8px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
+  cursor:pointer;
+}
+
+/* MODAL */
+.modal {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.85);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content {
+  background:#1c1c2e;
+  padding:20px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
+}
+
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -78,7 +168,7 @@ body {
 .nav a {
   flex:1;
   text-align:center;
-  padding:12px;
+  padding:10px;
   color:gray;
   text-decoration:none;
 }
@@ -89,20 +179,30 @@ body {
 
 <body>
 
-<div class="loader" id="loader">Loading...</div>
+<div id="loader">Loading...</div>
+
+<div id="app" style="display:none">
 
 <div class="header">
+  <img src="https://logo.clearbit.com/google.com" class="site-logo">
   <div class="title">Wizard Digital Access</div>
   <input id="search" placeholder="Search...">
 </div>
 
+<div class="categories" id="categories"></div>
 <div class="grid" id="products"></div>
 
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
 <div class="nav">
-  <a href="index.html" class="active">Home</a>
-  <a href="wallet.html">Wallet</a>
-  <a href="orders.html">Orders</a>
-  <a href="profile.html">Profile</a>
+  <a href="index.html" class="active">🏠</a>
+  <a href="wallet.html">💳</a>
+  <a href="orders.html">📦</a>
+  <a href="profile.html">👤</a>
+</div>
+
 </div>
 
 <script type="module">
@@ -118,105 +218,191 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* CONFIG */
 const app = initializeApp({
-  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain:"wizard-shop-52a50.firebaseapp.com",
-  projectId:"wizard-shop-52a50"
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let user;
-let allProducts=[];
+let user = null;
+let allProducts = [];
+let currentCategory = "all";
 
-/* ⚡ FAST AUTH FIX */
-onAuthStateChanged(auth, async (u)=>{
-  if(!u){
-    location.href="auth.html";
+const searchInput = document.getElementById("search");
+const productsDiv = document.getElementById("products");
+const categoriesDiv = document.getElementById("categories");
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modalContent");
+
+/* 🔐 AUTH FIX (NO FLASH) */
+onAuthStateChanged(auth, async (u) => {
+  if (!u) {
+    location.href = "auth.html";
     return;
   }
 
   user = u;
+  await init();
 
-  loadProducts();
-
-  loader.style.display="none"; // 🔥 instant show
+  document.getElementById("loader").style.display = "none";
+  document.getElementById("app").style.display = "block";
 });
 
-/* LOAD PRODUCTS */
-async function loadProducts(){
+/* INIT */
+async function init() {
   const snap = await getDocs(collection(db,"products"));
-  products.innerHTML="";
+  const cats = new Map();
+
+  allProducts = [];
 
   snap.forEach(d=>{
     const p = d.data();
+    p.id = d.id;
 
-    const card=document.createElement("div");
-    card.className="card";
+    allProducts.push(p);
 
-    card.innerHTML=`
-      <img src="${p.logo||''}" class="logo"
-      onerror="this.src='https://via.placeholder.com/50'">
-      <h4>${p.name}</h4>
-      <p>₦${p.price}</p>
-    `;
+    if (!cats.has(p.category)) {
+      cats.set(p.category, p.logo || "");
+    }
+  });
 
-    const btn=document.createElement("button");
-    btn.textContent="Buy";
-    btn.onclick=()=>buy(d.id);
+  renderCats(cats);
+  loadProducts();
+}
 
-    card.appendChild(btn);
-    products.appendChild(card);
+/* CATEGORY */
+function renderCats(catMap){
+  categoriesDiv.innerHTML = "";
+
+  const all = createCat("All","all","");
+  all.classList.add("active");
+  categoriesDiv.appendChild(all);
+
+  catMap.forEach((logo,name)=>{
+    categoriesDiv.appendChild(createCat(name,name,logo));
   });
 }
 
-/* 🔥 FIXED BUY (REAL FIX) */
+function createCat(label,value,logo){
+  const div = document.createElement("div");
+  div.className="cat";
+
+  div.innerHTML = `
+    ${logo ? `<img src="${logo}" onerror="this.remove()">` : ""}
+    <span>${label}</span>
+  `;
+
+  div.onclick=()=>{
+    currentCategory=value;
+
+    document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
+    div.classList.add("active");
+
+    loadProducts();
+  };
+
+  return div;
+}
+
+/* PRODUCTS */
+function loadProducts(){
+  const search = searchInput.value.toLowerCase();
+  productsDiv.innerHTML="";
+
+  allProducts.forEach(p=>{
+    if(currentCategory!=="all" && p.category!==currentCategory) return;
+    if(!p.name.toLowerCase().includes(search)) return;
+
+    const card = document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+      <img src="${p.logo || 'https://via.placeholder.com/50?text=Logo'}"
+      class="logo">
+
+      <h4>${p.name}</h4>
+      <div class="price">₦${p.price}</div>
+    `;
+
+    const row=document.createElement("div");
+    row.className="row";
+
+    const previewBtn=document.createElement("button");
+    previewBtn.textContent="Preview";
+    previewBtn.onclick=()=>preview(p);
+
+    const buyBtn=document.createElement("button");
+    buyBtn.textContent="Buy";
+    buyBtn.onclick=()=>buy(p.id);
+
+    row.append(previewBtn,buyBtn);
+    card.appendChild(row);
+
+    productsDiv.appendChild(card);
+  });
+}
+
+/* PREVIEW */
+function preview(p){
+  modalContent.innerHTML=`
+    <img src="${p.logo || ''}" class="logo">
+    <h3>${p.name}</h3>
+    <p>${p.description || "No description"}</p>
+
+    ${p.previewLink ? `
+      <a href="${p.previewLink}" target="_blank">
+        <button style="margin-top:10px;background:#444">Open Preview</button>
+      </a>
+    ` : ""}
+
+    <br><br>
+    <button onclick="document.getElementById('modal').style.display='none'">Close</button>
+  `;
+
+  modal.style.display="flex";
+}
+
+/* BUY */
 async function buy(id){
-  const pDoc = await getDoc(doc(db,"products",id));
-  const p = pDoc.data();
-
+  const p = (await getDoc(doc(db,"products",id))).data();
   const uRef = doc(db,"users",user.uid);
-  const uSnap = await getDoc(uRef);
+  const u = (await getDoc(uRef)).data();
 
-  if(!uSnap.exists()){
-    alert("User error");
-    return;
-  }
-
-  const wallet = Number(uSnap.data().wallet || 0);
-
-  if(wallet < p.price){
-    alert("Insufficient funds"); // ✅ fixed spelling + logic
-    return;
-  }
+  if((u.wallet||0) < p.price) return alert("Insufficient balance");
 
   const stockRef = doc(db,"productStock",id);
   const stockSnap = await getDoc(stockRef);
 
-  let items = stockSnap.data().items || [];
-  const item = items.find(i=>!i.sold);
+  let items = stockSnap.data().items;
+  const index = items.findIndex(i=>!i.sold);
 
-  if(!item){
-    alert("Out of stock");
-    return;
-  }
+  if(index === -1) return alert("Out of stock");
 
-  item.sold = true;
+  const item = items[index];
+  items[index].sold = true;
 
-  await updateDoc(uRef,{wallet: wallet - p.price});
-  await updateDoc(stockRef,{items});
+  await updateDoc(uRef,{wallet:u.wallet - p.price});
 
   await addDoc(collection(db,"orders"),{
     userId:user.uid,
+    productId:id,
     name:p.name,
     price:p.price,
     email:item.email,
     password:item.password,
+    logo:p.logo || "",
     createdAt:new Date()
   });
 
-  alert(`Email: ${item.email}\nPassword: ${item.password}`);
+  await updateDoc(stockRef,{items});
+
+  alert(`✅ Success\n\nEmail: ${item.email}\nPassword: ${item.password}`);
+
+  location.href="orders.html";
 }
 </script>
 
