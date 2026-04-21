@@ -61,7 +61,7 @@ button {
   height:40px;
   object-fit:contain;
   border-radius:6px;
-  background:#111; /* 🔥 removed white background */
+  background:#111;
 }
 
 .nav {
@@ -108,7 +108,6 @@ button {
 <div id="productsPage" class="card" style="display:none">
   <h3>Add Product</h3>
 
-  <!-- KEEP YOUR ORIGINAL FORM -->
   <input id="nameInput" placeholder="Name">
   <input id="categoryInput" placeholder="Category">
   <input id="priceInput" type="number" placeholder="Price">
@@ -155,6 +154,13 @@ const app = initializeApp({
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+/* 🔥 LOGO FIX (IMPORTANT) */
+function getLogo(domain, custom){
+  if(custom) return custom;
+  if(!domain) return "";
+  return `https://logo.clearbit.com/${domain}`;
+}
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
@@ -266,6 +272,61 @@ window.deleteCategory = async (id)=>{
   }
 };
 
+/* 🔥 FIXED ADD PRODUCT */
+addProductBtn.onclick = async ()=>{
+  const name = nameInput.value.trim();
+  const category = categoryInput.value.trim();
+  const price = Number(priceInput.value);
+
+  if(!name || !category || !price){
+    return alert("Fill all required fields");
+  }
+
+  try{
+    const logo = getLogo(domain.value, logoInput.value);
+
+    const ref = await addDoc(collection(db,"products"),{
+      name,
+      category,
+      price,
+      logo,
+      previewLink: previewLink.value || "",
+      description: description.value || "",
+      createdAt: new Date()
+    });
+
+    let items = [];
+
+    if(stockData.value.trim()){
+      items = stockData.value.split("\n")
+        .filter(l=>l.includes(":"))
+        .map(l=>{
+          const [email,password]=l.split(":");
+          return {email,password,sold:false};
+        });
+    }
+
+    await setDoc(doc(db,"productStock",ref.id),{items});
+
+    alert("✅ Product added successfully");
+
+    nameInput.value="";
+    categoryInput.value="";
+    priceInput.value="";
+    domain.value="";
+    logoInput.value="";
+    previewLink.value="";
+    description.value="";
+    stockData.value="";
+
+    loadProducts();
+
+  }catch(err){
+    console.error(err);
+    alert("❌ Failed to add product: " + err.message);
+  }
+};
+
 /* PRODUCTS */
 async function loadProducts(){
   products.innerHTML="";
@@ -293,7 +354,6 @@ async function loadProducts(){
 window.editProduct = async (id,name,price)=>{
   const newName = prompt("Edit name", name);
   const newPrice = Number(prompt("Edit price", price));
-
   if(!newName || !newPrice) return;
 
   await updateDoc(doc(db,"products",id),{

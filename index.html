@@ -33,15 +33,30 @@ body {
   gap:10px;
 }
 
+/* 🔥 BIGGER SITE LOGO */
 .site-logo {
-  width:32px;
-  height:32px;
+  width:40px;
+  height:40px;
   object-fit:contain;
+}
+
+/* TITLE */
+.title {
+  font-weight:bold;
+  font-size:16px;
+}
+
+/* MENU BUTTON */
+.menu {
+  margin-left:auto;
+  font-size:22px;
+  cursor:pointer;
 }
 
 /* SEARCH */
 .header input {
-  flex:1;
+  width:100%;
+  margin-top:10px;
   padding:10px;
   border:none;
   border-radius:8px;
@@ -65,6 +80,7 @@ body {
   display:flex;
   gap:6px;
   align-items:center;
+  white-space:nowrap;
 }
 
 .cat.active { background:purple; }
@@ -82,10 +98,9 @@ body {
   padding:14px;
   border-radius:14px;
   text-align:center;
-  box-shadow:0 0 10px rgba(0,0,0,0.3);
 }
 
-/* 🔥 FIXED LOGO STYLE */
+/* 🔥 CLEAN PRODUCT LOGO */
 .logo {
   width:48px;
   height:48px;
@@ -162,9 +177,14 @@ body {
 
 <div id="app" style="display:none;">
 
+<!-- HEADER -->
 <div class="header">
   <img id="siteLogo" class="site-logo">
-  <div>Wizard Digital Access</div>
+  <div class="title">Wizard Digital Access</div>
+  <div class="menu">☰</div>
+</div>
+
+<div style="padding:10px;">
   <input id="search" placeholder="Search...">
 </div>
 
@@ -218,27 +238,14 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* ✅ SITE LOGO */
+/* SITE LOGO */
 document.getElementById("siteLogo").src = "fallback.png";
 
-/* 🔥 CLEAN DOMAIN */
-function cleanDomain(input){
-  try{
-    return new URL(input.startsWith("http") ? input : "https://" + input)
-      .hostname.replace("www.","");
-  }catch{
-    return "";
-  }
-}
-
-/* 🔥 REAL LOGO SYSTEM */
+/* REAL PRODUCT LOGO */
 function getLogo(logo){
   if(!logo) return "fallback.png";
-
   if(logo.startsWith("http")) return logo;
-
-  const d = cleanDomain(logo);
-  return d ? `https://logo.clearbit.com/${d}` : "fallback.png";
+  return `https://logo.clearbit.com/${logo}`;
 }
 
 /* AUTH */
@@ -250,13 +257,7 @@ onAuthStateChanged(auth, async (u)=>{
 
   user = u;
 
-  try{
-    await init();
-  }catch(e){
-    console.error(e);
-    loader.innerText="Failed to load";
-    return;
-  }
+  await init();
 
   loader.style.display="none";
   appDiv.style.display="block";
@@ -264,49 +265,46 @@ onAuthStateChanged(auth, async (u)=>{
 
 /* INIT */
 async function init(){
-  allProducts=[];
-
-  const snap = await getDocs(collection(db,"products"));
-  const cats=new Map();
-
-  snap.forEach(d=>{
-    const p=d.data();
-    p.id=d.id;
-
-    p.logo = getLogo(p.logo);
-
-    allProducts.push(p);
-
-    if(!cats.has(p.category)){
-      cats.set(p.category,p.logo);
-    }
-  });
-
-  renderCats(cats);
+  await loadCategories();
+  await loadProductsData();
   loadProducts();
 }
 
-/* CATEGORY */
-function renderCats(map){
+/* 🔥 LOAD CATEGORIES FROM FIRESTORE */
+async function loadCategories(){
   categoriesDiv.innerHTML="";
 
   const all=createCat("All","all","");
   all.classList.add("active");
   categoriesDiv.appendChild(all);
 
-  map.forEach((logo,name)=>{
-    categoriesDiv.appendChild(createCat(name,name,logo));
+  const snap = await getDocs(collection(db,"categories"));
+
+  snap.forEach(d=>{
+    const c = d.data();
+    categoriesDiv.appendChild(createCat(c.name,c.name,""));
   });
 }
 
+/* LOAD PRODUCTS */
+async function loadProductsData(){
+  allProducts=[];
+  const snap = await getDocs(collection(db,"products"));
+
+  snap.forEach(d=>{
+    const p=d.data();
+    p.id=d.id;
+    p.logo = getLogo(p.logo);
+    allProducts.push(p);
+  });
+}
+
+/* CATEGORY UI */
 function createCat(label,value,logo){
   const div=document.createElement("div");
   div.className="cat";
 
-  div.innerHTML=`
-    ${logo ? `<img src="${logo}" width="18" onerror="this.remove()">` : ""}
-    <span>${label}</span>
-  `;
+  div.innerHTML=`<span>${label}</span>`;
 
   div.onclick=()=>{
     currentCategory=value;
@@ -318,7 +316,7 @@ function createCat(label,value,logo){
   return div;
 }
 
-/* PRODUCTS */
+/* PRODUCTS UI */
 function loadProducts(){
   const search=searchInput.value.toLowerCase();
   productsDiv.innerHTML="";
@@ -331,9 +329,7 @@ function loadProducts(){
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo}" class="logo"
-      onerror="this.src='fallback.png'">
-
+      <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
