@@ -158,27 +158,16 @@ const db = getFirestore(app);
 
 /* SAFE AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    location.href="auth.html";
-    return;
+  if(!user) return location.href="auth.html";
+
+  const snap = await getDoc(doc(db,"users",user.uid));
+
+  if(!snap.exists() || snap.data().role !== "admin"){
+    return location.href="index.html";
   }
 
-  try{
-    const ref = doc(db,"users",user.uid);
-    const snap = await getDoc(ref);
-
-    if(!snap.exists() || snap.data().role !== "admin"){
-      location.href="index.html";
-      return;
-    }
-
-    document.body.style.display="block";
-    await initSafe();
-
-  }catch(err){
-    console.error("ADMIN ERROR:", err);
-    alert("Admin failed. Press F12 and check console.");
-  }
+  document.body.style.display="block";
+  init();
 });
 
 /* SAFE INIT */
