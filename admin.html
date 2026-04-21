@@ -267,15 +267,27 @@ addProductBtn.onclick = async ()=>{
 
 /* PRODUCTS */
 async function loadProducts(){
-  products.innerHTML="";
+  products.innerHTML = "";
+
   const snap = await getDocs(collection(db,"products"));
 
   snap.forEach(d=>{
     const p = d.data();
 
+    // 🔥 FIX LOGO PROPERLY
+    let logo = "fallback.png";
+
+    if(p.logo){
+      if(p.logo.startsWith("http")){
+        logo = p.logo;
+      } else {
+        logo = `https://logo.clearbit.com/${p.logo}`;
+      }
+    }
+
     products.innerHTML += `
       <div class="item">
-        <img src="${p.logo||'fallback.png'}" class="logo"
+        <img src="${logo}" class="logo"
         onerror="this.src='fallback.png'">
 
         ${p.name} - ₦${p.price}
