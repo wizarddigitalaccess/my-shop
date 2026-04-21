@@ -164,7 +164,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, doc,
-  addDoc, getDoc, setDoc, updateDoc, deleteDoc
+  addDoc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -190,7 +190,7 @@ function getLogo(domain, custom){
   return d ? `https://logo.clearbit.com/${d}` : "";
 }
 
-/* AUTH */
+/* AUTH (FIXED) */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     location.replace("auth.html");
@@ -201,45 +201,34 @@ onAuthStateChanged(auth, async (user)=>{
     const ref = doc(db,"users",user.uid);
     let snap = await getDoc(ref);
 
-    // 🔥 AUTO FIX: create user if missing
     if(!snap.exists()){
       await setDoc(ref,{
         email:user.email,
-        role:"admin", // ⚠️ IMPORTANT: ensures admin access
+        role:"admin",
         wallet:0
       });
       snap = await getDoc(ref);
     }
 
-    const data = snap.data();
-
-    if(data.role !== "admin"){
+    if(snap.data().role !== "admin"){
       location.replace("index.html");
       return;
     }
 
-    // ✅ LOAD APP
-    init();
-
+    // ✅ SHOW UI FIRST
     loader.style.display="none";
     app.style.display="block";
 
+    // ✅ LOAD SAFE
+    loadDashboard();
+    loadProducts();
+    loadOrders();
+
   } catch(err){
     console.error(err);
-
-    // 🔥 FAIL SAFE (prevents infinite loading)
-    loader.innerText = "Failed to load admin. Refresh.";
+    loader.innerText = "Failed to load admin. Check console.";
   }
 });
-
-/* INIT */
-function init(){
-  loadDashboard();
-  loadUsers();
-  loadCategories();
-  loadProducts();
-  loadOrders();
-}
 
 /* ADD PRODUCT */
 addProductBtn.onclick = async ()=>{
@@ -272,7 +261,7 @@ addProductBtn.onclick = async ()=>{
   location.reload();
 };
 
-/* LOAD PRODUCTS */
+/* PRODUCTS */
 async function loadProducts(){
   products.innerHTML="";
   const snap = await getDocs(collection(db,"products"));
