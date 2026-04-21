@@ -58,9 +58,9 @@ button {
 <div class="box">
 <h2>Create Account</h2>
 
-<input id="name" placeholder="Full Name">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
+<input id="nameInput" placeholder="Full Name">
+<input id="emailInput" placeholder="Email">
+<input id="passwordInput" type="password" placeholder="Password">
 
 <button onclick="signup()">Sign Up</button>
 
@@ -84,8 +84,9 @@ import {
   setDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* 🔥 USE YOUR REAL CONFIG HERE */
 const app = initializeApp({
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  apiKey: "YOUR_REAL_API_KEY",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -95,9 +96,9 @@ const db = getFirestore(app);
 
 /* SIGNUP */
 window.signup = async function () {
-  const name = nameInput.value.trim();
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
+  const name = document.getElementById("nameInput").value.trim();
+  const email = document.getElementById("emailInput").value.trim();
+  const password = document.getElementById("passwordInput").value;
 
   if (!name || !email || !password) {
     return alert("Fill all fields");
@@ -115,7 +116,7 @@ window.signup = async function () {
       name,
       email,
       wallet: 0,
-      role: "user", // 🔥 IMPORTANT FIX
+      role: "user", // ✅ correct
       createdAt: new Date()
     });
 
@@ -125,6 +126,7 @@ window.signup = async function () {
     location.href = "verify.html";
 
   } catch (err) {
+    console.error(err);
     alert(err.message);
   }
 };

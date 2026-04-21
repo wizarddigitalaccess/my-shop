@@ -112,7 +112,7 @@ button {
   <input id="nameInput" placeholder="Name">
   <input id="categoryInput" placeholder="Category">
   <input id="priceInput" type="number" placeholder="Price">
-  <input id="domain" placeholder="Website (e.g netflix.com)">
+  <input id="domain" placeholder="Website (e.g facebook.com)">
   <input id="logoInput" placeholder="Custom Logo URL">
   <input id="previewLink" placeholder="Preview Link">
   <textarea id="description" placeholder="Product Description"></textarea>
@@ -147,16 +147,17 @@ import {
   addDoc, getDoc, setDoc, updateDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ CORRECT CONFIG */
 const app = initializeApp({
-  apiKey:"AIzaSy...",
-  authDomain:"wizard-shop-52a50.firebaseapp.com",
-  projectId:"wizard-shop-52a50"
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* SAFE AUTH */
+/* ✅ AUTH FIX */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     location.replace("auth.html");
@@ -168,20 +169,17 @@ onAuthStateChanged(auth, async (user)=>{
     const snap = await getDoc(ref);
 
     if(!snap.exists()){
-      alert("User data missing");
       return location.replace("auth.html");
     }
 
     const data = snap.data();
 
     if(data.role !== "admin"){
-      alert("Not an admin account");
       return location.replace("index.html");
     }
 
-    // ✅ ONLY NOW SHOW PANEL
     document.body.style.display="block";
-    init();
+    initSafe();
 
   }catch(err){
     console.error(err);
@@ -189,13 +187,13 @@ onAuthStateChanged(auth, async (user)=>{
   }
 });
 
-/* SAFE INIT */
+/* INIT */
 async function initSafe(){
-  try{ await loadDashboard(); }catch(e){ console.error(e); }
-  try{ await loadUsers(); }catch(e){ console.error(e); }
-  try{ await loadCategories(); }catch(e){ console.error(e); }
-  try{ await loadProducts(); }catch(e){ console.error(e); }
-  try{ await loadOrders(); }catch(e){ console.error(e); }
+  await loadDashboard();
+  await loadUsers();
+  await loadCategories();
+  await loadProducts();
+  await loadOrders();
 }
 
 /* USERS */
@@ -327,7 +325,7 @@ async function loadProducts(){
     products.innerHTML += `
       <div class="item">
         <img src="${p.logo||''}" class="logo"
-        onerror="this.src='https://via.placeholder.com/40'">
+        onerror="this.src='fallback.png'">
 
         ${p.name} - ₦${p.price}
 
@@ -361,9 +359,7 @@ async function loadOrders(){
 
   snap.forEach(d=>{
     const o = d.data();
-    orders.innerHTML += `
-      <div class="item">₦${o.price} - ${o.name}</div>
-    `;
+    orders.innerHTML += `<div class="item">₦${o.price} - ${o.name}</div>`;
   });
 }
 
