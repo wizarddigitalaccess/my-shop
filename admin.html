@@ -274,16 +274,10 @@ async function loadProducts(){
   snap.forEach(d=>{
     const p = d.data();
 
-    // 🔥 FIX LOGO PROPERLY
-    let logo = "fallback.png";
-
-    if(p.logo){
-      if(p.logo.startsWith("http")){
-        logo = p.logo;
-      } else {
-        logo = `https://logo.clearbit.com/${p.logo}`;
-      }
-    }
+    // ✅ USE LOGO DIRECTLY
+    const logo = p.logo && p.logo.startsWith("http")
+      ? p.logo
+      : "fallback.png";
 
     products.innerHTML += `
       <div class="item">
