@@ -4,83 +4,70 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Profile</title>
 
-<script src="https://unpkg.com/feather-icons"></script>
-
 <style>
 body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f0f1a;
-  color: white;
+  margin:0;
+  font-family:Arial;
+  background:#0f0f1a;
+  color:white;
 }
 
-/* LOADER */
 .loader {
-  position: fixed;
-  inset: 0;
+  position:fixed;
+  inset:0;
   background:#0f0f1a;
   display:flex;
-  justify-content:center;
   align-items:center;
-  z-index:999;
-  font-size:14px;
-  opacity:0.7;
+  justify-content:center;
 }
 
-.container { padding: 20px; }
+.container { padding:20px; }
 
 .card {
-  background: #1c1c2e;
-  padding: 20px;
-  border-radius: 15px;
+  background:#1c1c2e;
+  padding:20px;
+  border-radius:15px;
 }
 
 input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #111;
-  color: white;
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:8px;
+  border:none;
+  background:#111;
+  color:white;
 }
 
 button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
-  background: purple;
-  color: white;
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:purple;
+  color:white;
 }
 
-button.secondary { background: #333; }
+button.secondary { background:#333; }
 
-.msg {
-  font-size: 13px;
-  margin-top: 10px;
-  color: orange;
-}
-
-/* NAV (FIXED SAME AS INDEX) */
 .nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
-  background: #111;
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  background:#111;
 }
 
 .nav a {
   flex:1;
   text-align:center;
-  padding:10px;
+  padding:12px;
   color:gray;
   text-decoration:none;
 }
 
-.nav a.active { color: purple; }
+.nav a.active { color:purple; }
 </style>
 </head>
 
@@ -88,56 +75,37 @@ button.secondary { background: #333; }
 
 <div class="loader" id="loader">Loading profile...</div>
 
-<div class="container">
-  <div class="card">
-    <h2>My Profile</h2>
+<div id="app" style="display:none;">
+  <div class="container">
+    <div class="card">
+      <h2>My Profile</h2>
 
-    <input id="name" placeholder="Full Name">
-    <input id="email" disabled>
-    <input id="password" type="password" placeholder="New Password (optional)">
+      <input id="name">
+      <input id="email" disabled>
+      <input id="password" type="password" placeholder="New Password">
 
-    <button onclick="save()">Save Changes</button>
-    <button class="secondary" onclick="logout()">Logout</button>
-
-    <div class="msg" id="msg"></div>
+      <button onclick="save()">Save Changes</button>
+      <button class="secondary" onclick="logout()">Logout</button>
+    </div>
   </div>
 </div>
 
-<!-- ✅ SAME NAV EVERYWHERE -->
 <div class="nav">
-  <a href="index.html"><i data-feather="home"></i></a>
-  <a href="wallet.html"><i data-feather="credit-card"></i></a>
-  <a href="orders.html"><i data-feather="package"></i></a>
-  <a href="profile.html" class="active"><i data-feather="user"></i></a>
+  <a href="index.html">Home</a>
+  <a href="wallet.html">Wallet</a>
+  <a href="orders.html">Orders</a>
+  <a href="profile.html" class="active">Profile</a>
 </div>
-
-<script>
-setTimeout(() => feather.replace(), 200);
-</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  updatePassword, 
-  signOut 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  updateDoc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const ADMIN_EMAIL = "etee77366@gmail.com";
+import { getAuth, onAuthStateChanged, updatePassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50"
+  apiKey:"AIzaSy...",
+  authDomain:"wizard-shop-52a50.firebaseapp.com",
+  projectId:"wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
@@ -145,21 +113,15 @@ const db = getFirestore(app);
 
 let currentUser;
 
-/* AUTH */
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return location.href="auth.html";
-
-  if (user.email === ADMIN_EMAIL) {
-    location.href="admin.html";
-    return;
-  }
+onAuthStateChanged(auth, async (user)=>{
+  if(!user) return location.href="auth.html";
 
   currentUser = user;
 
-  const ref = doc(db, "users", user.uid);
+  const ref = doc(db,"users",user.uid);
   let snap = await getDoc(ref);
 
-  if (!snap.exists()) {
+  if(!snap.exists()){
     await setDoc(ref,{
       name:user.email.split("@")[0],
       email:user.email,
@@ -170,32 +132,25 @@ onAuthStateChanged(auth, async (user) => {
 
   const data = snap.data();
 
-  name.value = data.name || "";
-  email.value = data.email || "";
+  name.value = data.name;
+  email.value = data.email;
 
   loader.style.display="none";
+  app.style.display="block";
 });
 
-/* SAVE */
 window.save = async ()=>{
-  const msg = document.getElementById("msg");
+  await updateDoc(doc(db,"users",currentUser.uid),{
+    name:name.value
+  });
 
-  try{
-    await updateDoc(doc(db,"users",currentUser.uid),{
-      name:name.value
-    });
-
-    if(password.value){
-      await updatePassword(currentUser,password.value);
-    }
-
-    msg.innerText="Saved ✅";
-  }catch(e){
-    msg.innerText=e.message;
+  if(password.value){
+    await updatePassword(currentUser,password.value);
   }
+
+  alert("Saved");
 };
 
-/* LOGOUT */
 window.logout = ()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 

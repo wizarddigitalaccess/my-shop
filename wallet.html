@@ -4,84 +4,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wallet</title>
 
-<script src="https://unpkg.com/feather-icons"></script>
-
 <style>
 body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f0f1a;
-  color: white;
+  margin:0;
+  font-family:Arial;
+  background:#0f0f1a;
+  color:white;
 }
 
-/* LOADER */
 .loader {
-  position: fixed;
-  inset: 0;
-  background:#0f0f1a;
+  position:fixed;
+  inset:0;
   display:flex;
   justify-content:center;
   align-items:center;
-  z-index:999;
-  font-size:14px;
-  opacity:0.7;
+  background:#0f0f1a;
 }
 
-.container {
-  padding: 20px;
-  padding-bottom: 80px;
-}
+.container { padding:20px; }
 
 .card {
-  background: #1c1c2e;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 15px;
+  background:#1c1c2e;
+  padding:20px;
+  border-radius:12px;
+  margin-bottom:12px;
 }
 
-.balance {
-  font-size: 32px;
-  font-weight: bold;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #111;
-  color: white;
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  background: purple;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-.tx {
-  padding: 10px;
-  border-bottom: 1px solid #333;
-  display:flex;
-  justify-content:space-between;
-}
-
-.status-pending { color: orange; }
-.status-approved { color: lightgreen; }
-.status-rejected { color: red; }
-
-/* NAV (SAME EVERYWHERE) */
 .nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
-  background: #111;
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  background:#111;
 }
 
 .nav a {
@@ -91,133 +45,69 @@ button {
   color:gray;
 }
 
-.nav a.active { color: purple; }
+.nav a.active { color:purple; }
 </style>
 </head>
 
 <body>
 
-<div class="loader" id="loader">Loading wallet...</div>
+<div class="loader" id="loader">Loading...</div>
 
+<div id="app" style="display:none">
 <div class="container">
 
 <div class="card">
-<h2>Wallet Balance</h2>
-<div class="balance">₦<span id="balance">0</span></div>
+<h2>Balance</h2>
+₦<span id="balance">0</span>
 </div>
 
 <div class="card">
-<h3>Fund Wallet</h3>
-<input id="amount" type="number" placeholder="Enter amount">
-<button onclick="submitPayment()">Submit Payment</button>
-</div>
-
-<div class="card">
-<h3>Transactions</h3>
-<div id="history"></div>
+<input id="amount" placeholder="Amount">
+<button onclick="submitPayment()">Submit</button>
 </div>
 
 </div>
 
 <div class="nav">
-  <a href="index.html"><i data-feather="home"></i></a>
-  <a href="wallet.html" class="active"><i data-feather="credit-card"></i></a>
-  <a href="orders.html"><i data-feather="package"></i></a>
-  <a href="profile.html"><i data-feather="user"></i></a>
+  <a href="index.html">Home</a>
+  <a href="wallet.html" class="active">Wallet</a>
+  <a href="orders.html">Orders</a>
+  <a href="profile.html">Profile</a>
 </div>
-
-<script>
-setTimeout(() => feather.replace(), 200);
-</script>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  onSnapshot,
-  collection,
-  addDoc,
-  query,
-  where,
-  getDoc,
-  setDoc,
-  orderBy,
-  onSnapshot as onSnapshotCol
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, onSnapshot, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const ADMIN_EMAIL = "etee77366@gmail.com";
-
-const app = initializeApp({
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
-  authDomain: "wizard-shop-52a50.firebaseapp.com",
-  projectId: "wizard-shop-52a50"
-});
-
+const app = initializeApp({ apiKey:"AIzaSy...", authDomain:"wizard-shop-52a50.firebaseapp.com", projectId:"wizard-shop-52a50" });
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-onAuthStateChanged(auth, async (user)=>{
+onAuthStateChanged(auth, async(user)=>{
   if(!user) return location.href="auth.html";
 
-  if(user.email === ADMIN_EMAIL){
-    location.href="admin.html";
-    return;
-  }
-
   const ref = doc(db,"users",user.uid);
-  let snap = await getDoc(ref);
-
-  if(!snap.exists()){
-    await setDoc(ref,{
-      name:user.email.split("@")[0],
-      email:user.email,
-      wallet:0
-    });
-  }
 
   onSnapshot(ref,(s)=>{
     balance.innerText = s.data()?.wallet || 0;
   });
 
-  const q = query(
-    collection(db,"transactions"),
-    where("uid","==",user.uid),
-    orderBy("createdAt","desc")
-  );
-
-  onSnapshotCol(q,(snap)=>{
-    history.innerHTML="";
-    snap.forEach(d=>{
-      const t=d.data();
-      history.innerHTML += `
-        <div class="tx">
-          ₦${t.amount}
-          <span class="status-${t.status}">${t.status}</span>
-        </div>
-      `;
-    });
-  });
-
   loader.style.display="none";
+  app.style.display="block";
 });
 
 window.submitPayment = async ()=>{
-  const user = auth.currentUser;
-  const amt = Number(amount.value);
-
+  const amt = Number(document.getElementById("amount").value);
   if(!amt) return alert("Enter amount");
 
   await addDoc(collection(db,"transactions"),{
-    uid:user.uid,
     amount:amt,
-    status:"pending",
-    createdAt:new Date()
+    status:"pending"
   });
 
-  amount.value="";
-  alert("Submitted ✔️");
+  alert("Submitted");
 };
 </script>
 
