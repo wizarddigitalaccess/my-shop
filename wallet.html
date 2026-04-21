@@ -12,10 +12,9 @@ body {
   font-family: Arial;
   background: #0f0f1a;
   color: white;
-  display: none;
 }
 
-/* 🔥 LOADER (FIX WHITE FLASH) */
+/* LOADER */
 .loader {
   position: fixed;
   inset: 0;
@@ -33,7 +32,6 @@ body {
   padding-bottom: 80px;
 }
 
-/* CARD */
 .card {
   background: #1c1c2e;
   padding: 20px;
@@ -41,13 +39,11 @@ body {
   margin-bottom: 15px;
 }
 
-/* BALANCE */
 .balance {
   font-size: 32px;
   font-weight: bold;
 }
 
-/* INPUT */
 input {
   width: 100%;
   padding: 12px;
@@ -58,7 +54,6 @@ input {
   color: white;
 }
 
-/* BUTTON */
 button {
   width: 100%;
   padding: 12px;
@@ -67,47 +62,41 @@ button {
   border: none;
   border-radius: 8px;
   margin-top: 10px;
-  cursor: pointer;
 }
 
-/* TX */
 .tx {
   padding: 10px;
   border-bottom: 1px solid #333;
-  font-size: 14px;
   display:flex;
   justify-content:space-between;
 }
 
-/* STATUS COLORS */
 .status-pending { color: orange; }
 .status-approved { color: lightgreen; }
 .status-rejected { color: red; }
 
-.small {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* NAV */
+/* NAV (SAME EVERYWHERE) */
 .nav {
   position: fixed;
   bottom: 0;
   width: 100%;
-  background: #111;
   display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
+  background: #111;
 }
 
-.nav a { color: gray; }
+.nav a {
+  flex:1;
+  text-align:center;
+  padding:10px;
+  color:gray;
+}
+
 .nav a.active { color: purple; }
 </style>
 </head>
 
 <body>
 
-<!-- 🔥 LOADING SCREEN -->
 <div class="loader" id="loader">Loading wallet...</div>
 
 <div class="container">
@@ -115,41 +104,35 @@ button {
 <div class="card">
 <h2>Wallet Balance</h2>
 <div class="balance">₦<span id="balance">0</span></div>
-<p class="small">Updates instantly</p>
 </div>
 
 <div class="card">
 <h3>Fund Wallet</h3>
-
 <input id="amount" type="number" placeholder="Enter amount">
-
 <button onclick="submitPayment()">Submit Payment</button>
-
-<p class="small">⚠️ Manual approval (admin). Paystack coming later.</p>
 </div>
 
 <div class="card">
-<h3>Transaction History</h3>
-<div id="history">Loading...</div>
+<h3>Transactions</h3>
+<div id="history"></div>
 </div>
 
 </div>
 
-<!-- NAV -->
 <div class="nav">
   <a href="index.html"><i data-feather="home"></i></a>
-  <a href="profile.html"><i data-feather="user"></i></a>
   <a href="wallet.html" class="active"><i data-feather="credit-card"></i></a>
+  <a href="orders.html"><i data-feather="package"></i></a>
+  <a href="profile.html"><i data-feather="user"></i></a>
 </div>
 
 <script>
-setTimeout(() => feather.replace(), 300);
+setTimeout(() => feather.replace(), 200);
 </script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
 import {
   getFirestore,
   doc,
@@ -158,10 +141,10 @@ import {
   addDoc,
   query,
   where,
-  onSnapshot as onSnapshotCol,
   getDoc,
   setDoc,
-  orderBy
+  orderBy,
+  onSnapshot as onSnapshotCol
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const ADMIN_EMAIL = "etee77366@gmail.com";
@@ -175,92 +158,66 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* AUTH */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, async (user)=>{
+  if(!user) return location.href="auth.html";
 
-  if (!user) return location.href="auth.html";
-
-  // 🔥 ADMIN FIX (NO BREAK)
-  if (user.email === ADMIN_EMAIL) {
+  if(user.email === ADMIN_EMAIL){
     location.href="admin.html";
     return;
   }
 
-  const userRef = doc(db, "users", user.uid);
-  let snap = await getDoc(userRef);
+  const ref = doc(db,"users",user.uid);
+  let snap = await getDoc(ref);
 
-  // AUTO CREATE USER
-  if (!snap.exists()) {
-    await setDoc(userRef,{
+  if(!snap.exists()){
+    await setDoc(ref,{
       name:user.email.split("@")[0],
       email:user.email,
       wallet:0
     });
   }
 
-  /* 💰 LIVE BALANCE */
-  onSnapshot(userRef,(snap)=>{
-    if(snap.exists()){
-      balance.innerText = snap.data().wallet || 0;
-    }
+  onSnapshot(ref,(s)=>{
+    balance.innerText = s.data()?.wallet || 0;
   });
 
-  /* 📜 TRANSACTIONS (SORTED + STABLE) */
   const q = query(
     collection(db,"transactions"),
     where("uid","==",user.uid),
     orderBy("createdAt","desc")
   );
 
-  onSnapshotCol(q,(snapshot)=>{
+  onSnapshotCol(q,(snap)=>{
     history.innerHTML="";
-
-    if(snapshot.empty){
-      history.innerHTML="No transactions yet";
-      return;
-    }
-
-    snapshot.forEach(doc=>{
-      const tx = doc.data();
-
+    snap.forEach(d=>{
+      const t=d.data();
       history.innerHTML += `
         <div class="tx">
-          <span>₦${tx.amount}</span>
-          <span class="status-${tx.status}">
-            ${tx.status}
-          </span>
+          ₦${t.amount}
+          <span class="status-${t.status}">${t.status}</span>
         </div>
       `;
     });
   });
 
-  /* 🔥 SHOW UI SMOOTHLY */
-  setTimeout(()=>{
-    document.getElementById("loader").style.display="none";
-    document.body.style.display="block";
-  },300);
+  loader.style.display="none";
 });
 
-/* PAYMENT */
 window.submitPayment = async ()=>{
   const user = auth.currentUser;
-  const amount = Number(amountInput.value);
+  const amt = Number(amount.value);
 
-  if(!amount || amount <= 0){
-    alert("Enter valid amount");
-    return;
-  }
+  if(!amt) return alert("Enter amount");
 
   await addDoc(collection(db,"transactions"),{
     uid:user.uid,
-    amount,
+    amount:amt,
     status:"pending",
     createdAt:new Date()
   });
 
-  amountInput.value="";
-
-  alert("Submitted ✔️ Waiting for admin");
+  amount.value="";
+  alert("Submitted ✔️");
 };
 </script>
 

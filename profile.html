@@ -12,12 +12,22 @@ body {
   font-family: Arial;
   background: #0f0f1a;
   color: white;
-  display: none;
 }
 
-.container {
-  padding: 20px;
+/* LOADER */
+.loader {
+  position: fixed;
+  inset: 0;
+  background:#0f0f1a;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+  font-size:14px;
+  opacity:0.7;
 }
+
+.container { padding: 20px; }
 
 .card {
   background: #1c1c2e;
@@ -43,12 +53,9 @@ button {
   border: none;
   background: purple;
   color: white;
-  cursor: pointer;
 }
 
-button.secondary {
-  background: #333;
-}
+button.secondary { background: #333; }
 
 .msg {
   font-size: 13px;
@@ -56,22 +63,30 @@ button.secondary {
   color: orange;
 }
 
+/* NAV (FIXED SAME AS INDEX) */
 .nav {
   position: fixed;
   bottom: 0;
   width: 100%;
-  background: #111;
   display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
+  background: #111;
 }
 
-.nav a { color: gray; }
+.nav a {
+  flex:1;
+  text-align:center;
+  padding:10px;
+  color:gray;
+  text-decoration:none;
+}
+
 .nav a.active { color: purple; }
 </style>
 </head>
 
 <body>
+
+<div class="loader" id="loader">Loading profile...</div>
 
 <div class="container">
   <div class="card">
@@ -79,7 +94,6 @@ button.secondary {
 
     <input id="name" placeholder="Full Name">
     <input id="email" disabled>
-
     <input id="password" type="password" placeholder="New Password (optional)">
 
     <button onclick="save()">Save Changes</button>
@@ -89,14 +103,16 @@ button.secondary {
   </div>
 </div>
 
+<!-- ✅ SAME NAV EVERYWHERE -->
 <div class="nav">
   <a href="index.html"><i data-feather="home"></i></a>
-  <a href="profile.html" class="active"><i data-feather="user"></i></a>
   <a href="wallet.html"><i data-feather="credit-card"></i></a>
+  <a href="orders.html"><i data-feather="package"></i></a>
+  <a href="profile.html" class="active"><i data-feather="user"></i></a>
 </div>
 
 <script>
-setTimeout(() => feather.replace(), 500);
+setTimeout(() => feather.replace(), 200);
 </script>
 
 <script type="module">
@@ -129,16 +145,12 @@ const db = getFirestore(app);
 
 let currentUser;
 
-// 🔐 LOAD USER
+/* AUTH */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "auth.html";
-    return;
-  }
+  if (!user) return location.href="auth.html";
 
-  // 🔥 ADMIN REDIRECT
   if (user.email === ADMIN_EMAIL) {
-    window.location.href = "admin.html";
+    location.href="admin.html";
     return;
   }
 
@@ -147,69 +159,44 @@ onAuthStateChanged(auth, async (user) => {
   const ref = doc(db, "users", user.uid);
   let snap = await getDoc(ref);
 
-  // ✅ AUTO FIX USER DATA
   if (!snap.exists()) {
-    await setDoc(ref, {
-      name: user.email.split("@")[0],
-      email: user.email,
-      wallet: 0,
-      verified: true
+    await setDoc(ref,{
+      name:user.email.split("@")[0],
+      email:user.email,
+      wallet:0
     });
     snap = await getDoc(ref);
   }
 
   const data = snap.data();
 
-  document.getElementById("name").value = data.name || "";
-  document.getElementById("email").value = data.email || "";
+  name.value = data.name || "";
+  email.value = data.email || "";
 
-  document.body.style.display = "block";
+  loader.style.display="none";
 });
 
-// 💾 SAVE PROFILE
-window.save = async function () {
-  const name = document.getElementById("name").value.trim();
-  const password = document.getElementById("password").value;
+/* SAVE */
+window.save = async ()=>{
   const msg = document.getElementById("msg");
 
-  msg.innerText = "Saving...";
-
-  try {
-    if (!name) {
-      msg.innerText = "Name cannot be empty";
-      return;
-    }
-
-    // update name
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      name
+  try{
+    await updateDoc(doc(db,"users",currentUser.uid),{
+      name:name.value
     });
 
-    // update password safely
-    if (password) {
-      if (password.length < 6) {
-        msg.innerText = "Password must be at least 6 characters";
-        return;
-      }
-
-      await updatePassword(currentUser, password);
+    if(password.value){
+      await updatePassword(currentUser,password.value);
     }
 
-    msg.innerText = "Profile updated successfully ✅";
-
-  } catch (err) {
-    if (err.code === "auth/requires-recent-login") {
-      msg.innerText = "Please logout and login again before changing password";
-    } else {
-      msg.innerText = err.message;
-    }
+    msg.innerText="Saved ✅";
+  }catch(e){
+    msg.innerText=e.message;
   }
 };
 
-// 🚪 LOGOUT
-window.logout = function () {
-  signOut(auth).then(() => window.location.href = "auth.html");
-};
+/* LOGOUT */
+window.logout = ()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 
 </body>

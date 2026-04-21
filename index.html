@@ -13,7 +13,7 @@ body {
   color:white;
 }
 
-/* LOADER */
+/* LOADER (overlay only, NOT hiding UI) */
 .loader {
   position:fixed;
   inset:0;
@@ -109,18 +109,22 @@ body {
   font-weight:bold;
 }
 
-button {
-  width:100%;
+.row {
+  display:flex;
+  gap:5px;
+  margin-top:10px;
+}
+
+.row button {
+  flex:1;
   padding:8px;
-  margin-top:8px;
   border:none;
   border-radius:8px;
   background:purple;
   color:white;
-  cursor:pointer;
 }
 
-/* NAV */
+/* NAV (FIXED SAME EVERYWHERE) */
 .nav {
   position:fixed;
   bottom:0;
@@ -147,8 +151,6 @@ button {
   <div class="spinner"></div>
 </div>
 
-<div id="app">
-
 <div class="header">
   <img src="https://logo.clearbit.com/google.com" class="site-logo">
   <div class="title">Wizard Digital Access</div>
@@ -165,8 +167,6 @@ button {
   <a href="profile.html">👤</a>
 </div>
 
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -180,7 +180,6 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG */
 const app = initializeApp({
   apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -194,10 +193,7 @@ let user=null;
 let allProducts=[];
 let currentCategory="all";
 
-/* 🔥 SHOW UI INSTANTLY */
-document.getElementById("loader").style.display="none";
-
-/* AUTH */
+/* AUTH (FAST + SAFE) */
 onAuthStateChanged(auth, async (u)=>{
   if(!u){
     location.href="auth.html";
@@ -206,13 +202,9 @@ onAuthStateChanged(auth, async (u)=>{
 
   user = u;
 
-  try{
-    await init();
-  }catch(e){
-    console.error(e);
-    document.getElementById("products").innerHTML =
-      "<p style='padding:20px;color:red'>Failed to load products</p>";
-  }
+  await init().catch(console.error);
+
+  loader.style.display="none";
 });
 
 /* INIT */
@@ -262,7 +254,10 @@ function createCat(label,value,logo){
   const div=document.createElement("div");
   div.className="cat";
 
-  div.innerHTML = `<span>${label}</span>`;
+  div.innerHTML=`
+    ${logo?`<img src="${fixLogo(logo)}" width="18">`:""}
+    ${label}
+  `;
 
   div.onclick=()=>{
     currentCategory=value;
@@ -278,57 +273,54 @@ function createCat(label,value,logo){
 
 /* LOGO FIX */
 function fixLogo(url){
-  if(!url) return "https://via.placeholder.com/50?text=Logo";
+  if(!url) return "https://via.placeholder.com/50";
 
   if(url.startsWith("http")) return url;
 
-  try{
-    return `https://logo.clearbit.com/${url}`;
-  }catch{
-    return "https://via.placeholder.com/50?text=Logo";
-  }
+  return `https://logo.clearbit.com/${url}`;
 }
 
 /* PRODUCTS */
 function loadProducts(){
-  const search = document.getElementById("search").value.toLowerCase();
+  const searchVal = search.value.toLowerCase();
   products.innerHTML="";
 
   allProducts.forEach(p=>{
     if(currentCategory!=="all" && p.category!==currentCategory) return;
-    if(!p.name.toLowerCase().includes(search)) return;
+    if(!p.name.toLowerCase().includes(searchVal)) return;
 
     const card=document.createElement("div");
     card.className="card";
 
     card.innerHTML=`
-      <img src="${fixLogo(p.logo)}" class="logo"
-      onerror="this.src='https://via.placeholder.com/50?text=Logo'">
-
+      <img src="${fixLogo(p.logo)}" class="logo">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
 
-    /* PREVIEW */
+    const row=document.createElement("div");
+    row.className="row";
+
     if(p.previewLink){
       const preview=document.createElement("button");
       preview.textContent="Preview";
       preview.onclick=()=>window.open(p.previewLink,"_blank");
-      card.appendChild(preview);
+      row.appendChild(preview);
     }
 
-    /* BUY */
-    const buy=document.createElement("button");
-    buy.textContent="Buy";
-    buy.onclick=()=>buyProduct(p.id);
+    const buyBtn=document.createElement("button");
+    buyBtn.textContent="Buy";
+    buyBtn.onclick=()=>buy(p.id);
 
-    card.appendChild(buy);
+    row.appendChild(buyBtn);
+    card.appendChild(row);
+
     products.appendChild(card);
   });
 }
 
 /* BUY */
-async function buyProduct(id){
+async function buy(id){
   try{
     const pDoc = await getDoc(doc(db,"products",id));
     if(!pDoc.exists()) return alert("Product missing");
@@ -347,13 +339,12 @@ async function buyProduct(id){
     const stockRef=doc(db,"productStock",id);
     const stockSnap=await getDoc(stockRef);
 
+    if(!stockSnap.exists()) return alert("Out of stock");
+
     let items=stockSnap.data().items || [];
     const index=items.findIndex(i=>!i.sold);
 
-    if(index === -1){
-      alert("Out of stock");
-      return;
-    }
+    if(index === -1) return alert("Out of stock");
 
     const item=items[index];
     items[index].sold=true;
@@ -362,6 +353,7 @@ async function buyProduct(id){
 
     await addDoc(collection(db,"orders"),{
       userId:user.uid,
+      productId:id,
       name:p.name,
       price:p.price,
       email:item.email,
@@ -372,7 +364,7 @@ async function buyProduct(id){
 
     await updateDoc(stockRef,{items});
 
-    alert(`✅ Login:\n${item.email}\n${item.password}`);
+    alert(`Email: ${item.email}\nPassword: ${item.password}`);
 
   }catch(e){
     console.error(e);
