@@ -8,23 +8,20 @@
 <style>
 body {
   margin:0;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background:#0f0f1a;
   color:white;
 }
 
-/* LOADER (fix white flash) */
+/* LOADER */
 #loader {
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:#0f0f1a;
   display:flex;
   justify-content:center;
   align-items:center;
-  z-index:999;
+  z-index:9999;
   font-size:18px;
 }
 
@@ -48,7 +45,6 @@ body {
 
 .title {
   font-weight:bold;
-  font-size:16px;
 }
 
 .header input {
@@ -74,19 +70,19 @@ body {
   border-radius:20px;
   cursor:pointer;
   display:flex;
-  align-items:center;
   gap:6px;
+  align-items:center;
 }
+
+.cat.active { background:purple; }
 
 .cat img {
   width:18px;
   height:18px;
-  border-radius:4px;
   background:white;
   padding:2px;
+  border-radius:4px;
 }
-
-.cat.active { background:purple; }
 
 /* PRODUCTS */
 .grid {
@@ -106,11 +102,11 @@ body {
 .logo {
   width:50px;
   height:50px;
-  object-fit:contain;
-  border-radius:10px;
-  margin-bottom:10px;
   background:white;
   padding:6px;
+  border-radius:10px;
+  object-fit:contain;
+  margin-bottom:10px;
 }
 
 .price {
@@ -137,10 +133,7 @@ body {
 /* MODAL */
 .modal {
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:rgba(0,0,0,0.85);
   display:none;
   justify-content:center;
@@ -181,7 +174,7 @@ body {
 
 <div id="loader">Loading...</div>
 
-<div id="app" style="display:none">
+<div id="app" style="display:none;">
 
 <div class="header">
   <img src="https://logo.clearbit.com/google.com" class="site-logo">
@@ -218,7 +211,6 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -228,9 +220,10 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let user = null;
-let allProducts = [];
-let currentCategory = "all";
+let user, allProducts=[], currentCategory="all";
+
+const loader = document.getElementById("loader");
+const appDiv = document.getElementById("app");
 
 const searchInput = document.getElementById("search");
 const productsDiv = document.getElementById("products");
@@ -238,34 +231,31 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* 🔐 AUTH FIX (NO FLASH) */
-onAuthStateChanged(auth, async (u) => {
-  if (!u) {
-    location.href = "auth.html";
+/* AUTH */
+onAuthStateChanged(auth, async (u)=>{
+  if(!u){
+    location.replace("auth.html");
     return;
   }
 
   user = u;
   await init();
 
-  document.getElementById("loader").style.display = "none";
-  document.getElementById("app").style.display = "block";
+  loader.style.display="none";
+  appDiv.style.display="block";
 });
 
 /* INIT */
-async function init() {
+async function init(){
   const snap = await getDocs(collection(db,"products"));
   const cats = new Map();
-
-  allProducts = [];
 
   snap.forEach(d=>{
     const p = d.data();
     p.id = d.id;
-
     allProducts.push(p);
 
-    if (!cats.has(p.category)) {
+    if(!cats.has(p.category)){
       cats.set(p.category, p.logo || "");
     }
   });
@@ -275,20 +265,20 @@ async function init() {
 }
 
 /* CATEGORY */
-function renderCats(catMap){
-  categoriesDiv.innerHTML = "";
+function renderCats(map){
+  categoriesDiv.innerHTML="";
 
   const all = createCat("All","all","");
   all.classList.add("active");
   categoriesDiv.appendChild(all);
 
-  catMap.forEach((logo,name)=>{
+  map.forEach((logo,name)=>{
     categoriesDiv.appendChild(createCat(name,name,logo));
   });
 }
 
 function createCat(label,value,logo){
-  const div = document.createElement("div");
+  const div=document.createElement("div");
   div.className="cat";
 
   div.innerHTML = `
@@ -298,10 +288,8 @@ function createCat(label,value,logo){
 
   div.onclick=()=>{
     currentCategory=value;
-
     document.querySelectorAll(".cat").forEach(c=>c.classList.remove("active"));
     div.classList.add("active");
-
     loadProducts();
   };
 
@@ -317,12 +305,12 @@ function loadProducts(){
     if(currentCategory!=="all" && p.category!==currentCategory) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
-    const card = document.createElement("div");
+    const card=document.createElement("div");
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo || 'https://via.placeholder.com/50?text=Logo'}"
-      class="logo">
+      <img src="${p.logo || ''}" class="logo"
+      onerror="this.src='https://via.placeholder.com/50?text=Logo'">
 
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
@@ -352,17 +340,8 @@ function preview(p){
     <img src="${p.logo || ''}" class="logo">
     <h3>${p.name}</h3>
     <p>${p.description || "No description"}</p>
-
-    ${p.previewLink ? `
-      <a href="${p.previewLink}" target="_blank">
-        <button style="margin-top:10px;background:#444">Open Preview</button>
-      </a>
-    ` : ""}
-
-    <br><br>
     <button onclick="document.getElementById('modal').style.display='none'">Close</button>
   `;
-
   modal.style.display="flex";
 }
 
@@ -400,8 +379,7 @@ async function buy(id){
 
   await updateDoc(stockRef,{items});
 
-  alert(`✅ Success\n\nEmail: ${item.email}\nPassword: ${item.password}`);
-
+  alert(`Success\nEmail: ${item.email}\nPassword: ${item.password}`);
   location.href="orders.html";
 }
 </script>
