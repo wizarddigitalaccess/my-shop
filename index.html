@@ -220,9 +220,9 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* 🔥 FIX SITE LOGO */
+/* SAFE SITE LOGO */
 document.getElementById("siteLogo").src =
-  "https://logo.clearbit.com/google.com";
+  "https://via.placeholder.com/30";
 
 /* AUTH */
 onAuthStateChanged(auth, async (u)=>{
@@ -256,15 +256,15 @@ async function init(){
     const p=d.data();
     p.id=d.id;
 
-    /* 🔥 AUTO FIX LOGO FROM DOMAIN */
-    if(p.logo && !p.logo.startsWith("http")){
-      p.logo = "https://logo.clearbit.com/" + p.logo;
+    /* SAFE LOGO */
+    if(!p.logo){
+      p.logo = "https://via.placeholder.com/50";
     }
 
     allProducts.push(p);
 
     if(!cats.has(p.category)){
-      cats.set(p.category,p.logo||"");
+      cats.set(p.category,p.logo);
     }
   });
 
@@ -290,7 +290,7 @@ function createCat(label,value,logo){
   div.className="cat";
 
   div.innerHTML=`
-    ${logo ? `<img src="${logo}" onerror="this.remove()">` : ""}
+    ${logo ? `<img src="${logo}" width="20" onerror="this.remove()">` : ""}
     <span>${label}</span>
   `;
 
@@ -317,7 +317,8 @@ function loadProducts(){
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo || 'https://via.placeholder.com/50'}" class="logo">
+      <img src="${p.logo}" class="logo"
+      onerror="this.src='https://via.placeholder.com/50'">
 
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
@@ -341,12 +342,12 @@ function loadProducts(){
   });
 }
 
-/* PREVIEW (FIXED) */
+/* PREVIEW */
 function preview(p){
   modalContent.innerHTML=`
     <img src="${p.logo}" class="logo">
     <h3>${p.name}</h3>
-    <p>${p.description || "No description"}</p>
+    <p>${p.description || "No description available"}</p>
 
     ${p.previewLink ? `
       <a href="${p.previewLink}" target="_blank">
@@ -360,7 +361,7 @@ function preview(p){
   modal.style.display="flex";
 }
 
-/* BUY (SAFE) */
+/* BUY */
 async function buy(id){
   try{
     const p=(await getDoc(doc(db,"products",id))).data();
