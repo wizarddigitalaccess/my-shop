@@ -11,19 +11,8 @@ body {
   font-family: Arial;
   background:#0f0f1a;
   color:white;
+  display:none;
 }
-
-#loader {
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:#0f0f1a;
-  z-index:9999;
-}
-
-#app { display:none; }
 
 .header {
   padding:15px;
@@ -96,10 +85,6 @@ button {
 
 <body>
 
-<div id="loader">Loading admin...</div>
-
-<div id="app">
-
 <div class="header">
   <b>💎 Admin Panel</b>
   <button id="logoutBtn" style="background:red;">Logout</button>
@@ -122,17 +107,15 @@ button {
 </div>
 
 <div id="productsPage" class="card" style="display:none">
-
   <h3>Add Product</h3>
 
   <input id="nameInput" placeholder="Name">
   <input id="categoryInput" placeholder="Category">
   <input id="priceInput" type="number" placeholder="Price">
   <input id="domain" placeholder="Website (e.g netflix.com)">
-  <input id="logoInput" placeholder="Custom Logo URL (optional)">
-  <input id="previewLink" placeholder="Preview Link (optional)">
+  <input id="logoInput" placeholder="Custom Logo URL">
+  <input id="previewLink" placeholder="Preview Link">
   <textarea id="description" placeholder="Product Description"></textarea>
-
   <textarea id="stockData" placeholder="email:password"></textarea>
 
   <button id="addProductBtn">Add Product</button>
@@ -156,8 +139,6 @@ button {
   <button data-page="orders">Orders</button>
 </div>
 
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -167,7 +148,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  apiKey:"AIzaSy...",
   authDomain:"wizard-shop-52a50.firebaseapp.com",
   projectId:"wizard-shop-52a50"
 });
@@ -175,27 +156,25 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+/* FIXED LOGO */
+function getLogo(domain, custom){
+  if(custom) return custom;
+  if(!domain) return "";
+  return `https://logo.clearbit.com/${domain}`;
+}
+
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user) return location.href="auth.html";
 
-  try{
-    const snap = await getDoc(doc(db,"users",user.uid));
+  const snap = await getDoc(doc(db,"users",user.uid));
 
-    if(!snap.exists() || snap.data().role !== "admin"){
-      location.href="index.html";
-      return;
-    }
-
-    loader.style.display="none";
-    app.style.display="block";
-
-    init();
-
-  }catch(e){
-    console.error(e);
-    loader.innerText = "Error loading admin";
+  if(!snap.exists() || snap.data().role !== "admin"){
+    return location.href="index.html";
   }
+
+  document.body.style.display="block";
+  init();
 });
 
 /* INIT */
@@ -218,23 +197,17 @@ async function loadUsers(){
     users.innerHTML += `
       <div class="item">
         ${u.email}<br>₦${u.wallet||0}
-        <div>
-          <button onclick="deleteUser('${d.id}')">X</button>
-        </div>
       </div>
     `;
   });
 }
 
-window.deleteUser = async (id)=>{
-  await deleteDoc(doc(db,"users",id));
-  loadUsers();
-};
-
 /* CATEGORIES */
 addCategoryBtn.onclick = async ()=>{
-  if(!newCategory.value) return;
-  await addDoc(collection(db,"categories"),{name:newCategory.value});
+  const name = newCategory.value.trim();
+  if(!name) return;
+
+  await addDoc(collection(db,"categories"),{name});
   newCategory.value="";
   loadCategories();
 };
@@ -245,20 +218,12 @@ async function loadCategories(){
 
   snap.forEach(d=>{
     categories.innerHTML += `
-      <div class="item">
-        ${d.data().name}
-        <button onclick="deleteCategory('${d.id}')">Delete</button>
-      </div>
+      <div class="item">${d.data().name}</div>
     `;
   });
 }
 
-window.deleteCategory = async (id)=>{
-  await deleteDoc(doc(db,"categories",id));
-  loadCategories();
-};
-
-/* PRODUCTS */
+/* ADD PRODUCT */
 addProductBtn.onclick = async ()=>{
   const name = nameInput.value.trim();
   const category = categoryInput.value.trim();
@@ -266,9 +231,11 @@ addProductBtn.onclick = async ()=>{
 
   if(!name || !category || !price) return alert("Fill all");
 
+  const logo = getLogo(domain.value, logoInput.value);
+
   const ref = await addDoc(collection(db,"products"),{
     name, category, price,
-    logo: logoInput.value,
+    logo,
     previewLink: previewLink.value,
     description: description.value
   });
@@ -276,9 +243,10 @@ addProductBtn.onclick = async ()=>{
   await setDoc(doc(db,"productStock",ref.id),{items:[]});
 
   alert("Added");
-  loadProducts();
+  location.reload();
 };
 
+/* PRODUCTS */
 async function loadProducts(){
   products.innerHTML="";
   const snap = await getDocs(collection(db,"products"));
@@ -288,19 +256,12 @@ async function loadProducts(){
 
     products.innerHTML += `
       <div class="item">
-        <img src="${p.logo||''}" class="logo"
-        onerror="this.src='https://via.placeholder.com/40'">
+        <img src="${p.logo||''}" class="logo">
         ${p.name} - ₦${p.price}
-        <button onclick="deleteProduct('${d.id}')">Delete</button>
       </div>
     `;
   });
 }
-
-window.deleteProduct = async (id)=>{
-  await deleteDoc(doc(db,"products",id));
-  loadProducts();
-};
 
 /* DASHBOARD */
 async function loadDashboard(){
@@ -317,7 +278,9 @@ async function loadOrders(){
 
   snap.forEach(d=>{
     const o = d.data();
-    orders.innerHTML += `<div class="item">₦${o.price} - ${o.name}</div>`;
+    orders.innerHTML += `
+      <div class="item">₦${o.price} - ${o.name}</div>
+    `;
   });
 }
 
