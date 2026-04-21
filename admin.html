@@ -11,20 +11,8 @@ body {
   font-family: Arial;
   background:#0f0f1a;
   color:white;
+  display:none;
 }
-
-/* LOADER */
-#loader {
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:#0f0f1a;
-  z-index:9999;
-}
-
-#app { display:none; }
 
 .header {
   padding:15px;
@@ -97,10 +85,6 @@ button {
 
 <body>
 
-<div id="loader">Loading admin...</div>
-
-<div id="app">
-
 <div class="header">
   <b>💎 Admin Panel</b>
   <button id="logoutBtn" style="background:red;">Logout</button>
@@ -123,6 +107,7 @@ button {
 </div>
 
 <div id="productsPage" class="card" style="display:none">
+
   <h3>Add Product</h3>
 
   <input id="nameInput" placeholder="Name">
@@ -132,6 +117,7 @@ button {
   <input id="logoInput" placeholder="Custom Logo URL (optional)">
   <input id="previewLink" placeholder="Preview Link (optional)">
   <textarea id="description" placeholder="Product Description"></textarea>
+
   <textarea id="stockData" placeholder="email:password"></textarea>
 
   <button id="addProductBtn">Add Product</button>
@@ -155,8 +141,6 @@ button {
   <button data-page="orders">Orders</button>
 </div>
 
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -176,22 +160,21 @@ const db = getFirestore(app);
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.replace("auth.html");
+  if(!user) return location.href="auth.html";
 
-  try {
+  try{
     const snap = await getDoc(doc(db,"users",user.uid));
+
     if(!snap.exists() || snap.data().role !== "admin"){
-      return location.replace("index.html");
+      location.href="index.html";
+      return;
     }
 
-    loader.style.display="none";
-    app.style.display="block";
-
+    document.body.style.display="block";
     init();
-
-  } catch(e){
+  }catch(e){
     console.error(e);
-    loader.innerText="Error loading admin";
+    alert("Admin load error");
   }
 });
 
@@ -208,62 +191,122 @@ function init(){
 async function loadUsers(){
   users.innerHTML="";
   const snap = await getDocs(collection(db,"users"));
+
   snap.forEach(d=>{
-    const u=d.data();
-    users.innerHTML += `<div class="item">${u.email} - ₦${u.wallet||0}</div>`;
+    const u = d.data();
+
+    users.innerHTML += `
+      <div class="item">
+        ${u.email}<br>₦${u.wallet||0}
+        <div>
+          <button onclick="addMoney('${d.id}')">+</button>
+          <button onclick="subMoney('${d.id}')">-</button>
+          <button onclick="deleteUser('${d.id}')">X</button>
+        </div>
+      </div>
+    `;
   });
 }
 
-/* CATEGORIES */
-addCategoryBtn.onclick = async ()=>{
-  if(!newCategory.value) return;
-  await addDoc(collection(db,"categories"),{name:newCategory.value});
-  newCategory.value="";
-  loadCategories();
+window.addMoney = async (id)=>{
+  const amt = Number(prompt("Amount"));
+  if(!amt) return;
+
+  const ref = doc(db,"users",id);
+  const u = (await getDoc(ref)).data();
+
+  await updateDoc(ref,{wallet:(u.wallet||0)+amt});
+  loadUsers();
 };
 
-async function loadCategories(){
-  categories.innerHTML="";
-  const snap = await getDocs(collection(db,"categories"));
-  snap.forEach(d=>{
-    categories.innerHTML += `<div class="item">${d.data().name}</div>`;
-  });
+window.subMoney = async (id)=>{
+  const amt = Number(prompt("Amount"));
+  if(!amt) return;
+
+  const ref = doc(db,"users",id);
+  const u = (await getDoc(ref)).data();
+
+  await updateDoc(ref,{wallet:(u.wallet||0)-amt});
+  loadUsers();
+};
+
+window.deleteUser = async (id)=>{
+  if(confirm("Delete user?")){
+    await deleteDoc(doc(db,"users",id));
+    loadUsers();
+  }
+};
+
+/* LOGO FIX */
+function cleanDomain(input){
+  try{
+    return new URL(input.startsWith("http")?input:"https://"+input).hostname.replace("www.","");
+  }catch{
+    return "";
+  }
 }
 
-/* PRODUCTS */
+function getLogo(domain, custom){
+  if(custom) return custom;
+  const d = cleanDomain(domain);
+  return d ? `https://logo.clearbit.com/${d}` : "";
+}
+
+/* ADD PRODUCT */
 addProductBtn.onclick = async ()=>{
-  const logo = logoInput.value || (domain.value ? `https://logo.clearbit.com/${domain.value}`:"");
+  const name = nameInput.value.trim();
+  const category = categoryInput.value.trim();
+  const price = Number(priceInput.value);
+  const preview = previewLink.value.trim();
+  const desc = description.value.trim();
+
+  if(!name || !category || !price) return alert("Fill all");
+
+  const logo = getLogo(domain.value, logoInput.value);
 
   const ref = await addDoc(collection(db,"products"),{
-    name:nameInput.value,
-    category:categoryInput.value,
-    price:Number(priceInput.value),
-    logo,
-    previewLink:previewLink.value,
-    description:description.value
+    name, category, price, logo,
+    previewLink: preview,
+    description: desc
   });
 
-  await setDoc(doc(db,"productStock",ref.id),{items:[]});
+  const items = stockData.value.split("\n")
+    .filter(l=>l.includes(":"))
+    .map(l=>{
+      const [email,password]=l.split(":");
+      return {email:email.trim(),password:password.trim(),sold:false};
+    });
 
-  alert("Added");
-  loadProducts();
+  await setDoc(doc(db,"productStock",ref.id),{items});
+
+  alert("Product added");
+  location.reload();
 };
 
+/* PRODUCTS */
 async function loadProducts(){
   products.innerHTML="";
   const snap = await getDocs(collection(db,"products"));
+
   snap.forEach(d=>{
-    const p=d.data();
-    products.innerHTML += `<div class="item">${p.name} - ₦${p.price}</div>`;
+    const p = d.data();
+
+    products.innerHTML += `
+      <div class="item">
+        <img src="${p.logo||''}" class="logo"
+        onerror="this.src='https://via.placeholder.com/40?text=Logo'">
+        ${p.name} - ₦${p.price}
+      </div>
+    `;
   });
 }
 
 /* DASHBOARD */
 async function loadDashboard(){
   const snap = await getDocs(collection(db,"orders"));
-  let total=0;
-  snap.forEach(d=> total+=Number(d.data().price||0));
-  revenue.innerText=total;
+  let total = 0;
+  snap.forEach(d=> total += Number(d.data().price||0));
+  revenue.innerText = total;
 }
 
 /* ORDERS */
@@ -271,8 +314,8 @@ async function loadOrders(){
   orders.innerHTML="";
   const snap = await getDocs(collection(db,"orders"));
   snap.forEach(d=>{
-    const o=d.data();
-    orders.innerHTML += `<div class="item">${o.name} - ₦${o.price}</div>`;
+    const o = d.data();
+    orders.innerHTML += `<div class="item">₦${o.price} - ${o.name}</div>`;
   });
 }
 
@@ -290,7 +333,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 });
 
 /* LOGOUT */
-logoutBtn.onclick=()=>signOut(auth).then(()=>location.replace("auth.html"));
+logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 
 </body>
