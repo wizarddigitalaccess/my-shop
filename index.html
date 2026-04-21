@@ -22,7 +22,6 @@ body {
   justify-content:center;
   align-items:center;
   z-index:9999;
-  font-size:18px;
 }
 
 /* HEADER */
@@ -42,8 +41,6 @@ body {
   object-fit:contain;
   padding:4px;
 }
-
-.title { font-weight:bold; }
 
 .header input {
   flex:1;
@@ -73,14 +70,6 @@ body {
 }
 
 .cat.active { background:purple; }
-
-.cat img {
-  width:18px;
-  height:18px;
-  background:white;
-  padding:2px;
-  border-radius:4px;
-}
 
 /* PRODUCTS */
 .grid {
@@ -147,7 +136,7 @@ body {
   text-align:center;
 }
 
-/* NAV (TEXT ONLY ✅) */
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -162,7 +151,6 @@ body {
   padding:12px;
   color:gray;
   text-decoration:none;
-  font-size:14px;
 }
 
 .nav a.active { color:purple; }
@@ -176,9 +164,8 @@ body {
 <div id="app" style="display:none;">
 
 <div class="header">
-  <img src="https://logo.clearbit.com/google.com" class="site-logo"
-       onerror="this.src='https://via.placeholder.com/30'">
-  <div class="title">Wizard Digital Access</div>
+  <img id="siteLogo" class="site-logo">
+  <div>Wizard Digital Access</div>
   <input id="search" placeholder="Search...">
 </div>
 
@@ -211,6 +198,7 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -220,9 +208,8 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let user = null;
-let allProducts = [];
-let currentCategory = "all";
+/* GLOBAL */
+let user, allProducts=[], currentCategory="all";
 
 const loader = document.getElementById("loader");
 const appDiv = document.getElementById("app");
@@ -233,21 +220,24 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* 🔐 AUTH (FIXED NO WHITE FLASH) */
+/* 🔥 FIX SITE LOGO */
+document.getElementById("siteLogo").src =
+  "https://logo.clearbit.com/google.com";
+
+/* AUTH */
 onAuthStateChanged(auth, async (u)=>{
   if(!u){
-    loader.innerText = "Redirecting...";
-    setTimeout(()=>location.href="auth.html",500);
+    location.replace("auth.html");
     return;
   }
 
   user = u;
 
-  try {
+  try{
     await init();
-  } catch(err){
-    console.error(err);
-    loader.innerText = "Failed to load app";
+  }catch(e){
+    console.error(e);
+    loader.innerText="Failed to load";
     return;
   }
 
@@ -257,19 +247,24 @@ onAuthStateChanged(auth, async (u)=>{
 
 /* INIT */
 async function init(){
-  allProducts = [];
+  allProducts=[];
 
   const snap = await getDocs(collection(db,"products"));
-  const cats = new Map();
+  const cats=new Map();
 
   snap.forEach(d=>{
-    const p = d.data();
-    p.id = d.id;
+    const p=d.data();
+    p.id=d.id;
+
+    /* 🔥 AUTO FIX LOGO FROM DOMAIN */
+    if(p.logo && !p.logo.startsWith("http")){
+      p.logo = "https://logo.clearbit.com/" + p.logo;
+    }
 
     allProducts.push(p);
 
     if(!cats.has(p.category)){
-      cats.set(p.category, p.logo || "");
+      cats.set(p.category,p.logo||"");
     }
   });
 
@@ -281,7 +276,7 @@ async function init(){
 function renderCats(map){
   categoriesDiv.innerHTML="";
 
-  const all = createCat("All","all","");
+  const all=createCat("All","all","");
   all.classList.add("active");
   categoriesDiv.appendChild(all);
 
@@ -294,7 +289,7 @@ function createCat(label,value,logo){
   const div=document.createElement("div");
   div.className="cat";
 
-  div.innerHTML = `
+  div.innerHTML=`
     ${logo ? `<img src="${logo}" onerror="this.remove()">` : ""}
     <span>${label}</span>
   `;
@@ -311,7 +306,7 @@ function createCat(label,value,logo){
 
 /* PRODUCTS */
 function loadProducts(){
-  const search = searchInput.value.toLowerCase();
+  const search=searchInput.value.toLowerCase();
   productsDiv.innerHTML="";
 
   allProducts.forEach(p=>{
@@ -322,8 +317,7 @@ function loadProducts(){
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo || ''}" class="logo"
-      onerror="this.src='https://via.placeholder.com/50?text=Logo'">
+      <img src="${p.logo || 'https://via.placeholder.com/50'}" class="logo">
 
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
@@ -347,53 +341,79 @@ function loadProducts(){
   });
 }
 
-/* PREVIEW */
+/* PREVIEW (FIXED) */
 function preview(p){
   modalContent.innerHTML=`
-    <img src="${p.logo || ''}" class="logo">
+    <img src="${p.logo}" class="logo">
     <h3>${p.name}</h3>
     <p>${p.description || "No description"}</p>
+
+    ${p.previewLink ? `
+      <a href="${p.previewLink}" target="_blank">
+        <button style="background:#444;margin-top:10px;">Open Preview</button>
+      </a>` : ""}
+
+    <br><br>
     <button onclick="document.getElementById('modal').style.display='none'">Close</button>
   `;
+
   modal.style.display="flex";
 }
 
-/* BUY */
+/* BUY (SAFE) */
 async function buy(id){
-  const p = (await getDoc(doc(db,"products",id))).data();
-  const uRef = doc(db,"users",user.uid);
-  const u = (await getDoc(uRef)).data();
+  try{
+    const p=(await getDoc(doc(db,"products",id))).data();
 
-  if((u.wallet||0) < p.price) return alert("Insufficient balance");
+    const uRef=doc(db,"users",user.uid);
+    const u=(await getDoc(uRef)).data();
 
-  const stockRef = doc(db,"productStock",id);
-  const stockSnap = await getDoc(stockRef);
+    if((u.wallet||0) < p.price){
+      alert("Insufficient balance");
+      return;
+    }
 
-  let items = stockSnap.data().items;
-  const index = items.findIndex(i=>!i.sold);
+    const stockRef=doc(db,"productStock",id);
+    const stockSnap=await getDoc(stockRef);
 
-  if(index === -1) return alert("Out of stock");
+    if(!stockSnap.exists()){
+      alert("No stock setup");
+      return;
+    }
 
-  const item = items[index];
-  items[index].sold = true;
+    let items=stockSnap.data().items || [];
 
-  await updateDoc(uRef,{wallet:u.wallet - p.price});
+    const index=items.findIndex(i=>!i.sold);
+    if(index===-1){
+      alert("Out of stock");
+      return;
+    }
 
-  await addDoc(collection(db,"orders"),{
-    userId:user.uid,
-    productId:id,
-    name:p.name,
-    price:p.price,
-    email:item.email,
-    password:item.password,
-    logo:p.logo || "",
-    createdAt:new Date()
-  });
+    const item=items[index];
+    items[index].sold=true;
 
-  await updateDoc(stockRef,{items});
+    await updateDoc(uRef,{wallet:u.wallet - p.price});
 
-  alert(`Success\nEmail: ${item.email}\nPassword: ${item.password}`);
-  location.href="orders.html";
+    await addDoc(collection(db,"orders"),{
+      userId:user.uid,
+      productId:id,
+      name:p.name,
+      price:p.price,
+      email:item.email,
+      password:item.password,
+      logo:p.logo || "",
+      createdAt:new Date()
+    });
+
+    await updateDoc(stockRef,{items});
+
+    alert(`Success\nEmail: ${item.email}\nPassword: ${item.password}`);
+    location.href="orders.html";
+
+  }catch(err){
+    console.error(err);
+    alert("Purchase failed");
+  }
 }
 </script>
 

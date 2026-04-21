@@ -12,6 +12,7 @@ body {
   color:white;
 }
 
+/* LOADER */
 .loader {
   position:fixed;
   inset:0;
@@ -19,7 +20,11 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
+  font-size:16px;
 }
+
+/* APP */
+#app { display:none; }
 
 .container { padding:20px; }
 
@@ -47,10 +52,12 @@ button {
   border-radius:8px;
   background:purple;
   color:white;
+  cursor:pointer;
 }
 
 button.secondary { background:#333; }
 
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -73,9 +80,11 @@ button.secondary { background:#333; }
 
 <body>
 
+<!-- LOADER -->
 <div class="loader" id="loader">Loading profile...</div>
 
-<div id="app" style="display:none;">
+<!-- APP -->
+<div id="app">
   <div class="container">
     <div class="card">
       <h2>My Profile</h2>
@@ -88,70 +97,111 @@ button.secondary { background:#333; }
       <button class="secondary" onclick="logout()">Logout</button>
     </div>
   </div>
-</div>
 
-<div class="nav">
-  <a href="index.html">Home</a>
-  <a href="wallet.html">Wallet</a>
-  <a href="orders.html">Orders</a>
-  <a href="profile.html" class="active">Profile</a>
+  <div class="nav">
+    <a href="index.html">Home</a>
+    <a href="wallet.html">Wallet</a>
+    <a href="orders.html">Orders</a>
+    <a href="profile.html" class="active">Profile</a>
+  </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, updatePassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  updatePassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ✅ SAME CONFIG EVERYWHERE */
 const app = initializeApp({
-  apiKey:"AIzaSy...",
-  authDomain:"wizard-shop-52a50.firebaseapp.com",
-  projectId:"wizard-shop-52a50"
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const loader = document.getElementById("loader");
+const appDiv = document.getElementById("app");
+
 let currentUser;
 
-onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.href="auth.html";
+/* 🔐 AUTH */
+onAuthStateChanged(auth, async (user) => {
+  try {
+    if (!user) {
+      location.replace("auth.html");
+      return;
+    }
 
-  currentUser = user;
+    currentUser = user;
 
-  const ref = doc(db,"users",user.uid);
-  let snap = await getDoc(ref);
+    const ref = doc(db, "users", user.uid);
+    let snap = await getDoc(ref);
 
-  if(!snap.exists()){
-    await setDoc(ref,{
-      name:user.email.split("@")[0],
-      email:user.email,
-      wallet:0
-    });
-    snap = await getDoc(ref);
+    /* AUTO CREATE USER */
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        name: user.email.split("@")[0],
+        email: user.email,
+        wallet: 0
+      });
+      snap = await getDoc(ref);
+    }
+
+    const data = snap.data();
+
+    document.getElementById("name").value = data.name || "";
+    document.getElementById("email").value = data.email || "";
+
+    /* SHOW APP */
+    loader.style.display = "none";
+    appDiv.style.display = "block";
+
+  } catch (err) {
+    console.error(err);
+    loader.innerText = "Error loading profile";
   }
-
-  const data = snap.data();
-
-  name.value = data.name;
-  email.value = data.email;
-
-  loader.style.display="none";
-  app.style.display="block";
 });
 
-window.save = async ()=>{
-  await updateDoc(doc(db,"users",currentUser.uid),{
-    name:name.value
-  });
+/* SAVE */
+window.save = async () => {
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      name: document.getElementById("name").value
+    });
 
-  if(password.value){
-    await updatePassword(currentUser,password.value);
+    const newPass = document.getElementById("password").value;
+
+    if (newPass) {
+      await updatePassword(currentUser, newPass);
+    }
+
+    alert("Profile updated ✅");
+
+  } catch (err) {
+    alert(err.message);
   }
-
-  alert("Saved");
 };
 
-window.logout = ()=>signOut(auth).then(()=>location.href="auth.html");
+/* LOGOUT */
+window.logout = () => {
+  signOut(auth).then(() => {
+    location.replace("auth.html");
+  });
+};
 </script>
 
 </body>
