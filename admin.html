@@ -158,16 +158,35 @@ const db = getFirestore(app);
 
 /* SAFE AUTH */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.href="auth.html";
-
-  const snap = await getDoc(doc(db,"users",user.uid));
-
-  if(!snap.exists() || snap.data().role !== "admin"){
-    return location.href="index.html";
+  if(!user){
+    location.replace("auth.html");
+    return;
   }
 
-  document.body.style.display="block";
-  init();
+  try{
+    const ref = doc(db,"users",user.uid);
+    const snap = await getDoc(ref);
+
+    if(!snap.exists()){
+      alert("User data missing");
+      return location.replace("auth.html");
+    }
+
+    const data = snap.data();
+
+    if(data.role !== "admin"){
+      alert("Not an admin account");
+      return location.replace("index.html");
+    }
+
+    // ✅ ONLY NOW SHOW PANEL
+    document.body.style.display="block";
+    init();
+
+  }catch(err){
+    console.error(err);
+    alert("Admin load failed");
+  }
 });
 
 /* SAFE INIT */
