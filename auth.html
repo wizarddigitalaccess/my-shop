@@ -101,9 +101,16 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+let hasRedirected = false;
+
 /* 🔐 SAFE AUTH LISTENER */
 onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
+  if (!user || hasRedirected) return;
+
+  hasRedirected = true;
+
+  const msg = document.getElementById("msg");
+  msg.innerText = "Loading account...";
 
   try {
     const ref = doc(db, "users", user.uid);
@@ -122,16 +129,17 @@ onAuthStateChanged(auth, async (user) => {
 
     const data = snap.data();
 
-    /* CLEAN REDIRECT */
+    /* REDIRECT */
     if (data.role === "admin") {
-      location.href = "admin.html";
+      location.replace("admin.html");
     } else {
-      location.href = "index.html";
+      location.replace("index.html");
     }
 
   } catch (err) {
     console.error(err);
-    document.getElementById("msg").innerText = "Error loading account";
+    msg.innerText = "Error loading account";
+    hasRedirected = false; // allow retry
   }
 });
 
