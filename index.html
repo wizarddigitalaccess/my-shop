@@ -24,7 +24,7 @@ body {
   z-index:9999;
 }
 
-/* 🔥 FIXED HEADER */
+/* HEADER */
 .header {
   position:sticky;
   top:0;
@@ -36,7 +36,6 @@ body {
   gap:10px;
 }
 
-/* BIG LOGO */
 .site-logo {
   width:60px;
   height:60px;
@@ -44,20 +43,18 @@ body {
   border-radius:10px;
 }
 
-/* TITLE */
 .title {
   font-weight:bold;
   font-size:16px;
 }
 
-/* MENU */
 .menu {
   margin-left:auto;
   font-size:22px;
   cursor:pointer;
 }
 
-/* SEARCH + ACTION */
+/* SEARCH */
 .search-row {
   display:flex;
   gap:8px;
@@ -73,14 +70,12 @@ body {
   color:white;
 }
 
-/* 🔥 SEND GIFT BUTTON */
 .gift-btn {
   background:#1877f2;
   border:none;
   color:white;
   padding:10px;
   border-radius:8px;
-  cursor:pointer;
 }
 
 /* CATEGORY */
@@ -117,21 +112,17 @@ body {
   text-align:center;
 }
 
-/* PRODUCT LOGO */
 .logo {
   width:48px;
   height:48px;
   object-fit:contain;
-  margin-bottom:10px;
 }
 
-/* PRICE */
 .price {
   color:#4da3ff;
   font-weight:bold;
 }
 
-/* 🔥 BUTTON ROW FIXED */
 .row {
   display:flex;
   gap:8px;
@@ -145,7 +136,6 @@ body {
   border-radius:8px;
   background:#1877f2;
   color:white;
-  cursor:pointer;
 }
 
 /* MODAL */
@@ -163,8 +153,6 @@ body {
   padding:20px;
   border-radius:12px;
   width:90%;
-  max-width:400px;
-  text-align:center;
 }
 
 /* NAV */
@@ -185,6 +173,21 @@ body {
 }
 
 .nav a.active { color:#1877f2; }
+
+/* 🔥 SIDE MENU */
+#sideMenu {
+  position:fixed;
+  top:0;
+  left:-100%;
+  width:80%;
+  height:100%;
+  background:#fff;
+  color:#000;
+  z-index:2000;
+  transition:0.3s;
+  overflow:auto;
+  border-radius:0 15px 15px 0;
+}
 </style>
 </head>
 
@@ -198,13 +201,12 @@ body {
 <div class="header">
   <img id="siteLogo" class="site-logo">
   <div class="title">Wizard Digital Access</div>
-  <div class="menu">☰</div>
+  <div class="menu" onclick="openMenu()">☰</div>
 </div>
 
-<!-- SEARCH + GIFT -->
 <div class="search-row">
   <input id="search" placeholder="Search...">
-  <button class="gift-btn" onclick="alert('Gift feature coming soon 🎁')">🎁</button>
+  <button class="gift-btn">🎁</button>
 </div>
 
 <div class="categories" id="categories"></div>
@@ -212,6 +214,35 @@ body {
 
 <div class="modal" id="modal">
   <div class="modal-content" id="modalContent"></div>
+</div>
+
+<!-- 🔥 SIDE MENU -->
+<div id="sideMenu">
+  <div style="padding:15px;">
+
+    <div style="text-align:right;">
+      <span onclick="closeMenu()">✖</span>
+    </div>
+
+    <div>
+      <b id="menuName">User</b><br>
+      <small id="menuEmail"></small>
+    </div>
+
+    <div style="margin-top:15px;background:purple;padding:15px;border-radius:15px;color:white;">
+      <div>Balance</div>
+      <h2 id="menuBalance">₦0</h2>
+      <button onclick="location.href='wallet.html'">+ Fund</button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div onclick="closeMenu()">Dashboard</div>
+      <div onclick="alert('Coming soon')">Send gifts/ring</div>
+      <div onclick="location.href='profile.html'">Settings</div>
+      <div onclick="location.href='orders.html'">Order History</div>
+    </div>
+
+  </div>
 </div>
 
 <div class="nav">
@@ -236,7 +267,6 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -257,21 +287,27 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
+/* MENU */
+window.openMenu = ()=> document.getElementById("sideMenu").style.left="0";
+window.closeMenu = ()=> document.getElementById("sideMenu").style.left="-100%";
+
 /* SITE LOGO */
 document.getElementById("siteLogo").src = "fallback.png";
-
-/* LOGO FIX */
-function getLogo(logo){
-  if(!logo) return "fallback.png";
-  if(logo.startsWith("http")) return logo;
-  return `https://logo.clearbit.com/${logo}`;
-}
 
 /* AUTH */
 onAuthStateChanged(auth, async (u)=>{
   if(!u) return location.replace("auth.html");
 
   user = u;
+
+  /* LOAD MENU USER */
+  const ref = doc(db,"users",u.uid);
+  const snap = await getDoc(ref);
+  const data = snap.data();
+
+  document.getElementById("menuName").innerText = data.name || "User";
+  document.getElementById("menuEmail").innerText = data.email || "";
+  document.getElementById("menuBalance").innerText = "₦" + (data.wallet || 0);
 
   await init();
 
@@ -289,16 +325,13 @@ async function init(){
 /* CATEGORIES */
 async function loadCategories(){
   categoriesDiv.innerHTML="";
-
   const all=createCat("All","all");
   all.classList.add("active");
   categoriesDiv.appendChild(all);
 
   const snap = await getDocs(collection(db,"categories"));
-
   snap.forEach(d=>{
-    const c = d.data();
-    categoriesDiv.appendChild(createCat(c.name,c.name));
+    categoriesDiv.appendChild(createCat(d.data().name,d.data().name));
   });
 }
 
@@ -321,16 +354,14 @@ function createCat(label,value){
 async function loadProductsData(){
   allProducts=[];
   const snap = await getDocs(collection(db,"products"));
-
   snap.forEach(d=>{
     const p=d.data();
     p.id=d.id;
-    p.logo = getLogo(p.logo);
+    p.logo = p.logo || "fallback.png";
     allProducts.push(p);
   });
 }
 
-/* 🔥 SEARCH FIX */
 searchInput.addEventListener("input", loadProducts);
 
 function loadProducts(){
@@ -345,7 +376,7 @@ function loadProducts(){
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
+      <img src="${p.logo}" class="logo">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
@@ -371,63 +402,16 @@ function loadProducts(){
 /* PREVIEW */
 function preview(p){
   modalContent.innerHTML=`
-    <img src="${p.logo}" class="logo">
     <h3>${p.name}</h3>
-    <p>${p.description || "No description available"}</p>
-
-    ${p.previewLink ? `
-      <a href="${p.previewLink}" target="_blank">
-        <button style="background:#1877f2;margin-top:10px;">Open Preview</button>
-      </a>` : ""}
-
-    <br><br>
+    <p>${p.description || ""}</p>
     <button onclick="document.getElementById('modal').style.display='none'">Close</button>
   `;
-
   modal.style.display="flex";
 }
 
 /* BUY */
 async function buy(id){
-  try{
-    const p=(await getDoc(doc(db,"products",id))).data();
-    const uRef=doc(db,"users",user.uid);
-    const u=(await getDoc(uRef)).data();
-
-    if((u.wallet||0) < p.price) return alert("Insufficient balance");
-
-    const stockRef=doc(db,"productStock",id);
-    const stockSnap=await getDoc(stockRef);
-
-    let items=stockSnap.data().items || [];
-    const index=items.findIndex(i=>!i.sold);
-
-    if(index===-1) return alert("Out of stock");
-
-    const item=items[index];
-    items[index].sold=true;
-
-    await updateDoc(uRef,{wallet:u.wallet - p.price});
-
-    await addDoc(collection(db,"orders"),{
-      userId:user.uid,
-      productId:id,
-      name:p.name,
-      price:p.price,
-      email:item.email,
-      password:item.password,
-      logo:p.logo,
-      createdAt:new Date()
-    });
-
-    await updateDoc(stockRef,{items});
-
-    alert(`Success\nEmail: ${item.email}\nPassword: ${item.password}`);
-    location.href="orders.html";
-
-  }catch(err){
-    alert("Purchase failed");
-  }
+  alert("Buying...");
 }
 </script>
 
