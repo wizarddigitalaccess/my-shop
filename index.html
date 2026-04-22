@@ -54,7 +54,7 @@ body {
   cursor:pointer;
 }
 
-/* SEARCH */
+/* SEARCH + ACTION */
 .search-row {
   display:flex;
   gap:8px;
@@ -70,12 +70,16 @@ body {
   color:white;
 }
 
+/* 🔥 PREMIUM SEND GIFT BUTTON */
 .gift-btn {
   background:#1877f2;
-  border:none;
   color:white;
-  padding:10px;
-  border-radius:8px;
+  padding:10px 14px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+  white-space:nowrap;
 }
 
 /* CATEGORY */
@@ -116,6 +120,7 @@ body {
   width:48px;
   height:48px;
   object-fit:contain;
+  margin-bottom:10px;
 }
 
 .price {
@@ -136,6 +141,7 @@ body {
   border-radius:8px;
   background:#1877f2;
   color:white;
+  cursor:pointer;
 }
 
 /* MODAL */
@@ -153,6 +159,8 @@ body {
   padding:20px;
   border-radius:12px;
   width:90%;
+  max-width:400px;
+  text-align:center;
 }
 
 /* NAV */
@@ -174,19 +182,18 @@ body {
 
 .nav a.active { color:#1877f2; }
 
-/* 🔥 SIDE MENU */
+/* 🔥 SIDE MENU (RIGHT + FULL HEIGHT) */
 #sideMenu {
   position:fixed;
   top:0;
-  left:-100%;
-  width:80%;
+  right:-100%;
+  width:85%;
   height:100%;
-  background:#fff;
-  color:#000;
+  background:#0f0f1a;
   z-index:2000;
   transition:0.3s;
-  overflow:auto;
-  border-radius:0 15px 15px 0;
+  display:flex;
+  flex-direction:column;
 }
 </style>
 </head>
@@ -204,9 +211,12 @@ body {
   <div class="menu" onclick="openMenu()">☰</div>
 </div>
 
+<!-- SEARCH + GIFT -->
 <div class="search-row">
   <input id="search" placeholder="Search...">
-  <button class="gift-btn">🎁</button>
+  <button class="gift-btn" onclick="alert('Send gifts/ring coming soon')">
+    Send gifts/ring
+  </button>
 </div>
 
 <div class="categories" id="categories"></div>
@@ -218,31 +228,54 @@ body {
 
 <!-- 🔥 SIDE MENU -->
 <div id="sideMenu">
-  <div style="padding:15px;">
+
+  <div style="padding:20px;">
 
     <div style="text-align:right;">
-      <span onclick="closeMenu()">✖</span>
+      <span onclick="closeMenu()" style="font-size:22px;">✖</span>
     </div>
 
-    <div>
+    <div style="margin-top:10px;">
       <b id="menuName">User</b><br>
       <small id="menuEmail"></small>
     </div>
 
-    <div style="margin-top:15px;background:purple;padding:15px;border-radius:15px;color:white;">
-      <div>Balance</div>
+    <div style="
+      margin-top:20px;
+      padding:15px;
+      border-radius:15px;
+      background:linear-gradient(45deg,#6a00ff,#d000ff);
+    ">
+      <div>ACCOUNT BALANCE</div>
       <h2 id="menuBalance">₦0</h2>
-      <button onclick="location.href='wallet.html'">+ Fund</button>
-    </div>
 
-    <div style="margin-top:20px;">
-      <div onclick="closeMenu()">Dashboard</div>
-      <div onclick="alert('Coming soon')">Send gifts/ring</div>
-      <div onclick="location.href='profile.html'">Settings</div>
-      <div onclick="location.href='orders.html'">Order History</div>
+      <button onclick="location.href='wallet.html'" style="
+        margin-top:10px;
+        background:white;
+        color:black;
+        padding:8px 15px;
+        border:none;
+        border-radius:20px;
+      ">
+        + Fund
+      </button>
     </div>
 
   </div>
+
+  <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:18px;">
+    <div onclick="closeMenu()">🏠 Dashboard</div>
+    <div onclick="alert('Coming soon')">Send gifts/ring</div>
+    <div onclick="alert('WhatsApp section')">Buy old USA WhatsApp</div>
+    <div onclick="alert('Emails section')">Buy Emails</div>
+    <div onclick="location.href='profile.html'">Settings</div>
+
+    <hr style="border-color:#222;">
+
+    <div onclick="location.href='orders.html'">Order History</div>
+    <div onclick="alert('Transactions soon')">Transactions</div>
+  </div>
+
 </div>
 
 <div class="nav">
@@ -258,13 +291,7 @@ body {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore,
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  updateDoc,
-  addDoc
+  getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -287,12 +314,11 @@ const categoriesDiv = document.getElementById("categories");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
 
-/* MENU */
-window.openMenu = ()=> document.getElementById("sideMenu").style.left="0";
-window.closeMenu = ()=> document.getElementById("sideMenu").style.left="-100%";
-
-/* SITE LOGO */
 document.getElementById("siteLogo").src = "fallback.png";
+
+/* MENU CONTROL */
+window.openMenu = ()=> document.getElementById("sideMenu").style.right="0";
+window.closeMenu = ()=> document.getElementById("sideMenu").style.right="-100%";
 
 /* AUTH */
 onAuthStateChanged(auth, async (u)=>{
@@ -300,14 +326,12 @@ onAuthStateChanged(auth, async (u)=>{
 
   user = u;
 
-  /* LOAD MENU USER */
-  const ref = doc(db,"users",u.uid);
-  const snap = await getDoc(ref);
-  const data = snap.data();
+  const uSnap = await getDoc(doc(db,"users",u.uid));
+  const data = uSnap.data();
 
   document.getElementById("menuName").innerText = data.name || "User";
-  document.getElementById("menuEmail").innerText = data.email || "";
-  document.getElementById("menuBalance").innerText = "₦" + (data.wallet || 0);
+  document.getElementById("menuEmail").innerText = data.email;
+  document.getElementById("menuBalance").innerText = "₦"+(data.wallet||0);
 
   await init();
 
@@ -322,7 +346,6 @@ async function init(){
   loadProducts();
 }
 
-/* CATEGORIES */
 async function loadCategories(){
   categoriesDiv.innerHTML="";
   const all=createCat("All","all");
@@ -331,7 +354,8 @@ async function loadCategories(){
 
   const snap = await getDocs(collection(db,"categories"));
   snap.forEach(d=>{
-    categoriesDiv.appendChild(createCat(d.data().name,d.data().name));
+    const c=d.data();
+    categoriesDiv.appendChild(createCat(c.name,c.name));
   });
 }
 
@@ -350,10 +374,10 @@ function createCat(label,value){
   return div;
 }
 
-/* PRODUCTS */
 async function loadProductsData(){
   allProducts=[];
   const snap = await getDocs(collection(db,"products"));
+
   snap.forEach(d=>{
     const p=d.data();
     p.id=d.id;
@@ -376,7 +400,7 @@ function loadProducts(){
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo}" class="logo">
+      <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
@@ -399,19 +423,63 @@ function loadProducts(){
   });
 }
 
-/* PREVIEW */
 function preview(p){
   modalContent.innerHTML=`
+    <img src="${p.logo}" class="logo">
     <h3>${p.name}</h3>
-    <p>${p.description || ""}</p>
+    <p>${p.description || "No description available"}</p>
+
+    ${p.previewLink ? `
+      <a href="${p.previewLink}" target="_blank">
+        <button style="background:#1877f2;margin-top:10px;">Open Preview</button>
+      </a>` : ""}
+
+    <br><br>
     <button onclick="document.getElementById('modal').style.display='none'">Close</button>
   `;
   modal.style.display="flex";
 }
 
-/* BUY */
 async function buy(id){
-  alert("Buying...");
+  try{
+    const p=(await getDoc(doc(db,"products",id))).data();
+    const uRef=doc(db,"users",user.uid);
+    const u=(await getDoc(uRef)).data();
+
+    if((u.wallet||0) < p.price) return alert("Insufficient balance");
+
+    const stockRef=doc(db,"productStock",id);
+    const stockSnap=await getDoc(stockRef);
+
+    let items=stockSnap.data().items || [];
+    const index=items.findIndex(i=>!i.sold);
+
+    if(index===-1) return alert("Out of stock");
+
+    const item=items[index];
+    items[index].sold=true;
+
+    await updateDoc(uRef,{wallet:u.wallet - p.price});
+
+    await addDoc(collection(db,"orders"),{
+      userId:user.uid,
+      productId:id,
+      name:p.name,
+      price:p.price,
+      email:item.email,
+      password:item.password,
+      logo:p.logo,
+      createdAt:new Date()
+    });
+
+    await updateDoc(stockRef,{items});
+
+    alert(`Success\nEmail: ${item.email}\nPassword: ${item.password}`);
+    location.href="orders.html";
+
+  }catch{
+    alert("Purchase failed");
+  }
 }
 </script>
 
