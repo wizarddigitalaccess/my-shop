@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receiver Details</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f0f1a;
+  color:white;
+}
+
+.header{
+  padding:15px;
+  background:#1c1c2e;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.container{
+  padding:20px;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border:none;
+  border-radius:8px;
+  background:#1877f2;
+  color:white;
+  cursor:pointer;
+}
+
+.notice{
+  margin-top:15px;
+  font-size:13px;
+  color:#ccc;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div onclick="history.back()">←</div>
+  <b>Enter Receiver Details</b>
+</div>
+
+<div class="container">
+
+  <h3>Enter receiver’s details</h3>
+
+  <input placeholder="House number / Apt number">
+  <input placeholder="Street address">
+  <input placeholder="City / Province">
+  <input placeholder="State">
+  <input placeholder="Zip / Postal code">
+  <input placeholder="Country">
+  <input placeholder="Sender's Name">
+
+  <div class="notice">
+    FOR RING, BRA, PANT, SHIRT, HOODIE & SHOE ORDERS, SIZE WOULD BE NEEDED
+  </div>
+
+  <button onclick="submitGift()">Continue</button>
+
+</div>
+
+<script>
+function submitGift(){
+  alert("Next step: payment & confirmation (we can build next)");
+}
+</script>
+
+</body>
+</html>
