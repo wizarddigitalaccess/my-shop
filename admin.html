@@ -42,7 +42,7 @@ button {
   padding:6px 10px;
   border:none;
   border-radius:8px;
-  background:purple;
+  background:#1877f2;
   color:white;
   cursor:pointer;
 }
@@ -77,7 +77,7 @@ button {
   color:gray;
 }
 .nav button.active {
-  color:purple;
+  color:#1877f2;
 }
 </style>
 </head>
@@ -89,8 +89,32 @@ button {
   <button id="logoutBtn" style="background:red;">Logout</button>
 </div>
 
+<!-- DASHBOARD -->
 <div id="dashboard" class="card">
-  Revenue: ₦<span id="revenue"></span>
+  <h3>Revenue</h3>
+  ₦<span id="revenue"></span>
+
+  <hr>
+
+  <!-- 🎁 GIFT CATEGORIES -->
+  <h3>Gift Categories</h3>
+  <input id="giftCatName" placeholder="Category name">
+  <input id="giftCatImage" placeholder="Image URL">
+  <label><input type="checkbox" id="giftCatSize"> Requires Size</label>
+  <button onclick="addGiftCategory()">Add Category</button>
+  <div id="giftCategories"></div>
+
+  <hr>
+
+  <!-- 🎁 GIFT PRODUCTS -->
+  <h3>Gift Products</h3>
+  <input id="giftName" placeholder="Gift name">
+  <input id="giftCategory" placeholder="Category">
+  <input id="giftPrice" type="number" placeholder="Price">
+  <input id="giftImage" placeholder="Image URL">
+  <button onclick="addGiftProduct()">Add Gift</button>
+  <div id="giftProducts"></div>
+
 </div>
 
 <div id="usersPage" class="card" style="display:none">
@@ -155,13 +179,6 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* 🔥 LOGO FIX (IMPORTANT) */
-function getLogo(domain, custom){
-  if(custom) return custom;
-  if(!domain) return "";
-  return `https://logo.clearbit.com/${domain}`;
-}
-
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user) return location.replace("auth.html");
@@ -178,198 +195,9 @@ onAuthStateChanged(auth, async (user)=>{
 /* INIT */
 async function init(){
   loadDashboard();
-  loadUsers();
-  loadCategories();
-  loadProducts();
-  loadOrders();
+  loadGiftCategories();
+  loadGiftProducts();
 }
-
-/* USERS */
-async function loadUsers(){
-  users.innerHTML="";
-  const snap = await getDocs(collection(db,"users"));
-
-  snap.forEach(d=>{
-    const u = d.data();
-
-    users.innerHTML += `
-      <div class="item">
-        ${u.email}<br>₦${u.wallet||0}
-        <div>
-          <button onclick="addMoney('${d.id}')">+</button>
-          <button onclick="subMoney('${d.id}')">-</button>
-          <button onclick="deleteUser('${d.id}')">X</button>
-        </div>
-      </div>
-    `;
-  });
-}
-
-window.addMoney = async (id)=>{
-  const amt = Number(prompt("Amount"));
-  if(!amt) return;
-  const ref = doc(db,"users",id);
-  const u = (await getDoc(ref)).data();
-  await updateDoc(ref,{wallet:(u.wallet||0)+amt});
-  loadUsers();
-};
-
-window.subMoney = async (id)=>{
-  const amt = Number(prompt("Amount"));
-  if(!amt) return;
-  const ref = doc(db,"users",id);
-  const u = (await getDoc(ref)).data();
-  await updateDoc(ref,{wallet:(u.wallet||0)-amt});
-  loadUsers();
-};
-
-window.deleteUser = async (id)=>{
-  if(confirm("Delete user?")){
-    await deleteDoc(doc(db,"users",id));
-    loadUsers();
-  }
-};
-
-/* CATEGORIES */
-addCategoryBtn.onclick = async ()=>{
-  const name = newCategory.value.trim();
-  if(!name) return;
-  await addDoc(collection(db,"categories"),{name});
-  newCategory.value="";
-  loadCategories();
-};
-
-async function loadCategories(){
-  categories.innerHTML="";
-  const snap = await getDocs(collection(db,"categories"));
-
-  snap.forEach(d=>{
-    const c = d.data();
-
-    categories.innerHTML += `
-      <div class="item">
-        ${c.name}
-        <div>
-          <button onclick="editCategory('${d.id}','${c.name}')">Edit</button>
-          <button onclick="deleteCategory('${d.id}')">Delete</button>
-        </div>
-      </div>
-    `;
-  });
-}
-
-window.editCategory = async (id, oldName)=>{
-  const name = prompt("Edit category", oldName);
-  if(!name) return;
-  await updateDoc(doc(db,"categories",id),{name});
-  loadCategories();
-};
-
-window.deleteCategory = async (id)=>{
-  if(confirm("Delete category?")){
-    await deleteDoc(doc(db,"categories",id));
-    loadCategories();
-  }
-};
-
-/* 🔥 FIXED ADD PRODUCT */
-addProductBtn.onclick = async ()=>{
-  const name = nameInput.value.trim();
-  const category = categoryInput.value.trim();
-  const price = Number(priceInput.value);
-
-  if(!name || !category || !price){
-    return alert("Fill all required fields");
-  }
-
-  try{
-    const logo = getLogo(domain.value, logoInput.value);
-
-    const ref = await addDoc(collection(db,"products"),{
-      name,
-      category,
-      price,
-      logo,
-      previewLink: previewLink.value || "",
-      description: description.value || "",
-      createdAt: new Date()
-    });
-
-    let items = [];
-
-    if(stockData.value.trim()){
-      items = stockData.value.split("\n")
-        .filter(l=>l.includes(":"))
-        .map(l=>{
-          const [email,password]=l.split(":");
-          return {email,password,sold:false};
-        });
-    }
-
-    await setDoc(doc(db,"productStock",ref.id),{items});
-
-    alert("✅ Product added successfully");
-
-    nameInput.value="";
-    categoryInput.value="";
-    priceInput.value="";
-    domain.value="";
-    logoInput.value="";
-    previewLink.value="";
-    description.value="";
-    stockData.value="";
-
-    loadProducts();
-
-  }catch(err){
-    console.error(err);
-    alert("❌ Failed to add product: " + err.message);
-  }
-};
-
-/* PRODUCTS */
-async function loadProducts(){
-  products.innerHTML="";
-  const snap = await getDocs(collection(db,"products"));
-
-  snap.forEach(d=>{
-    const p = d.data();
-
-    products.innerHTML += `
-      <div class="item">
-        <img src="${p.logo || ''}" class="logo"
-        onerror="this.style.display='none'">
-
-        ${p.name} - ₦${p.price}
-
-        <div>
-          <button onclick="editProduct('${d.id}','${p.name}',${p.price})">Edit</button>
-          <button onclick="deleteProduct('${d.id}')">Delete</button>
-        </div>
-      </div>
-    `;
-  });
-}
-
-window.editProduct = async (id,name,price)=>{
-  const newName = prompt("Edit name", name);
-  const newPrice = Number(prompt("Edit price", price));
-  if(!newName || !newPrice) return;
-
-  await updateDoc(doc(db,"products",id),{
-    name:newName,
-    price:newPrice
-  });
-
-  loadProducts();
-};
-
-window.deleteProduct = async (id)=>{
-  if(confirm("Delete product?")){
-    await deleteDoc(doc(db,"products",id));
-    loadProducts();
-  }
-};
 
 /* DASHBOARD */
 async function loadDashboard(){
@@ -379,16 +207,87 @@ async function loadDashboard(){
   revenue.innerText = total;
 }
 
-/* ORDERS */
-async function loadOrders(){
-  orders.innerHTML="";
-  const snap = await getDocs(collection(db,"orders"));
+/* 🎁 ADD GIFT CATEGORY */
+window.addGiftCategory = async ()=>{
+  const name = giftCatName.value;
+  const image = giftCatImage.value;
+  const requiresSize = giftCatSize.checked;
+
+  await addDoc(collection(db,"giftCategories"),{
+    name,
+    image,
+    requiresSize
+  });
+
+  giftCatName.value="";
+  giftCatImage.value="";
+  giftCatSize.checked=false;
+
+  loadGiftCategories();
+};
+
+/* 🎁 LOAD GIFT CATEGORIES */
+async function loadGiftCategories(){
+  giftCategories.innerHTML="";
+  const snap = await getDocs(collection(db,"giftCategories"));
 
   snap.forEach(d=>{
-    const o = d.data();
-    orders.innerHTML += `<div class="item">₦${o.price} - ${o.name}</div>`;
+    const c = d.data();
+    giftCategories.innerHTML += `
+      <div class="item">
+        ${c.name}
+        <div>
+          <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
+        </div>
+      </div>
+    `;
   });
 }
+
+window.deleteGiftCategory = async (id)=>{
+  await deleteDoc(doc(db,"giftCategories",id));
+  loadGiftCategories();
+};
+
+/* 🎁 ADD GIFT PRODUCT */
+window.addGiftProduct = async ()=>{
+  await addDoc(collection(db,"giftProducts"),{
+    name: giftName.value,
+    category: giftCategory.value,
+    price: Number(giftPrice.value),
+    image: giftImage.value
+  });
+
+  giftName.value="";
+  giftCategory.value="";
+  giftPrice.value="";
+  giftImage.value="";
+
+  loadGiftProducts();
+};
+
+/* 🎁 LOAD GIFT PRODUCTS */
+async function loadGiftProducts(){
+  giftProducts.innerHTML="";
+  const snap = await getDocs(collection(db,"giftProducts"));
+
+  snap.forEach(d=>{
+    const g = d.data();
+    giftProducts.innerHTML += `
+      <div class="item">
+        ${g.name} - ₦${g.price}
+        <div>
+          <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+window.deleteGiftProduct = async (id)=>{
+  await deleteDoc(doc(db,"giftProducts",id));
+  loadGiftProducts();
+};
 
 /* NAV */
 document.querySelectorAll(".nav button").forEach(btn=>{
