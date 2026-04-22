@@ -24,8 +24,11 @@ body {
   z-index:9999;
 }
 
-/* HEADER */
+/* 🔥 FIXED HEADER */
 .header {
+  position:sticky;
+  top:0;
+  z-index:1000;
   background:#1c1c2e;
   padding:12px;
   display:flex;
@@ -33,10 +36,10 @@ body {
   gap:10px;
 }
 
-/* 🔥 BIGGER CLEAN SITE LOGO */
+/* BIG LOGO */
 .site-logo {
-  width:77px;
-  height:77px;
+  width:60px;
+  height:60px;
   object-fit:cover;
   border-radius:10px;
 }
@@ -44,25 +47,40 @@ body {
 /* TITLE */
 .title {
   font-weight:bold;
-  font-size:18px;
+  font-size:16px;
 }
 
 /* MENU */
 .menu {
   margin-left:auto;
-  font-size:24px;
+  font-size:22px;
   cursor:pointer;
 }
 
-/* SEARCH */
-.header input {
-  width:100%;
-  margin-top:10px;
+/* SEARCH + ACTION */
+.search-row {
+  display:flex;
+  gap:8px;
+  padding:10px;
+}
+
+.search-row input {
+  flex:1;
   padding:10px;
   border:none;
   border-radius:8px;
   background:#111;
   color:white;
+}
+
+/* 🔥 SEND GIFT BUTTON */
+.gift-btn {
+  background:#1877f2;
+  border:none;
+  color:white;
+  padding:10px;
+  border-radius:8px;
+  cursor:pointer;
 }
 
 /* CATEGORY */
@@ -78,13 +96,10 @@ body {
   padding:8px 12px;
   border-radius:20px;
   cursor:pointer;
-  display:flex;
-  gap:6px;
-  align-items:center;
   white-space:nowrap;
 }
 
-.cat.active { background:rgba(2, 2, 99, 0.184); }
+.cat.active { background:#1877f2; }
 
 /* PRODUCTS */
 .grid {
@@ -92,6 +107,7 @@ body {
   grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
   gap:14px;
   padding:12px;
+  padding-bottom:80px;
 }
 
 .card {
@@ -101,40 +117,35 @@ body {
   text-align:center;
 }
 
-/* 🔥 PRODUCT LOGO CLEAN */
+/* PRODUCT LOGO */
 .logo {
-  width:50px;
-  height:50px;
+  width:48px;
+  height:48px;
   object-fit:contain;
   margin-bottom:10px;
 }
 
 /* PRICE */
 .price {
-  color:rgb(240, 234, 240);
+  color:#4da3ff;
   font-weight:bold;
 }
 
-/* BUTTON ROW */
+/* 🔥 BUTTON ROW FIXED */
 .row {
   display:flex;
-  gap:6px;
+  gap:8px;
   margin-top:10px;
 }
 
 .row button {
   flex:1;
-  padding:8px;
+  padding:10px;
   border:none;
   border-radius:8px;
-  background:rgb(49, 107, 243);
+  background:#1877f2;
   color:white;
   cursor:pointer;
-}
-
-/* 🔥 BLUE PREVIEW BUTTON */
-.preview-btn {
-  background:#007bff !important;
 }
 
 /* MODAL */
@@ -173,7 +184,7 @@ body {
   text-decoration:none;
 }
 
-.nav a.active { color:rgb(0, 32, 128); }
+.nav a.active { color:#1877f2; }
 </style>
 </head>
 
@@ -190,8 +201,10 @@ body {
   <div class="menu">☰</div>
 </div>
 
-<div style="padding:10px;">
+<!-- SEARCH + GIFT -->
+<div class="search-row">
   <input id="search" placeholder="Search...">
+  <button class="gift-btn" onclick="alert('Gift feature coming soon 🎁')">🎁</button>
 </div>
 
 <div class="categories" id="categories"></div>
@@ -247,26 +260,16 @@ const modalContent = document.getElementById("modalContent");
 /* SITE LOGO */
 document.getElementById("siteLogo").src = "fallback.png";
 
-/* 🔥 SMART LOGO FIX */
+/* LOGO FIX */
 function getLogo(logo){
   if(!logo) return "fallback.png";
-
   if(logo.startsWith("http")) return logo;
-
-  try{
-    const domain = new URL("https://" + logo).hostname.replace("www.","");
-    return `https://logo.clearbit.com/${domain}`;
-  }catch{
-    return "fallback.png";
-  }
+  return `https://logo.clearbit.com/${logo}`;
 }
 
 /* AUTH */
 onAuthStateChanged(auth, async (u)=>{
-  if(!u){
-    location.replace("auth.html");
-    return;
-  }
+  if(!u) return location.replace("auth.html");
 
   user = u;
 
@@ -302,7 +305,7 @@ async function loadCategories(){
 function createCat(label,value){
   const div=document.createElement("div");
   div.className="cat";
-  div.innerHTML=`<span>${label}</span>`;
+  div.innerText=label;
 
   div.onclick=()=>{
     currentCategory=value;
@@ -314,7 +317,7 @@ function createCat(label,value){
   return div;
 }
 
-/* LOAD PRODUCTS */
+/* PRODUCTS */
 async function loadProductsData(){
   allProducts=[];
   const snap = await getDocs(collection(db,"products"));
@@ -322,9 +325,7 @@ async function loadProductsData(){
   snap.forEach(d=>{
     const p=d.data();
     p.id=d.id;
-
-    p.logo = getLogo(p.logo); // 🔥 FIXED
-
+    p.logo = getLogo(p.logo);
     allProducts.push(p);
   });
 }
@@ -332,7 +333,6 @@ async function loadProductsData(){
 /* 🔥 SEARCH FIX */
 searchInput.addEventListener("input", loadProducts);
 
-/* PRODUCTS */
 function loadProducts(){
   const search=searchInput.value.toLowerCase();
   productsDiv.innerHTML="";
@@ -345,9 +345,7 @@ function loadProducts(){
     card.className="card";
 
     card.innerHTML=`
-      <img src="${p.logo}" class="logo"
-      onerror="this.src='fallback.png'">
-
+      <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
       <h4>${p.name}</h4>
       <div class="price">₦${p.price}</div>
     `;
@@ -357,7 +355,6 @@ function loadProducts(){
 
     const previewBtn=document.createElement("button");
     previewBtn.textContent="Preview";
-    previewBtn.classList.add("preview-btn"); // 🔥 BLUE
     previewBtn.onclick=()=>preview(p);
 
     const buyBtn=document.createElement("button");
@@ -380,7 +377,7 @@ function preview(p){
 
     ${p.previewLink ? `
       <a href="${p.previewLink}" target="_blank">
-        <button style="background:#007bff;margin-top:10px;">Open Preview</button>
+        <button style="background:#1877f2;margin-top:10px;">Open Preview</button>
       </a>` : ""}
 
     <br><br>
@@ -390,34 +387,22 @@ function preview(p){
   modal.style.display="flex";
 }
 
-/* BUY (UNCHANGED) */
+/* BUY */
 async function buy(id){
   try{
     const p=(await getDoc(doc(db,"products",id))).data();
-
     const uRef=doc(db,"users",user.uid);
     const u=(await getDoc(uRef)).data();
 
-    if((u.wallet||0) < p.price){
-      alert("Insufficient balance");
-      return;
-    }
+    if((u.wallet||0) < p.price) return alert("Insufficient balance");
 
     const stockRef=doc(db,"productStock",id);
     const stockSnap=await getDoc(stockRef);
 
-    if(!stockSnap.exists()){
-      alert("No stock setup");
-      return;
-    }
-
     let items=stockSnap.data().items || [];
-
     const index=items.findIndex(i=>!i.sold);
-    if(index===-1){
-      alert("Out of stock");
-      return;
-    }
+
+    if(index===-1) return alert("Out of stock");
 
     const item=items[index];
     items[index].sold=true;
@@ -431,7 +416,7 @@ async function buy(id){
       price:p.price,
       email:item.email,
       password:item.password,
-      logo:p.logo || "",
+      logo:p.logo,
       createdAt:new Date()
     });
 
@@ -441,7 +426,6 @@ async function buy(id){
     location.href="orders.html";
 
   }catch(err){
-    console.error(err);
     alert("Purchase failed");
   }
 }
