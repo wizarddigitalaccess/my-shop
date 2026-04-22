@@ -59,7 +59,7 @@ body {
 
 .content { flex:1; }
 
-.price { color:violet; font-weight:bold; }
+.price { color:#4da3ff; font-weight:bold; }
 
 .field {
   background:#111;
@@ -81,10 +81,21 @@ button {
   padding:8px;
   border:none;
   border-radius:8px;
-  background:purple;
+  background:#1877f2;
   color:white;
   cursor:pointer;
 }
+
+/* STATUS */
+.status {
+  margin-top:8px;
+  font-size:13px;
+  font-weight:bold;
+}
+
+.placed { color:orange; }
+.delivery { color:#4da3ff; }
+.delivered { color:lightgreen; }
 
 /* NAV */
 .nav {
@@ -103,7 +114,7 @@ button {
   text-decoration:none;
 }
 
-.nav a.active { color:purple; }
+.nav a.active { color:#1877f2; }
 </style>
 </head>
 
@@ -150,7 +161,7 @@ const loader = document.getElementById("loader");
 const appDiv = document.getElementById("app");
 const ordersDiv = document.getElementById("orders");
 
-/* 🔐 AUTH (FIXED PROPER) */
+/* AUTH */
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     loader.innerText = "Redirecting...";
@@ -160,48 +171,44 @@ onAuthStateChanged(auth, async (user)=>{
 
   try {
     await loadOrders(user.uid);
-
     loader.style.display = "none";
     appDiv.style.display = "block";
-
   } catch(err){
     console.error(err);
     loader.innerText = "Failed to load orders";
   }
 });
 
-/* LOAD ORDERS */
+/* LOAD ALL ORDERS */
 async function loadOrders(uid){
-  ordersDiv.innerHTML = "Loading orders...";
+  ordersDiv.innerHTML = "";
 
-  const q = query(collection(db,"orders"), where("userId","==",uid));
-  const snap = await getDocs(q);
+  /* NORMAL ORDERS */
+  const normalQ = query(collection(db,"orders"), where("userId","==",uid));
+  const normalSnap = await getDocs(normalQ);
 
-  if(snap.empty){
+  /* GIFT ORDERS */
+  const giftQ = query(collection(db,"giftOrders"), where("userId","==",uid));
+  const giftSnap = await getDocs(giftQ);
+
+  if(normalSnap.empty && giftSnap.empty){
     ordersDiv.innerHTML = "<div style='text-align:center;color:gray;margin-top:40px;'>No orders yet 🛒</div>";
     return;
   }
 
-  ordersDiv.innerHTML = "";
-
-  snap.forEach(docSnap=>{
+  /* NORMAL ORDERS UI */
+  normalSnap.forEach(docSnap=>{
     const o = docSnap.data();
 
-    let date = "";
-    if(o.createdAt){
-      if(o.createdAt.seconds){
-        date = new Date(o.createdAt.seconds * 1000).toLocaleString();
-      } else {
-        date = new Date(o.createdAt).toLocaleString();
-      }
-    }
+    let date = o.createdAt?.seconds
+      ? new Date(o.createdAt.seconds * 1000).toLocaleString()
+      : "";
 
     const div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
-      <img src="${o.logo || ''}" class="logo"
-      onerror="this.src='https://via.placeholder.com/55?text=Logo'">
+      <img src="${o.logo || ''}" class="logo">
 
       <div class="content">
         <div>${o.name}</div>
@@ -214,6 +221,51 @@ async function loadOrders(uid){
           <button onclick="toggle('${docSnap.id}','${o.password}')">Show</button>
           <button onclick="copyLogin('${o.email}','${o.password}')">Copy</button>
         </div>
+
+        <div style="font-size:12px;color:gray">${date}</div>
+      </div>
+    `;
+
+    ordersDiv.appendChild(div);
+  });
+
+  /* GIFT ORDERS UI */
+  giftSnap.forEach(docSnap=>{
+    const o = docSnap.data();
+
+    let date = o.createdAt?.seconds
+      ? new Date(o.createdAt.seconds * 1000).toLocaleString()
+      : "";
+
+    let statusClass = "placed";
+    let statusText = "🟡 Order Placed";
+
+    if(o.status === "on delivery"){
+      statusClass = "delivery";
+      statusText = "🔵 On Delivery";
+    }
+
+    if(o.status === "delivered"){
+      statusClass = "delivered";
+      statusText = "🟢 Delivered";
+    }
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <img src="https://cdn-icons-png.flaticon.com/512/263/263142.png" class="logo">
+
+      <div class="content">
+        <div>🎁 ${o.type}</div>
+        <div class="price">₦${o.price}</div>
+
+        <div class="field">To: ${o.details?.house}, ${o.details?.city}</div>
+        <div class="field">Phone: ${o.details?.phone}</div>
+
+        ${o.details?.size ? `<div class="field">Size: ${o.details.size}</div>` : ""}
+
+        <div class="status ${statusClass}">${statusText}</div>
 
         <div style="font-size:12px;color:gray">${date}</div>
       </div>

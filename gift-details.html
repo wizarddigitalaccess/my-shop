@@ -65,12 +65,10 @@ button{
   <input id="zip" placeholder="Zip / Postal code">
   <input id="country" placeholder="Country">
 
-  <!-- ✅ NEW PHONE FIELD -->
   <input id="phone" placeholder="Receiver Phone Number">
 
   <input id="sender" placeholder="Sender's Name">
 
-  <!-- 🔥 SIZE FIELD (AUTO CONTROLLED) -->
   <input id="size" placeholder="Enter Size (e.g M, L, 42)" style="display:none;">
 
   <button onclick="submitGift()">Continue</button>
@@ -79,7 +77,8 @@ button{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* CONFIG */
 const app = initializeApp({
@@ -89,6 +88,7 @@ const app = initializeApp({
 });
 
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 /* GET GIFT TYPE */
 const giftType = localStorage.getItem("giftType");
@@ -99,7 +99,7 @@ if(giftType){
     "Enter receiver’s details for " + giftType;
 }
 
-/* 🔥 REAL SIZE CHECK FROM FIRESTORE */
+/* 🔥 CHECK SIZE FROM FIRESTORE */
 let requiresSize = false;
 
 async function checkSize(){
@@ -116,26 +116,27 @@ async function checkSize(){
     }
   });
 }
-
 checkSize();
 
-/* SUBMIT */
-window.submitGift = function(){
+/* SUBMIT WITH PAYMENT */
+window.submitGift = async function(){
+
+  const user = auth.currentUser;
+  if(!user) return alert("Please login");
 
   const data = {
     type: giftType,
-    house: document.getElementById("house").value.trim(),
-    street: document.getElementById("street").value.trim(),
-    city: document.getElementById("city").value.trim(),
-    state: document.getElementById("state").value.trim(),
-    zip: document.getElementById("zip").value.trim(),
-    country: document.getElementById("country").value.trim(),
-    phone: document.getElementById("phone").value.trim(), // ✅ NEW
-    sender: document.getElementById("sender").value.trim(),
-    size: requiresSize ? document.getElementById("size").value.trim() : null
+    house: house.value.trim(),
+    street: street.value.trim(),
+    city: city.value.trim(),
+    state: state.value.trim(),
+    zip: zip.value.trim(),
+    country: country.value.trim(),
+    phone: phone.value.trim(),
+    sender: sender.value.trim(),
+    size: requiresSize ? size.value.trim() : null
   };
 
-  /* VALIDATION */
   if(!data.house || !data.street || !data.city || !data.country || !data.sender || !data.phone){
     return alert("Please fill all required fields");
   }
@@ -144,13 +145,41 @@ window.submitGift = function(){
     return alert("Please enter size");
   }
 
-  /* SAVE */
-  localStorage.setItem("giftData", JSON.stringify(data));
+  try{
+    /* GET USER */
+    const userRef = doc(db,"users",user.uid);
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data();
 
-  alert("Proceeding to payment...");
+    const price = 5000; // 🔥 change later per gift
 
-  // 👉 NEXT STEP
-  // location.href = "gift-payment.html";
+    if((userData.wallet||0) < price){
+      return alert("Insufficient balance");
+    }
+
+    /* DEDUCT WALLET */
+    await updateDoc(userRef,{
+      wallet: (userData.wallet||0) - price
+    });
+
+    /* SAVE ORDER */
+    await addDoc(collection(db,"giftOrders"),{
+      userId: user.uid,
+      type: data.type,
+      details: data,
+      price,
+      status: "placed",
+      createdAt: new Date()
+    });
+
+    alert("🎁 Gift sent successfully!");
+
+    location.href = "orders.html";
+
+  }catch(err){
+    console.error(err);
+    alert("Payment failed");
+  }
 };
 </script>
 
