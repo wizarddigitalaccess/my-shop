@@ -34,14 +34,12 @@ body{
   margin-bottom:20px;
 }
 
-/* GIFT GRID */
 .gift-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:15px;
 }
 
-/* CARD */
 .gift-card{
   background:#1c1c2e;
   padding:20px;
@@ -55,7 +53,6 @@ body{
   transform:scale(1.05);
 }
 
-/* IMAGE */
 .gift-card img{
   width:60px;
   height:60px;
@@ -74,8 +71,6 @@ body{
 
 <div class="container">
   <div class="title">Choose a gift type</div>
-
-  <!-- 🔥 DYNAMIC GRID -->
   <div class="gift-grid" id="giftGrid"></div>
 </div>
 
@@ -87,7 +82,7 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* FIREBASE CONFIG */
+/* FIREBASE */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -95,18 +90,24 @@ const app = initializeApp({
 });
 
 const db = getFirestore(app);
-
 const grid = document.getElementById("giftGrid");
 
-/* 🔥 LOAD GIFT TYPES FROM FIREBASE */
+/* LOAD GIFT TYPES */
 async function loadGifts(){
-  grid.innerHTML = "";
+  grid.innerHTML = "Loading...";
 
   try{
     const snap = await getDocs(collection(db,"giftCategories"));
 
-    snap.forEach(doc=>{
-      const g = doc.data();
+    grid.innerHTML = "";
+
+    if(snap.empty){
+      grid.innerHTML = "No gift categories found";
+      return;
+    }
+
+    snap.forEach(docSnap=>{
+      const g = docSnap.data();
 
       const div = document.createElement("div");
       div.className = "gift-card";
@@ -118,8 +119,16 @@ async function loadGifts(){
       `;
 
       div.onclick = ()=>{
-        localStorage.setItem("giftType", g.name);
-        localStorage.setItem("requiresSize", g.requiresSize ? "true" : "false");
+        /* ✅ STORE FULL STRUCTURE FOR NEXT PAGE */
+        const giftData = {
+          id: docSnap.id,
+          name: g.name,
+          image: g.image || "",
+          requiresSize: g.requiresSize || false
+        };
+
+        localStorage.setItem("selectedGift", JSON.stringify(giftData));
+
         location.href = "gift-details.html";
       };
 
