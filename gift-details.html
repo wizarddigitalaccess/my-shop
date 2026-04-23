@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Receiver Details</title>
+<title>Select Gift</title>
 
 <style>
 body{
@@ -24,29 +24,39 @@ body{
   padding:20px;
 }
 
-input{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border:none;
-  border-radius:8px;
-  background:#111;
-  color:white;
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
 }
 
-button{
-  width:100%;
-  padding:12px;
-  margin-top:15px;
-  border:none;
-  border-radius:8px;
-  background:#1877f2;
-  color:white;
+.card{
+  background:#1c1c2e;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
   cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  height:200px;
 }
 
-button:disabled{
-  background:gray;
+.card img{
+  width:60px;
+  height:60px;
+  object-fit:contain;
+}
+
+.card h4{
+  font-size:14px;
+  height:36px;
+  overflow:hidden;
+}
+
+.price{
+  font-weight:bold;
+  margin-top:5px;
 }
 </style>
 </head>
@@ -55,35 +65,19 @@ button:disabled{
 
 <div class="header">
   <div onclick="history.back()">←</div>
-  <b>Enter Receiver Details</b>
+  <b>Select Gift</b>
 </div>
 
 <div class="container">
-
-  <h3 id="giftTitle">Loading...</h3>
-
-  <input id="house" placeholder="House number / Apt number">
-  <input id="street" placeholder="Street address">
-  <input id="city" placeholder="City / Province">
-  <input id="state" placeholder="State">
-  <input id="zip" placeholder="Zip / Postal code">
-  <input id="country" placeholder="Country">
-
-  <input id="phone" placeholder="Receiver Phone Number">
-  <input id="sender" placeholder="Sender's Name">
-
-  <input id="size" placeholder="Enter Size (e.g M, L, 42)" style="display:none;">
-
-  <button id="sendBtn" onclick="submitGift()" disabled>Send Gift</button>
-
+  <h3 id="title">Loading...</h3>
+  <div class="grid" id="grid"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-  getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc 
+import {
+  getFirestore, collection, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* FIREBASE */
 const app = initializeApp({
@@ -93,166 +87,77 @@ const app = initializeApp({
 });
 
 const db = getFirestore(app);
-const auth = getAuth(app);
 
-/* SELECTED PRODUCT */
-let selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
+/* GET SELECTED CATEGORY */
+const selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
-let productData = null;
-let requiresSize = false;
+const grid = document.getElementById("grid");
+const title = document.getElementById("title");
 
-/* LOAD PRODUCT (STRONG MATCH) */
-async function loadProduct(){
+/* LOAD PRODUCTS */
+async function loadProducts(){
+
+  if(!selectedGift.name){
+    title.innerText = "❌ No category selected";
+    return;
+  }
+
+  title.innerText = selectedGift.name;
 
   try{
-    /* ✅ BEST CASE: FULL OBJECT PASSED */
-    if(selectedGift && selectedGift.id && selectedGift.price){
-      productData = selectedGift;
+    const snap = await getDocs(collection(db,"giftProducts"));
+
+    grid.innerHTML = "";
+
+    let found = false;
+
+    snap.forEach(docSnap=>{
+      const p = docSnap.data();
+
+      /* ✅ MATCH CATEGORY */
+      if(p.category !== selectedGift.name) return;
+
+      found = true;
+
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <img src="${p.image || 'fallback.png'}" onerror="this.src='fallback.png'">
+        <h4>${p.name}</h4>
+        <div class="price">₦${p.price}</div>
+      `;
+
+      div.onclick = ()=>{
+
+        /* ✅ SAVE FULL PRODUCT */
+        const productData = {
+          id: docSnap.id,
+          name: p.name,
+          price: p.price,
+          image: p.image || "",
+          requiresSize: p.requiresSize || false
+        };
+
+        localStorage.setItem("selectedGift", JSON.stringify(productData));
+
+        location.href = "send-gift-details.html";
+      };
+
+      grid.appendChild(div);
+    });
+
+    if(!found){
+      grid.innerHTML = "No products available in this category";
     }
-
-    /* 🔄 FALLBACK: MATCH BY ID FIRST */
-    if(!productData && selectedGift.id){
-      const docSnap = await getDoc(doc(db,"giftProducts", selectedGift.id));
-      if(docSnap.exists()){
-        productData = docSnap.data();
-      }
-    }
-
-    /* 🔄 LAST FALLBACK: NAME MATCH */
-    if(!productData && selectedGift.name){
-      const snap = await getDocs(collection(db,"giftProducts"));
-      snap.forEach(d=>{
-        const p = d.data();
-        if(p.name === selectedGift.name){
-          productData = p;
-        }
-      });
-    }
-
-    /* ❌ NOT FOUND (CLEAN UI) */
-    if(!productData){
-      document.getElementById("giftTitle").innerText = "❌ This gift is not available";
-      document.getElementById("sendBtn").style.display = "none";
-      return;
-    }
-
-    /* ✅ UI UPDATE */
-    document.getElementById("giftTitle").innerText =
-      "Send: " + productData.name + " (₦" + productData.price + ")";
-
-    /* ✅ SIZE FROM ADMIN */
-    requiresSize = productData.requiresSize === true;
-
-    if(requiresSize){
-      document.getElementById("size").style.display = "block";
-    }
-
-    document.getElementById("sendBtn").disabled = false;
 
   }catch(err){
     console.error(err);
-    document.getElementById("giftTitle").innerText = "⚠️ Failed to load gift";
+    grid.innerHTML = "Failed to load products";
   }
 }
 
-loadProduct();
-
-/* SUBMIT */
-window.submitGift = async function(){
-
-  const btn = document.getElementById("sendBtn");
-  btn.disabled = true;
-  btn.innerText = "Processing...";
-
-  const user = auth.currentUser;
-
-  if(!user){
-    alert("Please login");
-    resetBtn();
-    return;
-  }
-
-  if(!productData){
-    resetBtn();
-    return;
-  }
-
-  const receiver = {
-    name: sender.value.trim(),
-    phone: phone.value.trim(),
-    city: city.value.trim(),
-    country: country.value.trim(),
-    note: street.value.trim() + ", " + state.value.trim(),
-    address: {
-      house: house.value.trim(),
-      street: street.value.trim(),
-      state: state.value.trim(),
-      zip: zip.value.trim()
-    },
-    size: requiresSize ? size.value.trim() : null
-  };
-
-  if(!receiver.name || !receiver.phone || !receiver.city || !receiver.country){
-    alert("Please fill all required fields");
-    resetBtn();
-    return;
-  }
-
-  if(requiresSize && !receiver.size){
-    alert("Please enter size");
-    resetBtn();
-    return;
-  }
-
-  try{
-    const userRef = doc(db,"users",user.uid);
-    const userSnap = await getDoc(userRef);
-    const userData = userSnap.data();
-
-    const price = Number(productData.price || 0);
-    const balance = userData.balance ?? userData.wallet ?? 0;
-
-    if(balance < price){
-      alert("Insufficient balance");
-      resetBtn();
-      return;
-    }
-
-    /* DEDUCT */
-    await updateDoc(userRef,{
-      balance: balance - price
-    });
-
-    /* SAVE ORDER WITH TRACKING */
-    await addDoc(collection(db,"giftOrders"),{
-      userId: user.uid,
-      userEmail: user.email,
-      productId: selectedGift.id || null,
-      type: productData.name,
-      price: price,
-
-      receiver: receiver,
-
-      status: "placed", /* 🔥 tracking start */
-      createdAt: Date.now()
-    });
-
-    alert("🎁 Gift sent successfully!");
-    location.href = "orders.html";
-
-  }catch(err){
-    console.error(err);
-    alert("Payment failed");
-    resetBtn();
-  }
-};
-
-/* RESET BUTTON */
-function resetBtn(){
-  const btn = document.getElementById("sendBtn");
-  btn.disabled = false;
-  btn.innerText = "Send Gift";
-}
+loadProducts();
 </script>
 
 </body>
