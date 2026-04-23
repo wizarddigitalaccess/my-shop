@@ -44,6 +44,10 @@ button{
   color:white;
   cursor:pointer;
 }
+
+button:disabled{
+  background:gray;
+}
 </style>
 </head>
 
@@ -51,12 +55,12 @@ button{
 
 <div class="header">
   <div onclick="history.back()">←</div>
-  <b id="title">Enter Receiver Details</b>
+  <b>Enter Receiver Details</b>
 </div>
 
 <div class="container">
 
-  <h3 id="giftTitle">Enter receiver’s details</h3>
+  <h3 id="giftTitle">Loading...</h3>
 
   <input id="house" placeholder="House number / Apt number">
   <input id="street" placeholder="Street address">
@@ -70,13 +74,15 @@ button{
 
   <input id="size" placeholder="Enter Size (e.g M, L, 42)" style="display:none;">
 
-  <button onclick="submitGift()">Send Gift</button>
+  <button id="sendBtn" onclick="submitGift()" disabled>Send Gift</button>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* CONFIG */
@@ -89,26 +95,73 @@ const app = initializeApp({
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-/* GET SELECTED GIFT */
-const selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
+/* SELECTED PRODUCT */
+let selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
-/* TITLE */
-if(selectedGift.name){
+let productData = null;
+let requiresSize = false;
+
+/* LOAD PRODUCT */
+async function loadProduct(){
+
+  // ✅ FIRST: Try using full object (FAST)
+  if(selectedGift && selectedGift.name && selectedGift.price){
+    productData = selectedGift;
+  }
+
+  // ❗ FALLBACK: fetch from Firestore if incomplete
+  if(!productData){
+    const snap = await getDocs(collection(db,"giftProducts"));
+
+    snap.forEach(d=>{
+      const p = d.data();
+      if(p.name === selectedGift.name){
+        productData = p;
+      }
+    });
+  }
+
+  if(!productData){
+    alert("Product not found");
+    return;
+  }
+
+  /* UI UPDATE */
   document.getElementById("giftTitle").innerText =
-    "Enter receiver’s details for " + selectedGift.name;
+    "Send: " + productData.name + " (₦" + productData.price + ")";
+
+  /* SIZE LOGIC */
+  requiresSize = productData.requiresSize || false;
+
+  if(requiresSize){
+    document.getElementById("size").style.display = "block";
+  }
+
+  /* ENABLE BUTTON */
+  document.getElementById("sendBtn").disabled = false;
 }
 
-/* SIZE */
-let requiresSize = selectedGift.requiresSize || false;
-if(requiresSize){
-  document.getElementById("size").style.display = "block";
-}
+loadProduct();
 
 /* SUBMIT */
 window.submitGift = async function(){
 
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true;
+  btn.innerText = "Processing...";
+
   const user = auth.currentUser;
-  if(!user) return alert("Please login");
+  if(!user){
+    alert("Please login");
+    btn.disabled = false;
+    btn.innerText = "Send Gift";
+    return;
+  }
+
+  if(!productData){
+    alert("Product not loaded");
+    return;
+  }
 
   const receiver = {
     name: sender.value.trim(),
@@ -126,11 +179,17 @@ window.submitGift = async function(){
   };
 
   if(!receiver.name || !receiver.phone || !receiver.city || !receiver.country){
-    return alert("Please fill all required fields");
+    alert("Please fill all required fields");
+    btn.disabled = false;
+    btn.innerText = "Send Gift";
+    return;
   }
 
   if(requiresSize && !receiver.size){
-    return alert("Please enter size");
+    alert("Please enter size");
+    btn.disabled = false;
+    btn.innerText = "Send Gift";
+    return;
   }
 
   try{
@@ -138,12 +197,14 @@ window.submitGift = async function(){
     const userSnap = await getDoc(userRef);
     const userData = userSnap.data();
 
-    const price = 5000; // later dynamic
-
+    const price = Number(productData.price || 0);
     const balance = userData.balance ?? userData.wallet ?? 0;
 
     if(balance < price){
-      return alert("Insufficient balance");
+      alert("Insufficient balance");
+      btn.disabled = false;
+      btn.innerText = "Send Gift";
+      return;
     }
 
     /* DEDUCT */
@@ -151,26 +212,25 @@ window.submitGift = async function(){
       balance: balance - price
     });
 
-    /* SAVE ORDER (FIXED STRUCTURE) */
+    /* SAVE ORDER */
     await addDoc(collection(db,"giftOrders"),{
       userId: user.uid,
       userEmail: user.email,
-      type: selectedGift.name,
+      type: productData.name,
       price: price,
-
       receiver: receiver,
-
       status: "pending",
       createdAt: Date.now()
     });
 
     alert("🎁 Gift sent successfully!");
-
     location.href = "orders.html";
 
   }catch(err){
     console.error(err);
     alert("Payment failed");
+    btn.disabled = false;
+    btn.innerText = "Send Gift";
   }
 };
 </script>
