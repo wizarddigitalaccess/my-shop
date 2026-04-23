@@ -85,7 +85,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* CONFIG */
+/* FIREBASE */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -95,25 +95,32 @@ const app = initializeApp({
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-/* SELECTED */
+/* SELECTED PRODUCT */
 let selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
 let productData = null;
 let requiresSize = false;
 
-/* LOAD PRODUCT */
+/* LOAD PRODUCT (STRONG MATCH) */
 async function loadProduct(){
 
   try{
-    // ✅ USE FULL OBJECT FIRST
-    if(selectedGift && selectedGift.name && selectedGift.price){
+    /* ✅ BEST CASE: FULL OBJECT PASSED */
+    if(selectedGift && selectedGift.id && selectedGift.price){
       productData = selectedGift;
     }
 
-    // 🔄 FALLBACK FETCH
+    /* 🔄 FALLBACK: MATCH BY ID FIRST */
+    if(!productData && selectedGift.id){
+      const docSnap = await getDoc(doc(db,"giftProducts", selectedGift.id));
+      if(docSnap.exists()){
+        productData = docSnap.data();
+      }
+    }
+
+    /* 🔄 LAST FALLBACK: NAME MATCH */
     if(!productData && selectedGift.name){
       const snap = await getDocs(collection(db,"giftProducts"));
-
       snap.forEach(d=>{
         const p = d.data();
         if(p.name === selectedGift.name){
@@ -122,25 +129,24 @@ async function loadProduct(){
       });
     }
 
-    // ❌ CLEAN ERROR (NO ALERT)
+    /* ❌ NOT FOUND (CLEAN UI) */
     if(!productData){
-      document.getElementById("giftTitle").innerText = "❌ Gift not available";
-      document.getElementById("sendBtn").disabled = true;
+      document.getElementById("giftTitle").innerText = "❌ This gift is not available";
+      document.getElementById("sendBtn").style.display = "none";
       return;
     }
 
-    /* UI */
+    /* ✅ UI UPDATE */
     document.getElementById("giftTitle").innerText =
       "Send: " + productData.name + " (₦" + productData.price + ")";
 
-    /* SIZE */
-    requiresSize = productData.requiresSize || false;
+    /* ✅ SIZE FROM ADMIN */
+    requiresSize = productData.requiresSize === true;
 
     if(requiresSize){
       document.getElementById("size").style.display = "block";
     }
 
-    /* ENABLE */
     document.getElementById("sendBtn").disabled = false;
 
   }catch(err){
@@ -162,14 +168,12 @@ window.submitGift = async function(){
 
   if(!user){
     alert("Please login");
-    btn.disabled = false;
-    btn.innerText = "Send Gift";
+    resetBtn();
     return;
   }
 
   if(!productData){
-    btn.disabled = false;
-    btn.innerText = "Send Gift";
+    resetBtn();
     return;
   }
 
@@ -190,15 +194,13 @@ window.submitGift = async function(){
 
   if(!receiver.name || !receiver.phone || !receiver.city || !receiver.country){
     alert("Please fill all required fields");
-    btn.disabled = false;
-    btn.innerText = "Send Gift";
+    resetBtn();
     return;
   }
 
   if(requiresSize && !receiver.size){
     alert("Please enter size");
-    btn.disabled = false;
-    btn.innerText = "Send Gift";
+    resetBtn();
     return;
   }
 
@@ -212,8 +214,7 @@ window.submitGift = async function(){
 
     if(balance < price){
       alert("Insufficient balance");
-      btn.disabled = false;
-      btn.innerText = "Send Gift";
+      resetBtn();
       return;
     }
 
@@ -222,14 +223,17 @@ window.submitGift = async function(){
       balance: balance - price
     });
 
-    /* SAVE */
+    /* SAVE ORDER WITH TRACKING */
     await addDoc(collection(db,"giftOrders"),{
       userId: user.uid,
       userEmail: user.email,
+      productId: selectedGift.id || null,
       type: productData.name,
       price: price,
+
       receiver: receiver,
-      status: "pending",
+
+      status: "placed", /* 🔥 tracking start */
       createdAt: Date.now()
     });
 
@@ -239,10 +243,16 @@ window.submitGift = async function(){
   }catch(err){
     console.error(err);
     alert("Payment failed");
-    btn.disabled = false;
-    btn.innerText = "Send Gift";
+    resetBtn();
   }
 };
+
+/* RESET BUTTON */
+function resetBtn(){
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = false;
+  btn.innerText = "Send Gift";
+}
 </script>
 
 </body>
