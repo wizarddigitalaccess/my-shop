@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Send Gift</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f0f1a;
+  color:white;
+}
+
+.header{
+  padding:15px;
+  background:#1c1c2e;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.container{
+  padding:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
+
+.card{
+  background:#1c1c2e;
+  padding:15px;
+  border-radius:12px;
+  text-align:center;
+  cursor:pointer;
+}
+
+.card img{
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  margin-bottom:10px;
+}
+
+.back{
+  margin-bottom:10px;
+  cursor:pointer;
+  color:#4da3ff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div onclick="goBack()">←</div>
+  <b id="title">Select Category</b>
+</div>
+
+<div class="container">
+
+  <div id="backBtn" class="back" style="display:none;" onclick="showCategories()">← Back to Categories</div>
+
+  <div class="grid" id="grid"></div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* CONFIG */
+const app = initializeApp({
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
+});
+
+const db = getFirestore(app);
+
+const grid = document.getElementById("grid");
+const title = document.getElementById("title");
+const backBtn = document.getElementById("backBtn");
+
+let allProducts = [];
+
+/* LOAD CATEGORIES */
+async function showCategories(){
+  title.innerText = "Select Category";
+  backBtn.style.display = "none";
+  grid.innerHTML = "";
+
+  const snap = await getDocs(collection(db,"giftCategories"));
+
+  snap.forEach(doc=>{
+    const c = doc.data();
+
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <div>${c.name}</div>
+    `;
+
+    div.onclick = ()=> showProducts(c.name);
+
+    grid.appendChild(div);
+  });
+}
+
+/* LOAD PRODUCTS */
+async function showProducts(category){
+  title.innerText = category;
+  backBtn.style.display = "block";
+  grid.innerHTML = "Loading...";
+
+  if(allProducts.length === 0){
+    const snap = await getDocs(collection(db,"giftProducts"));
+    snap.forEach(d=> allProducts.push(d.data()));
+  }
+
+  grid.innerHTML = "";
+
+  const filtered = allProducts.filter(p=>p.category === category);
+
+  if(filtered.length === 0){
+    grid.innerHTML = "No products available";
+    return;
+  }
+
+  filtered.forEach(p=>{
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <img src="${p.image || ''}">
+      <div>${p.name}</div>
+      <div>₦${p.price}</div>
+    `;
+
+    div.onclick = ()=>{
+      localStorage.setItem("selectedGift", JSON.stringify(p));
+      location.href = "gift-details.html";
+    };
+
+    grid.appendChild(div);
+  });
+}
+
+/* BACK */
+window.goBack = ()=>{
+  if(backBtn.style.display === "block"){
+    showCategories();
+  }else{
+    history.back();
+  }
+};
+
+/* INIT */
+showCategories();
+</script>
+
+</body>
+</html>
