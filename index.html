@@ -48,12 +48,6 @@ body {
   font-size:16px;
 }
 
-.menu {
-  margin-left:auto;
-  font-size:22px;
-  cursor:pointer;
-}
-
 /* SEARCH */
 .search-row {
   position:sticky;
@@ -216,7 +210,6 @@ import {
   getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* YOUR CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -335,7 +328,7 @@ function loadProducts(){
   });
 }
 
-/* ✅ PREVIEW FIX */
+/* PREVIEW */
 function preview(p){
   if(p.previewLink){
     window.open(p.previewLink, "_blank");
@@ -344,10 +337,15 @@ function preview(p){
   }
 }
 
-/* ✅ BUY REAL SYSTEM */
+/* BUY (FIXED SAFE STOCK SYSTEM) */
 async function buy(id){
   try{
     const pDoc = await getDoc(doc(db,"products",id));
+    if(!pDoc.exists()){
+      alert("Product not found");
+      return;
+    }
+
     const p = pDoc.data();
 
     const userRef = doc(db,"users",user.uid);
@@ -359,23 +357,32 @@ async function buy(id){
       return;
     }
 
-    const stockRef = doc(db,"productStock",id);
-    const stockSnap = await getDoc(stockRef);
+    const stockSnap = await getDocs(collection(db,"stock"));
 
-    let items = stockSnap.data().items || [];
-    const index = items.findIndex(i=>!i.sold);
+    let found = null;
+    let stockId = null;
 
-    if(index === -1){
+    stockSnap.forEach(d=>{
+      const s = d.data();
+      if(!s.used && s.productId === id && !found){
+        found = s;
+        stockId = d.id;
+      }
+    });
+
+    if(!found){
       alert("Out of stock");
       return;
     }
 
-    const item = items[index];
-    items[index].sold = true;
-
     /* DEDUCT */
     await updateDoc(userRef,{
       wallet: (u.wallet||0) - p.price
+    });
+
+    /* MARK USED */
+    await updateDoc(doc(db,"stock",stockId),{
+      used:true
     });
 
     /* SAVE ORDER */
@@ -384,15 +391,12 @@ async function buy(id){
       productId:id,
       name:p.name,
       price:p.price,
-      email:item.email,
-      password:item.password,
-      extra:item.extra || "",
+      email:found.email,
+      password:found.password,
+      extra:found.extra || "",
       logo:p.logo,
-      createdAt:new Date()
+      createdAt:Date.now()
     });
-
-    /* UPDATE STOCK */
-    await updateDoc(stockRef,{items});
 
     alert("✅ Purchase successful");
     location.href="orders.html";
