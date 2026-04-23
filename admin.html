@@ -77,7 +77,6 @@ button {
   color:white;
 }
 
-/* TRACKING */
 .statusBox{
   padding:8px;
   border-radius:8px;
@@ -115,19 +114,16 @@ select{
   <button id="logoutBtn" style="background:red;">Logout</button>
 </div>
 
-<!-- HOME -->
 <div id="home" class="card page">
   <h3>Tracking System</h3>
   <div id="tracking"></div>
 </div>
 
-<!-- USERS -->
 <div id="usersPage" class="card page hidden">
   <h3>Users</h3>
   <div id="users"></div>
 </div>
 
-<!-- MAIN -->
 <div id="categoriesPage" class="card page hidden">
   <h3>Main Categories</h3>
   <input id="catName" placeholder="Category name">
@@ -145,25 +141,22 @@ select{
   <div id="products"></div>
 </div>
 
-<!-- ORDERS -->
 <div id="ordersPage" class="card page hidden">
   <h3>Main Orders</h3>
   <div id="orders"></div>
 </div>
 
-<!-- ✅ FIXED GIFT PAGE -->
 <div id="giftDashboard" class="card page hidden">
-
 <h3>Gift Categories</h3>
-<input id="gCatName" placeholder="Gift category name">
-<button onclick="addGiftCategory()">Add Category</button>
+<input id="gCatName">
+<button onclick="addGiftCategory()">Add</button>
 <div id="gCategories"></div>
 
 <hr>
 
-<input id="gName" placeholder="Product name">
-<input id="gCategory" placeholder="Category">
-<input id="gPrice" type="number" placeholder="Price">
+<input id="gName">
+<input id="gCategory">
+<input id="gPrice" type="number">
 
 <div class="toggle">
   <label>Require Size</label>
@@ -171,18 +164,14 @@ select{
 </div>
 
 <button onclick="addGiftProduct()">Add</button>
-
 <div id="gProducts"></div>
-
 </div>
 
-<!-- GIFT ORDERS -->
 <div id="giftOrdersPage" class="card page hidden">
   <h3>Gift Orders</h3>
   <div id="giftOrders"></div>
 </div>
 
-<!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
@@ -195,9 +184,8 @@ select{
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore, collection, getDocs, doc, addDoc, getDoc, updateDoc, deleteDoc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, addDoc, getDoc, updateDoc, deleteDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -227,52 +215,90 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 
 /* INIT */
 function init(){
-  loadUsers();
   loadCategories();
   loadProducts();
+  loadGiftCategories();
   loadGiftProducts();
   loadTracking();
-  loadGiftCategories();
 }
 
-/* USERS, PRODUCTS, TRACKING — ALL YOUR ORIGINAL CODE REMAINS HERE (UNCHANGED) */
+/* CATEGORY */
+window.addCategory = async()=>{
+  if(!catName.value) return;
+  await addDoc(collection(db,"categories"),{name:catName.value});
+  catName.value="";
+  loadCategories();
+};
 
-/* GIFT CATEGORY (ONLY FIXED PART) */
+async function loadCategories(){
+  categories.innerHTML="";
+  (await getDocs(collection(db,"categories"))).forEach(d=>{
+    categories.innerHTML+=`<div class="item">${d.data().name}</div>`;
+  });
+}
+
+/* PRODUCTS */
+window.addProduct = async()=>{
+  if(!pName.value || !pCategory.value || !pPrice.value) return alert("Fill all");
+  await addDoc(collection(db,"products"),{
+    name:pName.value,
+    category:pCategory.value,
+    price:Number(pPrice.value),
+    previewLink:pPreview.value
+  });
+  loadProducts();
+};
+
+async function loadProducts(){
+  products.innerHTML="";
+  (await getDocs(collection(db,"products"))).forEach(d=>{
+    const p=d.data();
+    products.innerHTML+=`<div class="item">${p.name} ₦${p.price}</div>`;
+  });
+}
+
+/* GIFT PRODUCT */
+window.addGiftProduct = async()=>{
+  if(!gName.value || !gCategory.value || !gPrice.value) return alert("Fill all");
+  await addDoc(collection(db,"giftProducts"),{
+    name:gName.value,
+    category:gCategory.value,
+    price:Number(gPrice.value),
+    requiresSize:gProductSize.checked
+  });
+  loadGiftProducts();
+};
+
+async function loadGiftProducts(){
+  gProducts.innerHTML="";
+  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
+    const p=d.data();
+    gProducts.innerHTML+=`<div class="item">${p.name} ₦${p.price}</div>`;
+  });
+}
+
+/* GIFT CATEGORY */
 window.addGiftCategory = async()=>{
   if(!gCatName.value) return;
   await addDoc(collection(db,"giftCategories"),{name:gCatName.value});
-  gCatName.value="";
   loadGiftCategories();
 };
 
 async function loadGiftCategories(){
   gCategories.innerHTML="";
   (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
-    const c=d.data();
-    gCategories.innerHTML+=`
-    <div class="item">
-      ${c.name}
-      <div class="actions">
-        <button onclick="editGiftCat('${d.id}','${c.name}')">Edit</button>
-        <button onclick="delGiftCat('${d.id}')">Delete</button>
-      </div>
-    </div>`;
+    gCategories.innerHTML+=`<div class="item">${d.data().name}</div>`;
   });
 }
 
-window.editGiftCat = async(id,name)=>{
-  const newName = prompt("Edit category",name);
-  if(!newName) return;
-  await updateDoc(doc(db,"giftCategories",id),{name:newName});
-  loadGiftCategories();
-};
-
-window.delGiftCat = async(id)=>{
-  if(confirm("Delete category?")){
-    await deleteDoc(doc(db,"giftCategories",id));
-    loadGiftCategories();
-  }
-};
+/* TRACKING */
+async function loadTracking(){
+  tracking.innerHTML="";
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    const g=d.data();
+    tracking.innerHTML+=`<div class="item">${g.type} - ${g.status||"placed"}</div>`;
+  });
+}
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
