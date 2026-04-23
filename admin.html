@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -8,22 +8,11 @@
 <style>
 body { margin:0; font-family:Arial; background:#0f0f1a; color:white; display:none; }
 .header { padding:15px; background:#1c1c2e; display:flex; justify-content:space-between; }
-
 .card { background:#1c1c2e; padding:15px; border-radius:12px; margin:15px; }
 .hidden { display:none; }
 
 input { width:100%; padding:10px; margin-top:8px; border:none; border-radius:8px; background:#111; color:white; }
-
-button {
-  padding:6px 10px;
-  border:none;
-  border-radius:8px;
-  background:#1877f2;
-  color:white;
-  cursor:pointer;
-  transition:0.2s;
-}
-button:hover { opacity:0.8; }
+button { padding:6px 10px; border:none; border-radius:8px; background:#1877f2; color:white; cursor:pointer; }
 
 .item {
   display:flex;
@@ -35,10 +24,10 @@ button:hover { opacity:0.8; }
 
 .actions {
   display:flex;
-  gap:6px;
+  gap:8px;
 }
 .actions button {
-  width:70px;
+  min-width:60px;
 }
 
 .nav {
@@ -47,19 +36,9 @@ button:hover { opacity:0.8; }
   width:100%;
   display:flex;
   background:#111;
-  border-top:1px solid #333;
 }
-.nav button {
-  flex:1;
-  background:none;
-  color:gray;
-  font-size:12px;
-  padding:10px;
-}
-.nav button.active {
-  color:#1877f2;
-  border-top:2px solid #1877f2;
-}
+.nav button { flex:1; background:none; color:gray; font-size:12px; }
+.nav button.active { color:#1877f2; }
 
 img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
 
@@ -107,7 +86,6 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
 
 <!-- GIFT DASHBOARD -->
 <div id="giftDashboard" class="card page hidden">
-
   <h3>Gift Categories</h3>
 
   <input id="gCatName" placeholder="Category name">
@@ -122,7 +100,6 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
   <hr>
 
   <h3>Gift Products</h3>
-
   <input id="gName" placeholder="Product name">
   <input id="gCategory" placeholder="Category">
   <input id="gPrice" type="number" placeholder="Price">
@@ -133,9 +110,7 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
   </div>
 
   <input type="file" id="gImageFile">
-
   <button onclick="addGiftProduct()">Add</button>
-
   <div id="gProducts"></div>
 </div>
 
@@ -167,7 +142,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSy...",
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -176,32 +151,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* ✅ FIXED AUTH (NO MORE LOCKOUT) */
+/* AUTH */
 onAuthStateChanged(auth, async user=>{
-  if(!user){
-    location.href="auth.html";
-    return;
+  if(!user) return location.href="auth.html";
+
+  const snap = await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists() || snap.data().role !== "admin"){
+    return location.href="index.html";
   }
 
-  try{
-    const snap = await getDoc(doc(db,"users",user.uid));
-
-    // allow access if role missing but email matches admin
-    const role = snap.exists() ? (snap.data().role || "").toLowerCase() : "";
-
-    if(role !== "admin"){
-      alert("Access denied (not admin)");
-      location.href="index.html";
-      return;
-    }
-
-    document.body.style.display="block";
-    init();
-
-  }catch(err){
-    console.error(err);
-    alert("Auth error");
-  }
+  document.body.style.display="block";
+  init();
 });
 
 /* NAV */
@@ -226,76 +186,232 @@ function init(){
   loadGiftOrders();
 }
 
-/* IMAGE UPLOAD FIX */
+/* ANALYTICS */
+async function loadAnalytics(){
+  let total=0;
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    total+=Number(d.data().price||0);
+  });
+  analytics.innerHTML = "Revenue ₦"+total;
+}
+
+/* USERS */
+async function loadUsers(){
+  users.innerHTML="";
+  (await getDocs(collection(db,"users"))).forEach(d=>{
+    const u=d.data();
+    users.innerHTML+=
+      <div class="item">
+        ${u.email} ₦${u.balance||0}
+        <div class="actions">
+          <button onclick="fundUser('${d.id}')">+₦</button>
+          <button onclick="deductUser('${d.id}')">-₦</button>
+          <button onclick="deleteUser('${d.id}')">Delete</button>
+        </div>
+      </div>;
+  });
+}
+
+window.fundUser=async(id)=>{
+  const amt=Number(prompt("Amount"));
+  const refDoc = doc(db,"users",id);
+  const snap = await getDoc(refDoc);
+  await updateDoc(refDoc,{balance:(snap.data().balance||0)+amt});
+  loadUsers();
+};
+
+window.deductUser=async(id)=>{
+  const amt=Number(prompt("Amount"));
+  const refDoc = doc(db,"users",id);
+  const snap = await getDoc(refDoc);
+  await updateDoc(refDoc,{balance:(snap.data().balance||0)-amt});
+  loadUsers();
+};
+
+window.deleteUser=async(id)=>{
+  await deleteDoc(doc(db,"users",id));
+  loadUsers();
+};
+
+/* MAIN CATEGORIES */
+window.addCategory=async()=>{
+  if(!catName.value) return;
+  await addDoc(collection(db,"categories"),{name:catName.value});
+  catName.value="";
+  loadCategories();
+};
+
+async function loadCategories(){
+  categories.innerHTML="";
+  (await getDocs(collection(db,"categories"))).forEach(d=>{
+    categories.innerHTML+=
+      <div class="item">
+        ${d.data().name}
+        <div class="actions">
+          <button onclick="editCategory('${d.id}')">Edit</button>
+          <button onclick="deleteCategory('${d.id}')">Delete</button>
+        </div>
+      </div>;
+  });
+}
+
+window.editCategory=async(id)=>{
+  const name=prompt("New name");
+  if(!name) return;
+  await updateDoc(doc(db,"categories",id),{name});
+  loadCategories();
+};
+
+window.deleteCategory=async(id)=>{
+  await deleteDoc(doc(db,"categories",id));
+  loadCategories();
+};
+
+/* MAIN ORDERS */
+async function loadOrders(){
+  orders.innerHTML="";
+  (await getDocs(collection(db,"orders"))).forEach(d=>{
+    const o=d.data();
+    orders.innerHTML+=
+      <div class="item">
+        ${o.userEmail || ""} - ₦${o.price}
+        <div class="actions">
+          <button onclick="updateOrder('${d.id}','delivered')">Done</button>
+          <button onclick="deleteOrder('${d.id}')">Delete</button>
+        </div>
+      </div>;
+  });
+}
+
+window.updateOrder=async(id,status)=>{
+  await updateDoc(doc(db,"orders",id),{status});
+  loadOrders();
+};
+
+window.deleteOrder=async(id)=>{
+  await deleteDoc(doc(db,"orders",id));
+  loadOrders();
+};
+
+/* GIFT CATEGORY */
+window.addGiftCategory=async()=>{
+  await addDoc(collection(db,"giftCategories"),{
+    name:gCatName.value,
+    requiresSize:gRequireSize.checked
+  });
+  gCatName.value="";
+  gRequireSize.checked=false;
+  loadGiftCategories();
+};
+
+async function loadGiftCategories(){
+  gCategories.innerHTML="";
+  (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
+    const c=d.data();
+    gCategories.innerHTML+=
+      <div class="item">
+        ${c.name} ${c.requiresSize?"(Size)":""}
+        <div class="actions">
+          <button onclick="editGiftCategory('${d.id}')">Edit</button>
+          <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
+        </div>
+      </div>;
+  });
+}
+
+window.editGiftCategory=async(id)=>{
+  const name=prompt("New name");
+  const size=confirm("Require size?");
+  await updateDoc(doc(db,"giftCategories",id),{name,requiresSize:size});
+  loadGiftCategories();
+};
+
+window.deleteGiftCategory=async(id)=>{
+  await deleteDoc(doc(db,"giftCategories",id));
+  loadGiftCategories();
+};
+
+/* GIFT PRODUCTS */
 async function uploadImage(file){
-  if(!file) throw "No image selected";
   const r=ref(storage,"gifts/"+Date.now());
   await uploadBytes(r,file);
   return await getDownloadURL(r);
 }
 
-/* ADD PRODUCT FIX */
 window.addGiftProduct=async()=>{
-  try{
-    if(!gName.value || !gCategory.value || !gPrice.value){
-      return alert("Fill all fields");
-    }
+  const img=await uploadImage(gImageFile.files[0]);
 
-    const file = gImageFile.files[0];
-    if(!file) return alert("Select image");
+  await addDoc(collection(db,"giftProducts"),{
+    name:gName.value,
+    category:gCategory.value,
+    price:Number(gPrice.value),
+    image:img,
+    requiresSize:gProductSize.checked
+  });
 
-    const img = await uploadImage(file);
-
-    await addDoc(collection(db,"giftProducts"),{
-      name:gName.value,
-      category:gCategory.value,
-      price:Number(gPrice.value),
-      image:img,
-      requiresSize:gProductSize.checked
-    });
-
-    alert("Product added ✅");
-
-    gName.value="";
-    gCategory.value="";
-    gPrice.value="";
-    gImageFile.value="";
-    gProductSize.checked=false;
-
-    loadGiftProducts();
-
-  }catch(err){
-    console.error(err);
-    alert("Failed to add product");
-  }
+  loadGiftProducts();
 };
 
-/* TRACKING SYSTEM */
+async function loadGiftProducts(){
+  gProducts.innerHTML="";
+  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
+    const p=d.data();
+    gProducts.innerHTML+=
+      <div class="item">
+        ${p.name} ₦${p.price} ${p.requiresSize?"(Size)":""}
+        <div class="actions">
+          <button onclick="editGiftProduct('${d.id}')">Edit</button>
+          <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
+        </div>
+      </div>;
+  });
+}
+
+window.editGiftProduct=async(id)=>{
+  const name=prompt("Name");
+  const price=prompt("Price");
+  const size=confirm("Require size?");
+  await updateDoc(doc(db,"giftProducts",id),{
+    name,
+    price:Number(price),
+    requiresSize:size
+  });
+  loadGiftProducts();
+};
+
+window.deleteGiftProduct=async(id)=>{
+  await deleteDoc(doc(db,"giftProducts",id));
+  loadGiftProducts();
+};
+
+/* GIFT ORDERS */
+async function loadGiftOrders(){
+  giftOrders.innerHTML="";
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    const o=d.data();
+    giftOrders.innerHTML+=
+      <div class="item">
+        ${o.userEmail} - ${o.receiver?.name} - ₦${o.price}
+        <div class="actions">
+          <button onclick="updateGiftOrder('${d.id}','delivered')">Done</button>
+          <button onclick="deleteGiftOrder('${d.id}')">Delete</button>
+        </div>
+      </div>;
+  });
+}
+
 window.updateGiftOrder=async(id,status)=>{
   await updateDoc(doc(db,"giftOrders",id),{status});
   loadGiftOrders();
 };
 
-/* LOAD GIFT ORDERS */
-async function loadGiftOrders(){
-  giftOrders.innerHTML="";
-  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
-    const o=d.data();
-
-    giftOrders.innerHTML+=`
-      <div class="item">
-        ${o.userEmail} - ${o.receiver?.name} - ₦${o.price}
-        <div class="actions">
-          <button onclick="updateGiftOrder('${d.id}','pending')">Pending</button>
-          <button onclick="updateGiftOrder('${d.id}','processing')">On Way</button>
-          <button onclick="updateGiftOrder('${d.id}','delivered')">Done</button>
-        </div>
-      </div>`;
-  });
-}
+window.deleteGiftOrder=async(id)=>{
+  await deleteDoc(doc(db,"giftOrders",id));
+  loadGiftOrders();
+};
 
 /* LOGOUT */
-logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
+logoutBtn.onclick=()=>signOut(auth);
 </script>
 
 </body>
