@@ -71,6 +71,7 @@ button {
 .nav button.active {
   color:#1877f2;
 }
+img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
 </style>
 </head>
 
@@ -83,31 +84,32 @@ button {
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="card page">
-  <h3>Total Revenue</h3>
-  ₦<span id="revenue"></span>
+  <h3>Analytics</h3>
+  <div id="analytics"></div>
 </div>
 
 <!-- CATEGORIES -->
 <div id="categoriesPage" class="card page hidden">
-  <h3>Main Categories</h3>
-  <input id="catName" placeholder="Category name">
+  <h3>Categories</h3>
+  <input id="catName" placeholder="Name">
   <button onclick="addCategory()">Add</button>
   <div id="categories"></div>
 </div>
 
 <!-- PRODUCTS -->
 <div id="productsPage" class="card page hidden">
-  <h3>Main Products</h3>
+  <h3>Products</h3>
   <input id="pName" placeholder="Name">
   <input id="pCategory" placeholder="Category">
   <input id="pPrice" type="number" placeholder="Price">
+  <input type="file" id="pImageFile">
   <button onclick="addProduct()">Add</button>
   <div id="products"></div>
 </div>
 
 <!-- ORDERS -->
 <div id="ordersPage" class="card page hidden">
-  <h3>Main Orders</h3>
+  <h3>Orders</h3>
   <div id="orders"></div>
 </div>
 
@@ -117,36 +119,12 @@ button {
   <div id="users"></div>
 </div>
 
-<!-- GIFTS -->
-<div id="giftsPage" class="card page hidden">
-  <h3>Gift Categories</h3>
-  <input id="giftCatName" placeholder="Name">
-  <button onclick="addGiftCategory()">Add</button>
-  <div id="giftCategories"></div>
-
-  <hr>
-
-  <h3>Gift Products</h3>
-  <input id="giftName" placeholder="Name">
-  <input id="giftCategory" placeholder="Category">
-  <input id="giftPrice" type="number" placeholder="Price">
-  <button onclick="addGiftProduct()">Add</button>
-  <div id="giftProducts"></div>
-
-  <hr>
-
-  <h3>Gift Orders</h3>
-  <div id="giftOrders"></div>
-</div>
-
-<!-- NAV -->
 <div class="nav">
   <button data-page="dashboard" class="active">Home</button>
   <button data-page="categoriesPage">Categories</button>
   <button data-page="productsPage">Products</button>
   <button data-page="ordersPage">Orders</button>
   <button data-page="usersPage">Users</button>
-  <button data-page="giftsPage">Gifts</button>
 </div>
 
 <script type="module">
@@ -154,9 +132,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, doc,
-  addDoc, getDoc, deleteDoc
+  addDoc, getDoc, deleteDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import {
+  getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+/* INIT */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -165,6 +148,7 @@ const app = initializeApp({
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 /* AUTH */
 onAuthStateChanged(auth, async user=>{
@@ -191,36 +175,46 @@ document.querySelectorAll(".nav button").forEach(btn=>{
   }
 });
 
-/* INIT */
+/* INIT LOAD */
 function init(){
-  loadRevenue();
+  loadAnalytics();
   loadCategories();
   loadProducts();
   loadOrders();
   loadUsers();
-  loadGiftCategories();
-  loadGiftProducts();
-  loadGiftOrders();
 }
 
-/* REVENUE */
-async function loadRevenue(){
-  let total=0;
+/* IMAGE UPLOAD */
+async function uploadImage(file){
+  const storageRef = ref(storage,"products/"+Date.now());
+  await uploadBytes(storageRef,file);
+  return await getDownloadURL(storageRef);
+}
 
-  (await getDocs(collection(db,"orders"))).forEach(d=>{
-    total+=Number(d.data().price||0);
+/* ANALYTICS */
+async function loadAnalytics(){
+  let total=0, count=0, delivered=0;
+
+  const snap = await getDocs(collection(db,"orders"));
+
+  snap.forEach(d=>{
+    const o=d.data();
+    total += Number(o.total||0);
+    count++;
+    if(o.status==="delivered") delivered++;
   });
 
-  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
-    total+=Number(d.data().price||0);
-  });
-
-  revenue.innerText=total;
+  analytics.innerHTML = `
+    💰 Revenue: ₦${total}<br>
+    📦 Orders: ${count}<br>
+    ✅ Delivered: ${delivered}
+  `;
 }
 
 /* CATEGORIES */
 window.addCategory=async()=>{
   await addDoc(collection(db,"categories"),{name:catName.value});
+  catName.value="";
   loadCategories();
 };
 
@@ -242,11 +236,19 @@ window.deleteCategory=async(id)=>{
 
 /* PRODUCTS */
 window.addProduct=async()=>{
+  const file = pImageFile.files[0];
+  if(!file) return alert("Select image");
+
+  const image = await uploadImage(file);
+
   await addDoc(collection(db,"products"),{
     name:pName.value,
     category:pCategory.value,
-    price:Number(pPrice.value)
+    price:Number(pPrice.value),
+    image:image,
+    createdAt:Date.now()
   });
+
   loadProducts();
 };
 
@@ -256,11 +258,27 @@ async function loadProducts(){
     const p=d.data();
     products.innerHTML+=`
       <div class="item">
+        <img src="${p.image}">
         ${p.name} - ₦${p.price}
-        <button onclick="deleteProduct('${d.id}')">Delete</button>
+        <div>
+          <button onclick="editProduct('${d.id}')">Edit</button>
+          <button onclick="deleteProduct('${d.id}')">Delete</button>
+        </div>
       </div>`;
   });
 }
+
+window.editProduct=async(id)=>{
+  const name=prompt("New name");
+  const price=prompt("New price");
+  if(!name || !price) return;
+
+  await updateDoc(doc(db,"products",id),{
+    name, price:Number(price)
+  });
+
+  loadProducts();
+};
 
 window.deleteProduct=async(id)=>{
   await deleteDoc(doc(db,"products",id));
@@ -274,11 +292,20 @@ async function loadOrders(){
     const o=d.data();
     orders.innerHTML+=`
       <div class="item">
-        ₦${o.price}
-        <button onclick="deleteOrder('${d.id}')">Delete</button>
+        ₦${o.total} - ${o.status || "pending"}
+        <div>
+          <button onclick="updateOrder('${d.id}','processing')">⚙️</button>
+          <button onclick="updateOrder('${d.id}','delivered')">✅</button>
+          <button onclick="deleteOrder('${d.id}')">🗑</button>
+        </div>
       </div>`;
   });
 }
+
+window.updateOrder=async(id,status)=>{
+  await updateDoc(doc(db,"orders",id),{status});
+  loadOrders();
+};
 
 window.deleteOrder=async(id)=>{
   await deleteDoc(doc(db,"orders",id));
@@ -295,71 +322,6 @@ async function loadUsers(){
       </div>`;
   });
 }
-
-/* GIFTS (kept working) */
-window.addGiftCategory=async()=>{
-  await addDoc(collection(db,"giftCategories"),{name:giftCatName.value});
-  loadGiftCategories();
-};
-
-async function loadGiftCategories(){
-  giftCategories.innerHTML="";
-  (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
-    giftCategories.innerHTML+=`
-      <div class="item">
-        ${d.data().name}
-        <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
-      </div>`;
-  });
-}
-
-window.deleteGiftCategory=async(id)=>{
-  await deleteDoc(doc(db,"giftCategories",id));
-  loadGiftCategories();
-};
-
-window.addGiftProduct=async()=>{
-  await addDoc(collection(db,"giftProducts"),{
-    name:giftName.value,
-    category:giftCategory.value,
-    price:Number(giftPrice.value)
-  });
-  loadGiftProducts();
-};
-
-async function loadGiftProducts(){
-  giftProducts.innerHTML="";
-  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
-    const g=d.data();
-    giftProducts.innerHTML+=`
-      <div class="item">
-        ${g.name} - ₦${g.price}
-        <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
-      </div>`;
-  });
-}
-
-window.deleteGiftProduct=async(id)=>{
-  await deleteDoc(doc(db,"giftProducts",id));
-  loadGiftProducts();
-};
-
-async function loadGiftOrders(){
-  giftOrders.innerHTML="";
-  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
-    const g=d.data();
-    giftOrders.innerHTML+=`
-      <div class="item">
-        ₦${g.price}
-        <button onclick="deleteGiftOrder('${d.id}')">Delete</button>
-      </div>`;
-  });
-}
-
-window.deleteGiftOrder=async(id)=>{
-  await deleteDoc(doc(db,"giftOrders",id));
-  loadGiftOrders();
-};
 
 /* LOGOUT */
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
