@@ -111,7 +111,6 @@ button {
 
   <hr>
 
-  <!-- GIFT CATEGORIES -->
   <h3>Gift Categories</h3>
   <input id="giftCatName" placeholder="Category name">
   <input id="giftCatImage" placeholder="Image URL">
@@ -126,7 +125,6 @@ button {
 
   <hr>
 
-  <!-- GIFT PRODUCTS -->
   <h3>Gift Products</h3>
   <input id="giftName" placeholder="Gift name">
   <input id="giftCategory" placeholder="Category">
@@ -137,55 +135,12 @@ button {
 
   <hr>
 
-  <!-- 🎁 GIFT ORDERS -->
   <h3>Gift Orders</h3>
   <div id="giftOrders"></div>
-
-</div>
-
-<div id="usersPage" class="card" style="display:none">
-  <h3>Users</h3>
-  <div id="users"></div>
-</div>
-
-<div id="categoriesPage" class="card" style="display:none">
-  <h3>Categories</h3>
-  <input id="newCategory" placeholder="Category name">
-  <button id="addCategoryBtn">Add</button>
-  <div id="categories"></div>
-</div>
-
-<div id="productsPage" class="card" style="display:none">
-  <h3>Add Product</h3>
-
-  <input id="nameInput" placeholder="Name">
-  <input id="categoryInput" placeholder="Category">
-  <input id="priceInput" type="number" placeholder="Price">
-  <input id="domain" placeholder="Website">
-  <input id="logoInput" placeholder="Logo URL">
-  <input id="previewLink" placeholder="Preview Link">
-  <textarea id="description" placeholder="Description"></textarea>
-  <textarea id="stockData" placeholder="email:password"></textarea>
-
-  <button id="addProductBtn">Add Product</button>
-
-  <hr>
-
-  <h3>Products</h3>
-  <div id="products"></div>
-</div>
-
-<div id="ordersPage" class="card" style="display:none">
-  <h3>Orders</h3>
-  <div id="orders"></div>
 </div>
 
 <div class="nav">
   <button data-page="dashboard" class="active">Dashboard</button>
-  <button data-page="users">Users</button>
-  <button data-page="categories">Categories</button>
-  <button data-page="products">Products</button>
-  <button data-page="orders">Orders</button>
 </div>
 
 <script type="module">
@@ -196,8 +151,9 @@ import {
   addDoc, getDoc, updateDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ FIXED CONFIG */
 const app = initializeApp({
-  apiKey: "AIzaSy...",
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -205,17 +161,33 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* AUTH */
+/* 🔥 FIXED AUTH (NO MORE FREEZE) */
 onAuthStateChanged(auth, async (user)=>{
-  if(!user) return location.replace("auth.html");
+  try{
+    if(!user){
+      location.replace("auth.html");
+      return;
+    }
 
-  const snap = await getDoc(doc(db,"users",user.uid));
-  if(!snap.exists() || snap.data().role !== "admin"){
-    return location.replace("index.html");
+    const snap = await getDoc(doc(db,"users",user.uid));
+
+    if(!snap.exists()){
+      alert("User not found");
+      return location.replace("index.html");
+    }
+
+    if(snap.data().role !== "admin"){
+      alert("Not admin");
+      return location.replace("index.html");
+    }
+
+    document.body.style.display="block";
+    init();
+
+  }catch(err){
+    console.error(err);
+    alert("Admin load error: " + err.message);
   }
-
-  document.body.style.display="block";
-  init();
 });
 
 /* INIT */
@@ -301,7 +273,7 @@ window.deleteGiftProduct = async (id)=>{
   loadGiftProducts();
 };
 
-/* 🎁 GIFT ORDERS */
+/* GIFT ORDERS */
 async function loadGiftOrders(){
   giftOrders.innerHTML="Loading...";
   const snap = await getDocs(collection(db,"giftOrders"));
@@ -339,19 +311,6 @@ window.deleteGiftOrder = async (id)=>{
   await deleteDoc(doc(db,"giftOrders",id));
   loadGiftOrders();
 };
-
-/* NAV */
-document.querySelectorAll(".nav button").forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-
-    ["dashboard","usersPage","categoriesPage","productsPage","ordersPage"]
-    .forEach(id=> document.getElementById(id).style.display="none");
-
-    document.getElementById(btn.dataset.page+(btn.dataset.page==="dashboard"?"":"Page")).style.display="block";
-  };
-});
 
 /* LOGOUT */
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
