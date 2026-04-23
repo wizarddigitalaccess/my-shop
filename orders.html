@@ -60,44 +60,42 @@ body {
 
 .price { color:#4da3ff; font-weight:bold; }
 
+/* 🔥 CLEAN FIELDS */
 .field {
   background:#111;
   padding:10px;
   border-radius:8px;
   margin-top:8px;
   font-size:13px;
-  word-break:break-all;
+  word-break:break-word;
 }
 
-.row {
-  display:flex;
-  gap:5px;
-  margin-top:8px;
-}
-
-button {
-  flex:1;
-  padding:8px;
-  border:none;
-  border-radius:8px;
-  background:#1877f2;
-  color:white;
-  cursor:pointer;
-}
-
-/* 🔥 STATUS BADGES */
+/* 🔥 STATUS (UPGRADED) */
 .status {
-  margin-top:10px;
-  padding:6px;
-  border-radius:6px;
-  font-size:12px;
+  margin-top:12px;
+  padding:8px;
+  border-radius:8px;
+  font-size:13px;
   text-align:center;
   font-weight:bold;
+  letter-spacing:.5px;
 }
 
-.placed { background:#444; }
-.delivery { background:#1877f2; }
-.delivered { background:green; }
+/* STATES */
+.placed {
+  background:#333;
+  color:#ffcc00;
+}
+
+.delivery {
+  background:#0a3d91;
+  color:#6ab7ff;
+}
+
+.delivered {
+  background:#0f5132;
+  color:#4ade80;
+}
 
 /* NAV */
 .nav {
@@ -178,81 +176,95 @@ onAuthStateChanged(auth, async (user)=>{
 async function loadOrders(uid){
   ordersDiv.innerHTML="";
 
-  /* 🔹 NORMAL ORDERS */
+  let allOrders = [];
+
+  /* NORMAL ORDERS */
   const normalQ = query(collection(db,"orders"), where("userId","==",uid));
   const normalSnap = await getDocs(normalQ);
 
   normalSnap.forEach(docSnap=>{
     const o = docSnap.data();
-
-    const div = document.createElement("div");
-    div.className="card";
-
-    div.innerHTML = `
-      <img src="${o.logo || ''}" class="logo">
-
-      <div class="content">
-        <b>${o.name}</b>
-        <div class="price">₦${o.price}</div>
-
-        <div class="field">Email: ${o.email}</div>
-        <div class="field">Password: ${o.password}</div>
-
-        <div class="status delivered">Delivered ✅</div>
-      </div>
-    `;
-
-    ordersDiv.appendChild(div);
+    o.type = "normal";
+    allOrders.push(o);
   });
 
-  /* 🔥 GIFT ORDERS */
+  /* GIFT ORDERS */
   const giftQ = query(collection(db,"giftOrders"), where("userId","==",uid));
   const giftSnap = await getDocs(giftQ);
 
   giftSnap.forEach(docSnap=>{
     const g = docSnap.data();
+    g.type = "gift";
+    allOrders.push(g);
+  });
 
-    let statusClass = "placed";
-    let statusText = "Order Placed 🟡";
+  /* 🔥 SORT NEWEST FIRST */
+  allOrders.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
 
-    if(g.status === "on delivery"){
-      statusClass = "delivery";
-      statusText = "On Delivery 🚚";
-    }
-
-    if(g.status === "delivered"){
-      statusClass = "delivered";
-      statusText = "Delivered 🎁";
-    }
+  /* RENDER */
+  allOrders.forEach(o=>{
 
     const div = document.createElement("div");
     div.className="card";
 
-    div.innerHTML = `
-      <img src="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" class="logo">
+    /* NORMAL PRODUCT */
+    if(o.type === "normal"){
+      div.innerHTML = `
+        <img src="${o.logo || ''}" class="logo">
 
-      <div class="content">
-        <b>${g.type} Gift</b>
-        <div class="price">₦${g.price}</div>
+        <div class="content">
+          <b>${o.name}</b>
+          <div class="price">₦${o.price}</div>
 
-        <div class="field">
-          📍 ${g.receiver?.city}, ${g.receiver?.country}
+          <div class="field">Email: ${o.email}</div>
+          <div class="field">Password: ${o.password}</div>
+
+          <div class="status delivered">Delivered ✅</div>
         </div>
+      `;
+    }
 
-        <div class="field">
-          📞 ${g.receiver?.phone}
+    /* 🔥 GIFT PRODUCT */
+    else{
+      let statusClass = "placed";
+      let statusText = "Order Placed 🟡";
+
+      if(o.status === "on the way"){
+        statusClass = "delivery";
+        statusText = "On The Way 🚚";
+      }
+
+      if(o.status === "delivered"){
+        statusClass = "delivered";
+        statusText = "Delivered 🎁";
+      }
+
+      div.innerHTML = `
+        <img src="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" class="logo">
+
+        <div class="content">
+          <b>${o.type || "Gift"} Gift</b>
+          <div class="price">₦${o.price}</div>
+
+          <div class="field">
+            📍 ${o.receiver?.city || "-"}, ${o.receiver?.country || "-"}
+          </div>
+
+          <div class="field">
+            📞 ${o.receiver?.phone || "-"}
+          </div>
+
+          ${o.receiver?.size ? `<div class="field">Size: ${o.receiver.size}</div>` : ""}
+
+          <div class="status ${statusClass}">${statusText}</div>
         </div>
-
-        ${g.size ? `<div class="field">Size: ${g.size}</div>` : ""}
-
-        <div class="status ${statusClass}">${statusText}</div>
-      </div>
-    `;
+      `;
+    }
 
     ordersDiv.appendChild(div);
   });
 
-  if(ordersDiv.innerHTML === ""){
+  if(allOrders.length === 0){
     ordersDiv.innerHTML = "<div style='text-align:center;color:gray;margin-top:40px;'>No orders yet 🛒</div>";
   }
 }
