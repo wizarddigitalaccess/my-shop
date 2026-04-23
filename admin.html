@@ -17,13 +17,12 @@ button {
   padding:6px 10px;
   border:none;
   border-radius:8px;
-  background:#1877f2;
   color:white;
   cursor:pointer;
   font-weight:bold;
 }
 
-/* 🔥 CLEAR BUTTON TYPES */
+.btn-main { background:#1877f2; }
 .btn-edit { background:#ffaa00; }
 .btn-delete { background:#ff3b3b; }
 .btn-status { background:#00c853; }
@@ -36,10 +35,7 @@ button {
   padding:10px;
 }
 
-.actions {
-  display:flex;
-  gap:8px;
-}
+.actions { display:flex; gap:8px; }
 
 .nav {
   position:fixed;
@@ -66,31 +62,36 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
 
 <div class="header">
   <b>💎 Admin Panel</b>
-  <button id="logoutBtn" style="background:red;">Logout</button>
+  <button id="logoutBtn" class="btn-delete">Logout</button>
 </div>
 
+<!-- HOME -->
 <div id="home" class="card page">
   <h3>Dashboard</h3>
   <div id="analytics"></div>
 </div>
 
+<!-- USERS -->
 <div id="usersPage" class="card page hidden">
   <h3>Users</h3>
   <div id="users"></div>
 </div>
 
+<!-- MAIN CATEGORIES -->
 <div id="categoriesPage" class="card page hidden">
   <h3>Main Categories</h3>
   <input id="catName" placeholder="Category name">
-  <button onclick="addCategory()">Add</button>
+  <button class="btn-main" onclick="addCategory()">Add</button>
   <div id="categories"></div>
 </div>
 
+<!-- MAIN ORDERS -->
 <div id="ordersPage" class="card page hidden">
   <h3>Main Orders</h3>
   <div id="orders"></div>
 </div>
 
+<!-- GIFT DASHBOARD -->
 <div id="giftDashboard" class="card page hidden">
   <h3>Gift Categories</h3>
 
@@ -100,7 +101,7 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
     <input type="checkbox" id="gRequireSize">
   </div>
 
-  <button onclick="addGiftCategory()">Add</button>
+  <button class="btn-main" onclick="addGiftCategory()">Add</button>
   <div id="gCategories"></div>
 
   <hr>
@@ -116,15 +117,17 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
   </div>
 
   <input type="file" id="gImageFile">
-  <button onclick="addGiftProduct()">Add</button>
+  <button class="btn-main" onclick="addGiftProduct()">Add</button>
   <div id="gProducts"></div>
 </div>
 
+<!-- GIFT ORDERS -->
 <div id="giftOrdersPage" class="card page hidden">
   <h3>Gift Orders</h3>
   <div id="giftOrders"></div>
 </div>
 
+<!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
@@ -145,8 +148,9 @@ import {
   getStorage, ref, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
+/* ✅ YOUR ORIGINAL CONFIG (FIXED) */
 const app = initializeApp({
-  apiKey: "AIzaSy...",
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -173,6 +177,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
     document.getElementById(btn.dataset.page).classList.remove("hidden");
+
     document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
   }
@@ -207,8 +212,8 @@ async function loadUsers(){
       <div class="item">
         ${u.email} ₦${u.balance||0}
         <div class="actions">
-          <button onclick="fundUser('${d.id}')">+₦</button>
-          <button onclick="deductUser('${d.id}')">-₦</button>
+          <button class="btn-main" onclick="fundUser('${d.id}')">+₦</button>
+          <button class="btn-main" onclick="deductUser('${d.id}')">-₦</button>
           <button class="btn-delete" onclick="deleteUser('${d.id}')">Delete</button>
         </div>
       </div>`;
@@ -307,6 +312,7 @@ window.deleteGiftOrder=async(id)=>{
   loadGiftOrders();
 };
 
+/* LOGOUT */
 logoutBtn.onclick=()=>signOut(auth);
 </script>
 
