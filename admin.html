@@ -77,6 +77,28 @@ button {
   color:white;
 }
 
+/* 🔥 TRACKING STYLE */
+.statusBox{
+  padding:8px;
+  border-radius:8px;
+  font-weight:bold;
+  font-size:12px;
+  text-align:center;
+  min-width:110px;
+}
+
+.placed{background:#665c00;color:#ffd700;}
+.delivery{background:#003366;color:#4da3ff;}
+.delivered{background:#003300;color:#00ff88;}
+
+select{
+  padding:6px;
+  border-radius:6px;
+  background:#111;
+  color:white;
+  border:none;
+}
+
 .toggle {
   display:flex;
   align-items:center;
@@ -93,7 +115,7 @@ button {
   <button id="logoutBtn" style="background:red;">Logout</button>
 </div>
 
-<!-- HOME (TRACKING) -->
+<!-- HOME -->
 <div id="home" class="card page">
   <h3>Tracking System</h3>
   <div id="tracking"></div>
@@ -105,7 +127,7 @@ button {
   <div id="users"></div>
 </div>
 
-<!-- MAIN SITE -->
+<!-- MAIN -->
 <div id="categoriesPage" class="card page hidden">
   <h3>Main Categories</h3>
   <input id="catName" placeholder="Category name">
@@ -182,7 +204,6 @@ const db = getFirestore(app);
 /* AUTH */
 onAuthStateChanged(auth, async user=>{
   if(!user) return location.href="auth.html";
-
   document.body.style.display="block";
   init();
 });
@@ -192,7 +213,6 @@ document.querySelectorAll(".nav button").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
     document.getElementById(btn.dataset.page).classList.remove("hidden");
-
     document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
   }
@@ -227,10 +247,8 @@ async function loadUsers(){
 window.fund = async(id)=>{
   const amount = prompt("Amount");
   if(!amount) return;
-
   const ref = doc(db,"users",id);
   const u = (await getDoc(ref)).data();
-
   await updateDoc(ref,{wallet:(u.wallet||0)+Number(amount)});
   loadUsers();
 };
@@ -238,10 +256,8 @@ window.fund = async(id)=>{
 window.deduct = async(id)=>{
   const amount = prompt("Amount");
   if(!amount) return;
-
   const ref = doc(db,"users",id);
   const u = (await getDoc(ref)).data();
-
   await updateDoc(ref,{wallet:(u.wallet||0)-Number(amount)});
   loadUsers();
 };
@@ -253,7 +269,7 @@ window.delUser = async(id)=>{
   }
 };
 
-/* MAIN CATEGORY */
+/* CATEGORY + EDIT */
 window.addCategory = async()=>{
   if(!catName.value) return;
   await addDoc(collection(db,"categories"),{name:catName.value});
@@ -268,17 +284,27 @@ async function loadCategories(){
     categories.innerHTML+=`
     <div class="item">
       ${c.name}
-      <button onclick="delCat('${d.id}')">Delete</button>
+      <div class="actions">
+        <button onclick="editCat('${d.id}','${c.name}')">Edit</button>
+        <button onclick="delCat('${d.id}')">Delete</button>
+      </div>
     </div>`;
   });
 }
+
+window.editCat = async(id,name)=>{
+  const newName = prompt("Edit category",name);
+  if(!newName) return;
+  await updateDoc(doc(db,"categories",id),{name:newName});
+  loadCategories();
+};
 
 window.delCat = async(id)=>{
   await deleteDoc(doc(db,"categories",id));
   loadCategories();
 };
 
-/* MAIN PRODUCTS */
+/* PRODUCTS + EDIT */
 window.addProduct = async()=>{
   await addDoc(collection(db,"products"),{
     name:pName.value,
@@ -286,6 +312,7 @@ window.addProduct = async()=>{
     price:Number(pPrice.value),
     previewLink:pPreview.value
   });
+  pName.value=""; pCategory.value=""; pPrice.value=""; pPreview.value="";
   loadProducts();
 };
 
@@ -297,18 +324,32 @@ async function loadProducts(){
     <div class="item">
       ${p.name} ₦${p.price}
       <div class="actions">
+        <button onclick="editProduct('${d.id}','${p.name}','${p.category}','${p.price}','${p.previewLink||""}')">Edit</button>
         <button onclick="delProduct('${d.id}')">Delete</button>
       </div>
     </div>`;
   });
 }
 
+window.editProduct = async(id,n,c,pr,link)=>{
+  const name = prompt("Name",n);
+  const cat = prompt("Category",c);
+  const price = prompt("Price",pr);
+  const preview = prompt("Preview link",link);
+
+  await updateDoc(doc(db,"products",id),{
+    name,category:cat,price:Number(price),previewLink:preview
+  });
+
+  loadProducts();
+};
+
 window.delProduct = async(id)=>{
   await deleteDoc(doc(db,"products",id));
   loadProducts();
 };
 
-/* GIFT PRODUCTS */
+/* GIFT PRODUCTS + EDIT */
 window.addGiftProduct = async()=>{
   await addDoc(collection(db,"giftProducts"),{
     name:gName.value,
@@ -316,6 +357,7 @@ window.addGiftProduct = async()=>{
     price:Number(gPrice.value),
     requiresSize:gProductSize.checked
   });
+  gName.value=""; gCategory.value=""; gPrice.value="";
   loadGiftProducts();
 };
 
@@ -326,10 +368,26 @@ async function loadGiftProducts(){
     gProducts.innerHTML+=`
     <div class="item">
       ${p.name} ₦${p.price}
-      <button onclick="delGift('${d.id}')">Delete</button>
+      <div class="actions">
+        <button onclick="editGift('${d.id}','${p.name}','${p.category}','${p.price}',${p.requiresSize})">Edit</button>
+        <button onclick="delGift('${d.id}')">Delete</button>
+      </div>
     </div>`;
   });
 }
+
+window.editGift = async(id,n,c,pr,size)=>{
+  const name = prompt("Name",n);
+  const cat = prompt("Category",c);
+  const price = prompt("Price",pr);
+  const requires = confirm("Require size?");
+
+  await updateDoc(doc(db,"giftProducts",id),{
+    name,category:cat,price:Number(price),requiresSize:requires
+  });
+
+  loadGiftProducts();
+};
 
 window.delGift = async(id)=>{
   await deleteDoc(doc(db,"giftProducts",id));
@@ -341,20 +399,34 @@ async function loadTracking(){
   tracking.innerHTML="";
   (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
     const g=d.data();
+
+    let cls="placed";
+    if(g.status==="on delivery") cls="delivery";
+    if(g.status==="delivered") cls="delivered";
+
     tracking.innerHTML+=`
     <div class="item">
-      ${g.type}
-      <select onchange="updateStatus('${d.id}',this.value)">
-        <option ${g.status=="placed"?"selected":""}>placed</option>
-        <option ${g.status=="on delivery"?"selected":""}>on delivery</option>
-        <option ${g.status=="delivered"?"selected":""}>delivered</option>
-      </select>
+      <div>
+        <b>${g.type}</b><br>
+        <small>${g.userEmail || ""}</small>
+      </div>
+
+      <div class="actions">
+        <div class="statusBox ${cls}">${g.status || "placed"}</div>
+
+        <select onchange="updateStatus('${d.id}',this.value)">
+          <option ${g.status=="placed"?"selected":""}>placed</option>
+          <option ${g.status=="on delivery"?"selected":""}>on delivery</option>
+          <option ${g.status=="delivered"?"selected":""}>delivered</option>
+        </select>
+      </div>
     </div>`;
   });
 }
 
 window.updateStatus = async(id,val)=>{
   await updateDoc(doc(db,"giftOrders",id),{status:val});
+  loadTracking();
 };
 
 /* LOGOUT */
