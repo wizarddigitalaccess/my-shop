@@ -431,23 +431,6 @@ async function loadGiftCategories(){
   });
 }
 
-window.editGiftCat = async(id,name)=>{
-  const newName = prompt("Edit category",name);
-  if(!newName) return;
-
-  await updateDoc(doc(db,"giftCategories",id),{
-    name:newName
-  });
-
-  loadGiftCategories();
-};
-
-window.delGiftCat = async(id)=>{
-  if(confirm("Delete category?")){
-    await deleteDoc(doc(db,"giftCategories",id));
-    loadGiftCategories();
-  }
-};
 
 /* TRACKING */
 async function loadTracking(){
