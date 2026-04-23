@@ -77,19 +77,36 @@ button {
   color:white;
 }
 
-/* 🔥 TRACKING STYLE */
-.statusBox{
-  padding:8px;
-  border-radius:8px;
-  font-weight:bold;
-  font-size:12px;
-  text-align:center;
-  min-width:110px;
+/* 🔥 MILITARY TRACKING */
+.trackBox{
+  background:#111;
+  padding:15px;
+  border-radius:12px;
+  margin-bottom:12px;
+  border:1px solid #222;
 }
 
-.placed{background:#665c00;color:#ffd700;}
-.delivery{background:#003366;color:#4da3ff;}
-.delivered{background:#003300;color:#00ff88;}
+.trackLine{
+  display:flex;
+  align-items:center;
+  margin-top:12px;
+}
+
+.dot{
+  width:18px;height:18px;
+  border-radius:50%;
+}
+
+.line{
+  flex:1;
+  height:3px;
+}
+
+/* COLORS */
+.gold{background:#ffd700;}
+.blue{background:#1877f2;}
+.green{background:#00ff88;}
+.gray{background:#333;}
 
 select{
   padding:6px;
@@ -141,6 +158,7 @@ select{
   <input id="pCategory" placeholder="Category">
   <input id="pPrice" type="number" placeholder="Price">
   <input id="pPreview" placeholder="Preview Link">
+  <input id="pLogin" placeholder="Login (email:password:2fa)"> <!-- 🔥 NEW -->
   <button onclick="addProduct()">Add Product</button>
   <div id="products"></div>
 </div>
@@ -169,12 +187,6 @@ select{
   <div id="gProducts"></div>
 </div>
 
-<!-- GIFT ORDERS -->
-<div id="giftOrdersPage" class="card page hidden">
-  <h3>Gift Orders</h3>
-  <div id="giftOrders"></div>
-</div>
-
 <!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
@@ -182,7 +194,6 @@ select{
   <button data-page="categoriesPage">Main</button>
   <button data-page="ordersPage">Orders</button>
   <button data-page="giftDashboard">Gifts</button>
-  <button data-page="giftOrdersPage">Gift Orders</button>
 </div>
 
 <script type="module">
@@ -227,199 +238,51 @@ function init(){
   loadTracking();
 }
 
-/* USERS */
-async function loadUsers(){
-  users.innerHTML="";
-  (await getDocs(collection(db,"users"))).forEach(d=>{
-    const u=d.data();
-    users.innerHTML+=`
-    <div class="item">
-      ${u.email} ₦${u.wallet||0}
-      <div class="actions">
-        <button onclick="fund('${d.id}')">+₦</button>
-        <button onclick="deduct('${d.id}')">-₦</button>
-        <button onclick="delUser('${d.id}')">Del</button>
-      </div>
-    </div>`;
-  });
-}
-
-window.fund = async(id)=>{
-  const amount = prompt("Amount");
-  if(!amount) return;
-  const ref = doc(db,"users",id);
-  const u = (await getDoc(ref)).data();
-  await updateDoc(ref,{wallet:(u.wallet||0)+Number(amount)});
-  loadUsers();
-};
-
-window.deduct = async(id)=>{
-  const amount = prompt("Amount");
-  if(!amount) return;
-  const ref = doc(db,"users",id);
-  const u = (await getDoc(ref)).data();
-  await updateDoc(ref,{wallet:(u.wallet||0)-Number(amount)});
-  loadUsers();
-};
-
-window.delUser = async(id)=>{
-  if(confirm("Delete user?")){
-    await deleteDoc(doc(db,"users",id));
-    loadUsers();
-  }
-};
-
-/* CATEGORY + EDIT */
-window.addCategory = async()=>{
-  if(!catName.value) return;
-  await addDoc(collection(db,"categories"),{name:catName.value});
-  catName.value="";
-  loadCategories();
-};
-
-async function loadCategories(){
-  categories.innerHTML="";
-  (await getDocs(collection(db,"categories"))).forEach(d=>{
-    const c=d.data();
-    categories.innerHTML+=`
-    <div class="item">
-      ${c.name}
-      <div class="actions">
-        <button onclick="editCat('${d.id}','${c.name}')">Edit</button>
-        <button onclick="delCat('${d.id}')">Delete</button>
-      </div>
-    </div>`;
-  });
-}
-
-window.editCat = async(id,name)=>{
-  const newName = prompt("Edit category",name);
-  if(!newName) return;
-  await updateDoc(doc(db,"categories",id),{name:newName});
-  loadCategories();
-};
-
-window.delCat = async(id)=>{
-  await deleteDoc(doc(db,"categories",id));
-  loadCategories();
-};
-
-/* PRODUCTS + EDIT */
-window.addProduct = async()=>{
-  await addDoc(collection(db,"products"),{
-    name:pName.value,
-    category:pCategory.value,
-    price:Number(pPrice.value),
-    previewLink:pPreview.value
-  });
-  pName.value=""; pCategory.value=""; pPrice.value=""; pPreview.value="";
-  loadProducts();
-};
-
-async function loadProducts(){
-  products.innerHTML="";
-  (await getDocs(collection(db,"products"))).forEach(d=>{
-    const p=d.data();
-    products.innerHTML+=`
-    <div class="item">
-      ${p.name} ₦${p.price}
-      <div class="actions">
-        <button onclick="editProduct('${d.id}','${p.name}','${p.category}','${p.price}','${p.previewLink||""}')">Edit</button>
-        <button onclick="delProduct('${d.id}')">Delete</button>
-      </div>
-    </div>`;
-  });
-}
-
-window.editProduct = async(id,n,c,pr,link)=>{
-  const name = prompt("Name",n);
-  const cat = prompt("Category",c);
-  const price = prompt("Price",pr);
-  const preview = prompt("Preview link",link);
-
-  await updateDoc(doc(db,"products",id),{
-    name,category:cat,price:Number(price),previewLink:preview
-  });
-
-  loadProducts();
-};
-
-window.delProduct = async(id)=>{
-  await deleteDoc(doc(db,"products",id));
-  loadProducts();
-};
-
-/* GIFT PRODUCTS + EDIT */
-window.addGiftProduct = async()=>{
-  await addDoc(collection(db,"giftProducts"),{
-    name:gName.value,
-    category:gCategory.value,
-    price:Number(gPrice.value),
-    requiresSize:gProductSize.checked
-  });
-  gName.value=""; gCategory.value=""; gPrice.value="";
-  loadGiftProducts();
-};
-
-async function loadGiftProducts(){
-  gProducts.innerHTML="";
-  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
-    const p=d.data();
-    gProducts.innerHTML+=`
-    <div class="item">
-      ${p.name} ₦${p.price}
-      <div class="actions">
-        <button onclick="editGift('${d.id}','${p.name}','${p.category}','${p.price}',${p.requiresSize})">Edit</button>
-        <button onclick="delGift('${d.id}')">Delete</button>
-      </div>
-    </div>`;
-  });
-}
-
-window.editGift = async(id,n,c,pr,size)=>{
-  const name = prompt("Name",n);
-  const cat = prompt("Category",c);
-  const price = prompt("Price",pr);
-  const requires = confirm("Require size?");
-
-  await updateDoc(doc(db,"giftProducts",id),{
-    name,category:cat,price:Number(price),requiresSize:requires
-  });
-
-  loadGiftProducts();
-};
-
-window.delGift = async(id)=>{
-  await deleteDoc(doc(db,"giftProducts",id));
-  loadGiftProducts();
-};
-
-/* TRACKING */
+/* 🔥 TRACKING FIXED + MILITARY */
 async function loadTracking(){
   tracking.innerHTML="";
-  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
-    const g=d.data();
 
-    let cls="placed";
-    if(g.status==="on delivery") cls="delivery";
-    if(g.status==="delivered") cls="delivered";
+  const snap = await getDocs(collection(db,"giftOrders"));
+
+  if(snap.empty){
+    tracking.innerHTML="<p style='color:gray;text-align:center;'>No tracking data</p>";
+    return;
+  }
+
+  snap.forEach(d=>{
+    const g=d.data();
+    const status = g.status || "placed";
+
+    const s1 = true;
+    const s2 = status==="on delivery" || status==="delivered";
+    const s3 = status==="delivered";
 
     tracking.innerHTML+=`
-    <div class="item">
-      <div>
-        <b>${g.type}</b><br>
-        <small>${g.userEmail || ""}</small>
+    <div class="trackBox">
+
+      <b>${g.type || "Gift"}</b><br>
+      <small>${g.userEmail || ""}</small>
+
+      <div class="trackLine">
+
+        <div class="dot ${s1?'gold':'gray'}"></div>
+        <div class="line ${s2?'blue':'gray'}"></div>
+
+        <div class="dot ${s2?'blue':'gray'}"></div>
+        <div class="line ${s3?'green':'gray'}"></div>
+
+        <div class="dot ${s3?'green':'gray'}"></div>
+
       </div>
 
-      <div class="actions">
-        <div class="statusBox ${cls}">${g.status || "placed"}</div>
-
+      <div style="margin-top:10px;">
         <select onchange="updateStatus('${d.id}',this.value)">
-          <option ${g.status=="placed"?"selected":""}>placed</option>
-          <option ${g.status=="on delivery"?"selected":""}>on delivery</option>
-          <option ${g.status=="delivered"?"selected":""}>delivered</option>
+          <option ${status=="placed"?"selected":""}>placed</option>
+          <option ${status=="on delivery"?"selected":""}>on delivery</option>
+          <option ${status=="delivered"?"selected":""}>delivered</option>
         </select>
       </div>
+
     </div>`;
   });
 }
@@ -427,6 +290,22 @@ async function loadTracking(){
 window.updateStatus = async(id,val)=>{
   await updateDoc(doc(db,"giftOrders",id),{status:val});
   loadTracking();
+};
+
+/* 🔥 PRODUCT WITH LOGIN */
+window.addProduct = async()=>{
+  await addDoc(collection(db,"products"),{
+    name:pName.value,
+    category:pCategory.value,
+    price:Number(pPrice.value),
+    previewLink:pPreview.value,
+    login:pLogin.value   // 🔥 NEW
+  });
+
+  pName.value=""; pCategory.value=""; pPrice.value="";
+  pPreview.value=""; pLogin.value="";
+
+  loadProducts();
 };
 
 /* LOGOUT */
