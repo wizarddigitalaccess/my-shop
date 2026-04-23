@@ -8,23 +8,31 @@
 <style>
 body { margin:0; font-family:Arial; background:#0f0f1a; color:white; display:none; }
 .header { padding:15px; background:#1c1c2e; display:flex; justify-content:space-between; }
+
 .card { background:#1c1c2e; padding:15px; border-radius:12px; margin:15px; }
 .hidden { display:none; }
 
 input { width:100%; padding:10px; margin-top:8px; border:none; border-radius:8px; background:#111; color:white; }
-button { padding:6px 10px; border:none; border-radius:8px; background:#1877f2; color:white; cursor:pointer; }
 
-.item {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  border-bottom:1px solid #333;
-  padding:10px;
+button {
+  padding:6px 10px;
+  border:none;
+  border-radius:8px;
+  background:#1877f2;
+  color:white;
+  cursor:pointer;
 }
 
-.actions { display:flex; gap:8px; }
-.actions button { min-width:60px; }
+/* 🔥 STABLE ACTION BUTTONS */
+.actions {
+  display:flex;
+  gap:6px;
+}
+.actions button{
+  min-width:65px;
+}
 
+/* NAV IMPROVED */
 .nav {
   position:fixed;
   bottom:0;
@@ -32,8 +40,16 @@ button { padding:6px 10px; border:none; border-radius:8px; background:#1877f2; c
   display:flex;
   background:#111;
 }
-.nav button { flex:1; background:none; color:gray; font-size:12px; }
-.nav button.active { color:#1877f2; }
+.nav button {
+  flex:1;
+  background:none;
+  color:gray;
+  padding:10px 0;
+}
+.nav button.active {
+  color:#1877f2;
+  border-top:2px solid #1877f2;
+}
 </style>
 </head>
 
@@ -44,62 +60,61 @@ button { padding:6px 10px; border:none; border-radius:8px; background:#1877f2; c
   <button id="logoutBtn" style="background:red;">Logout</button>
 </div>
 
+<!-- HOME -->
 <div id="home" class="card page">
   <h3>Dashboard</h3>
   <div id="analytics"></div>
 </div>
 
+<!-- USERS -->
 <div id="usersPage" class="card page hidden">
   <h3>Users</h3>
   <div id="users"></div>
 </div>
 
+<!-- MAIN CATEGORIES -->
 <div id="categoriesPage" class="card page hidden">
   <h3>Main Categories</h3>
-  <input id="catName" placeholder="Category name">
+  <input id="catName">
   <button onclick="addCategory()">Add</button>
   <div id="categories"></div>
 </div>
 
+<!-- MAIN ORDERS -->
 <div id="ordersPage" class="card page hidden">
   <h3>Main Orders</h3>
   <div id="orders"></div>
 </div>
 
+<!-- GIFT DASHBOARD -->
 <div id="giftDashboard" class="card page hidden">
-  <h3>Gift Categories</h3>
 
-  <input id="gCatName" placeholder="Category name">
-  <div class="toggle">
-    <label>Require Size</label>
-    <input type="checkbox" id="gRequireSize">
-  </div>
+<h3>Gift Categories</h3>
+<input id="gCatName">
+<label><input type="checkbox" id="gRequireSize"> Require Size</label>
+<button onclick="addGiftCategory()">Add</button>
+<div id="gCategories"></div>
 
-  <button onclick="addGiftCategory()">Add</button>
-  <div id="gCategories"></div>
+<hr>
 
-  <hr>
+<h3>Gift Products</h3>
+<input id="gName" placeholder="Name">
+<input id="gCategory" placeholder="Category">
+<input id="gPrice" type="number" placeholder="Price">
+<label><input type="checkbox" id="gProductSize"> Require Size</label>
+<input type="file" id="gImageFile">
+<button onclick="addGiftProduct()">Add</button>
+<div id="gProducts"></div>
 
-  <h3>Gift Products</h3>
-  <input id="gName" placeholder="Product name">
-  <input id="gCategory" placeholder="Category">
-  <input id="gPrice" type="number" placeholder="Price">
-
-  <div class="toggle">
-    <label>Require Size</label>
-    <input type="checkbox" id="gProductSize">
-  </div>
-
-  <input type="file" id="gImageFile">
-  <button onclick="addGiftProduct()">Add</button>
-  <div id="gProducts"></div>
 </div>
 
+<!-- GIFT ORDERS -->
 <div id="giftOrdersPage" class="card page hidden">
   <h3>Gift Orders</h3>
   <div id="giftOrders"></div>
 </div>
 
+<!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
@@ -125,40 +140,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-/* ✅ FIXED AUTH */
+/* AUTH */
 onAuthStateChanged(auth, async user=>{
-  if(!user){
-    location.href="auth.html";
-    return;
+  if(!user) return location.href="auth.html";
+
+  const snap = await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists() || (snap.data().role||"") !== "admin"){
+    return location.href="index.html";
   }
 
-  try{
-    const snap = await getDoc(doc(db,"users",user.uid));
-    let isAdmin = false;
-
-    if(snap.exists()){
-      const role = (snap.data().role || "").toLowerCase();
-      if(role === "admin") isAdmin = true;
-    }
-
-    // fallback (IMPORTANT)
-    if(user.email === "YOUR_EMAIL@gmail.com"){
-      isAdmin = true;
-    }
-
-    if(!isAdmin){
-      alert("Access denied");
-      location.href="index.html";
-      return;
-    }
-
-    document.body.style.display="block";
-    init();
-
-  }catch(e){
-    console.error(e);
-    alert("Auth error");
-  }
+  document.body.style.display="block";
+  init();
 });
 
 /* NAV */
@@ -166,7 +158,6 @@ document.querySelectorAll(".nav button").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
     document.getElementById(btn.dataset.page).classList.remove("hidden");
-
     document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
   }
@@ -175,27 +166,140 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 /* INIT */
 function init(){
   loadUsers();
+  loadCategories();
+  loadGiftCategories();
+  loadGiftProducts();
+  loadGiftOrders();
 }
 
-/* USERS FIXED */
+/* USERS */
 async function loadUsers(){
   users.innerHTML="";
   (await getDocs(collection(db,"users"))).forEach(d=>{
     const u=d.data();
-    users.innerHTML += `
-      <div class="item">
-        ${u.email} ₦${u.balance||0}
-        <div class="actions">
-          <button onclick="fundUser('${d.id}')">+₦</button>
-          <button onclick="deductUser('${d.id}')">-₦</button>
-          <button onclick="deleteUser('${d.id}')">Delete</button>
-        </div>
-      </div>`;
+    users.innerHTML+=`
+    <div class="item">
+      ${u.email}
+      <div class="actions">
+        <button onclick="deleteUser('${d.id}')">Delete</button>
+      </div>
+    </div>`;
   });
 }
 
+window.deleteUser=id=>deleteDoc(doc(db,"users",id)).then(loadUsers);
+
+/* MAIN CATEGORIES */
+window.addCategory=async()=>{
+  if(!catName.value) return;
+  await addDoc(collection(db,"categories"),{name:catName.value});
+  catName.value="";
+  loadCategories();
+};
+
+async function loadCategories(){
+  categories.innerHTML="";
+  (await getDocs(collection(db,"categories"))).forEach(d=>{
+    categories.innerHTML+=`
+    <div class="item">
+      ${d.data().name}
+      <div class="actions">
+        <button onclick="deleteCategory('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+}
+
+window.deleteCategory=id=>deleteDoc(doc(db,"categories",id)).then(loadCategories);
+
+/* GIFT CATEGORY */
+window.addGiftCategory=async()=>{
+  await addDoc(collection(db,"giftCategories"),{
+    name:gCatName.value,
+    requiresSize:gRequireSize.checked
+  });
+  loadGiftCategories();
+};
+
+async function loadGiftCategories(){
+  gCategories.innerHTML="";
+  (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
+    const c=d.data();
+    gCategories.innerHTML+=`
+    <div class="item">
+      ${c.name} ${c.requiresSize?"(Size)":""}
+      <div class="actions">
+        <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+}
+
+window.deleteGiftCategory=id=>deleteDoc(doc(db,"giftCategories",id)).then(loadGiftCategories);
+
+/* GIFT PRODUCTS */
+async function uploadImage(file){
+  const r=ref(storage,"gifts/"+Date.now());
+  await uploadBytes(r,file);
+  return await getDownloadURL(r);
+}
+
+window.addGiftProduct=async()=>{
+  if(!gImageFile.files[0]) return alert("Select image");
+
+  const img=await uploadImage(gImageFile.files[0]);
+
+  await addDoc(collection(db,"giftProducts"),{
+    name:gName.value,
+    category:gCategory.value,
+    price:Number(gPrice.value),
+    image:img,
+    requiresSize:gProductSize.checked
+  });
+
+  loadGiftProducts();
+};
+
+async function loadGiftProducts(){
+  gProducts.innerHTML="";
+  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
+    const p=d.data();
+    gProducts.innerHTML+=`
+    <div class="item">
+      ${p.name} ₦${p.price}
+      <div class="actions">
+        <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+}
+
+window.deleteGiftProduct=id=>deleteDoc(doc(db,"giftProducts",id)).then(loadGiftProducts);
+
+/* GIFT ORDERS + TRACKING */
+async function loadGiftOrders(){
+  giftOrders.innerHTML="";
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    const o=d.data();
+
+    giftOrders.innerHTML+=`
+    <div class="item">
+      ${o.userEmail} - ${o.type}
+      <div class="actions">
+        <button onclick="setStatus('${d.id}','placed')">Placed</button>
+        <button onclick="setStatus('${d.id}','on_the_way')">Way</button>
+        <button onclick="setStatus('${d.id}','delivered')">Done</button>
+      </div>
+    </div>`;
+  });
+}
+
+window.setStatus=(id,status)=>{
+  updateDoc(doc(db,"giftOrders",id),{status}).then(loadGiftOrders);
+};
+
 /* LOGOUT */
-logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
+logoutBtn.onclick=()=>signOut(auth);
 </script>
 
 </body>
