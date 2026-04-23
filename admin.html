@@ -402,6 +402,53 @@ window.delGift = async(id)=>{
   loadGiftProducts();
 };
 
+/* 🔥 GIFT CATEGORY SYSTEM */
+window.addGiftCategory = async()=>{
+  if(!gCatName.value) return;
+
+  await addDoc(collection(db,"giftCategories"),{
+    name:gCatName.value
+  });
+
+  gCatName.value="";
+  loadGiftCategories();
+};
+
+async function loadGiftCategories(){
+  gCategories.innerHTML="";
+
+  (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
+    const c=d.data();
+
+    gCategories.innerHTML+=`
+    <div class="item">
+      ${c.name}
+      <div class="actions">
+        <button onclick="editGiftCat('${d.id}','${c.name}')">Edit</button>
+        <button onclick="delGiftCat('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
+}
+
+window.editGiftCat = async(id,name)=>{
+  const newName = prompt("Edit category",name);
+  if(!newName) return;
+
+  await updateDoc(doc(db,"giftCategories",id),{
+    name:newName
+  });
+
+  loadGiftCategories();
+};
+
+window.delGiftCat = async(id)=>{
+  if(confirm("Delete category?")){
+    await deleteDoc(doc(db,"giftCategories",id));
+    loadGiftCategories();
+  }
+};
+
 /* TRACKING */
 async function loadTracking(){
   tracking.innerHTML="";
@@ -466,24 +513,6 @@ async function loadGiftCategories(){
     </div>`;
   });
 }
-
-window.editGiftCat = async(id,name)=>{
-  const newName = prompt("Edit category",name);
-  if(!newName) return;
-
-  await updateDoc(doc(db,"giftCategories",id),{
-    name:newName
-  });
-
-  loadGiftCategories();
-};
-
-window.delGiftCat = async(id)=>{
-  if(confirm("Delete category?")){
-    await deleteDoc(doc(db,"giftCategories",id));
-    loadGiftCategories();
-  }
-};
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
