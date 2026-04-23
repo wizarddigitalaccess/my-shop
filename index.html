@@ -54,7 +54,7 @@ body {
   cursor:pointer;
 }
 
-/* 🔥 FIXED SEARCH + GIFT */
+/* SEARCH */
 .search-row {
   position:sticky;
   top:84px;
@@ -82,7 +82,6 @@ body {
   border-radius:10px;
   font-weight:bold;
   cursor:pointer;
-  white-space:nowrap;
 }
 
 /* CATEGORY */
@@ -91,7 +90,6 @@ body {
   overflow-x:auto;
   padding:10px;
   gap:10px;
-  margin-top:10px;
 }
 
 .cat {
@@ -99,12 +97,11 @@ body {
   padding:8px 12px;
   border-radius:20px;
   cursor:pointer;
-  white-space:nowrap;
 }
 
 .cat.active { background:#1877f2; }
 
-/* 🔥 PRODUCTS GRID */
+/* PRODUCTS */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
@@ -113,7 +110,6 @@ body {
   padding-bottom:80px;
 }
 
-/* 🔥 CARD FIX */
 .card {
   background:#1c1c2e;
   padding:14px;
@@ -121,10 +117,9 @@ body {
   display:flex;
   flex-direction:column;
   justify-content:space-between;
-  height:220px; /* 🔥 LOCK HEIGHT */
+  height:220px;
 }
 
-/* TOP CONTENT */
 .card-top {
   text-align:center;
 }
@@ -136,26 +131,20 @@ body {
   margin-bottom:8px;
 }
 
-/* 🔥 TITLE FIX */
 .card h4 {
   font-size:14px;
-  margin:5px 0;
-  height:36px; /* 🔥 LOCK TITLE HEIGHT */
+  height:36px;
   overflow:hidden;
 }
 
-/* 🔥 PRICE FIX */
 .price {
   color:#d5e4f4;
   font-weight:bold;
-  margin-top:5px;
 }
 
-/* 🔥 BUTTON ROW LOCKED */
 .row {
   display:flex;
   gap:6px;
-  margin-top:10px;
 }
 
 .row button {
@@ -166,26 +155,6 @@ body {
   background:#1877f2;
   color:white;
   cursor:pointer;
-  font-size:12px;
-}
-
-/* MODAL */
-.modal {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.85);
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
-
-.modal-content {
-  background:#1c1c2e;
-  padding:20px;
-  border-radius:12px;
-  width:90%;
-  max-width:400px;
-  text-align:center;
 }
 
 /* NAV */
@@ -207,19 +176,6 @@ body {
 
 .nav a.active { color:#1877f2; }
 
-/* SIDE MENU */
-#sideMenu {
-  position:fixed;
-  top:0;
-  right:-100%;
-  width:85%;
-  height:100%;
-  background:#0f0f1a;
-  z-index:2000;
-  transition:0.3s;
-  display:flex;
-  flex-direction:column;
-}
 </style>
 </head>
 
@@ -230,9 +186,8 @@ body {
 <div id="app" style="display:none;">
 
 <div class="header">
-  <img id="siteLogo" class="site-logo">
+  <img id="siteLogo" class="site-logo" src="fallback.png">
   <div class="title">Wizard Digital Access</div>
-  <div class="menu" onclick="openMenu()">☰</div>
 </div>
 
 <div class="search-row">
@@ -244,10 +199,6 @@ body {
 
 <div class="categories" id="categories"></div>
 <div class="grid" id="products"></div>
-
-<div class="modal" id="modal">
-  <div class="modal-content" id="modalContent"></div>
-</div>
 
 <div class="nav">
   <a href="index.html" class="active">Home</a>
@@ -265,6 +216,7 @@ import {
   getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* YOUR CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -283,6 +235,7 @@ const searchInput = document.getElementById("search");
 const productsDiv = document.getElementById("products");
 const categoriesDiv = document.getElementById("categories");
 
+/* AUTH */
 onAuthStateChanged(auth, async (u)=>{
   if(!u) return location.replace("auth.html");
 
@@ -294,12 +247,14 @@ onAuthStateChanged(auth, async (u)=>{
   appDiv.style.display="block";
 });
 
+/* INIT */
 async function init(){
   await loadCategories();
   await loadProductsData();
   loadProducts();
 }
 
+/* CATEGORIES */
 async function loadCategories(){
   categoriesDiv.innerHTML="";
   const all=createCat("All","all");
@@ -328,6 +283,7 @@ function createCat(label,value){
   return div;
 }
 
+/* PRODUCTS */
 async function loadProductsData(){
   allProducts=[];
   const snap = await getDocs(collection(db,"products"));
@@ -355,7 +311,7 @@ function loadProducts(){
 
     card.innerHTML=`
       <div class="card-top">
-        <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
+        <img src="${p.logo}" class="logo">
         <h4>${p.name}</h4>
         <div class="price">₦${p.price}</div>
       </div>
@@ -379,12 +335,72 @@ function loadProducts(){
   });
 }
 
+/* ✅ PREVIEW FIX */
 function preview(p){
-  alert(p.name);
+  if(p.previewLink){
+    window.open(p.previewLink, "_blank");
+  }else{
+    alert("No preview available");
+  }
 }
 
+/* ✅ BUY REAL SYSTEM */
 async function buy(id){
-  alert("Buy working");
+  try{
+    const pDoc = await getDoc(doc(db,"products",id));
+    const p = pDoc.data();
+
+    const userRef = doc(db,"users",user.uid);
+    const uSnap = await getDoc(userRef);
+    const u = uSnap.data();
+
+    if((u.wallet||0) < p.price){
+      alert("Insufficient balance");
+      return;
+    }
+
+    const stockRef = doc(db,"productStock",id);
+    const stockSnap = await getDoc(stockRef);
+
+    let items = stockSnap.data().items || [];
+    const index = items.findIndex(i=>!i.sold);
+
+    if(index === -1){
+      alert("Out of stock");
+      return;
+    }
+
+    const item = items[index];
+    items[index].sold = true;
+
+    /* DEDUCT */
+    await updateDoc(userRef,{
+      wallet: (u.wallet||0) - p.price
+    });
+
+    /* SAVE ORDER */
+    await addDoc(collection(db,"orders"),{
+      userId:user.uid,
+      productId:id,
+      name:p.name,
+      price:p.price,
+      email:item.email,
+      password:item.password,
+      extra:item.extra || "",
+      logo:p.logo,
+      createdAt:new Date()
+    });
+
+    /* UPDATE STOCK */
+    await updateDoc(stockRef,{items});
+
+    alert("✅ Purchase successful");
+    location.href="orders.html";
+
+  }catch(e){
+    console.error(e);
+    alert("Purchase failed");
+  }
 }
 </script>
 
