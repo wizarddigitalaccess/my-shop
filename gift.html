@@ -65,12 +65,12 @@ body{
 <body>
 
 <div class="header">
-  <div class="back" onclick="history.back()">←</div>
-  <b>Send Gift</b>
+  <div class="back" onclick="goBack()">←</div>
+  <b id="pageTitle">Send Gift</b>
 </div>
 
 <div class="container">
-  <div class="title">Choose a gift type</div>
+  <div class="title" id="subTitle">Choose a gift category</div>
   <div class="gift-grid" id="giftGrid"></div>
 </div>
 
@@ -92,8 +92,23 @@ const app = initializeApp({
 const db = getFirestore(app);
 const grid = document.getElementById("giftGrid");
 
-/* LOAD GIFT TYPES */
-async function loadGifts(){
+let currentCategory = null;
+
+/* BACK BUTTON */
+window.goBack = function(){
+  if(currentCategory){
+    loadCategories();
+  }else{
+    history.back();
+  }
+};
+
+/* LOAD CATEGORIES */
+async function loadCategories(){
+  currentCategory = null;
+  document.getElementById("pageTitle").innerText = "Send Gift";
+  document.getElementById("subTitle").innerText = "Choose a gift category";
+
   grid.innerHTML = "Loading...";
 
   try{
@@ -102,7 +117,7 @@ async function loadGifts(){
     grid.innerHTML = "";
 
     if(snap.empty){
-      grid.innerHTML = "No gift categories found";
+      grid.innerHTML = "No categories available";
       return;
     }
 
@@ -119,17 +134,7 @@ async function loadGifts(){
       `;
 
       div.onclick = ()=>{
-        /* ✅ STORE FULL STRUCTURE FOR NEXT PAGE */
-        const giftData = {
-          id: docSnap.id,
-          name: g.name,
-          image: g.image || "",
-          requiresSize: g.requiresSize || false
-        };
-
-        localStorage.setItem("selectedGift", JSON.stringify(giftData));
-
-        location.href = "gift-details.html";
+        loadProducts(g.name);
       };
 
       grid.appendChild(div);
@@ -137,11 +142,76 @@ async function loadGifts(){
 
   }catch(err){
     console.error(err);
-    grid.innerHTML = "Failed to load gifts";
+    grid.innerHTML = "Failed to load categories";
   }
 }
 
-loadGifts();
+/* LOAD PRODUCTS BY CATEGORY */
+async function loadProducts(categoryName){
+  currentCategory = categoryName;
+
+  document.getElementById("pageTitle").innerText = categoryName;
+  document.getElementById("subTitle").innerText = "Choose a product";
+
+  grid.innerHTML = "Loading...";
+
+  try{
+    const snap = await getDocs(collection(db,"giftProducts"));
+
+    grid.innerHTML = "";
+
+    let found = false;
+
+    snap.forEach(docSnap=>{
+      const p = docSnap.data();
+
+      /* ✅ MATCH CATEGORY */
+      if((p.category || "").toLowerCase() === categoryName.toLowerCase()){
+
+        found = true;
+
+        const div = document.createElement("div");
+        div.className = "gift-card";
+
+        div.innerHTML = `
+          <img src="${p.image || 'fallback.png'}"
+          onerror="this.src='fallback.png'">
+          <div>${p.name}</div>
+          <small>₦${p.price}</small>
+        `;
+
+        div.onclick = ()=>{
+          /* ✅ SAVE FULL PRODUCT */
+          const productData = {
+            id: docSnap.id,
+            name: p.name,
+            price: p.price,
+            image: p.image || "",
+            category: p.category,
+            requiresSize: p.requiresSize || false
+          };
+
+          localStorage.setItem("selectedGift", JSON.stringify(productData));
+
+          location.href = "gift-details.html";
+        };
+
+        grid.appendChild(div);
+      }
+    });
+
+    if(!found){
+      grid.innerHTML = "No products in this category";
+    }
+
+  }catch(err){
+    console.error(err);
+    grid.innerHTML = "Failed to load products";
+  }
+}
+
+/* INIT */
+loadCategories();
 </script>
 
 </body>
