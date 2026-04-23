@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -41,6 +41,7 @@ button {
   cursor:pointer;
 }
 
+/* ACTION BUTTONS */
 .btn-edit{background:#1877f2;color:white;}
 .btn-del{background:#e74c3c;color:white;}
 .btn-fund{background:#2ecc71;color:white;}
@@ -61,6 +62,7 @@ button {
   justify-content:flex-end;
 }
 
+/* NAV */
 .nav {
   position:fixed;
   bottom:0;
@@ -145,10 +147,8 @@ import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/fire
 import { getFirestore,collection,getDocs,doc,addDoc,getDoc,updateDoc,deleteDoc }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const ADMIN_EMAIL = "sleyk414@gmail.com"; // 🔥 PUT YOUR EMAIL HERE
-
 const app=initializeApp({
- apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+ apiKey:"AIzaSy...",
  authDomain:"wizard-shop-52a50.firebaseapp.com",
  projectId:"wizard-shop-52a50"
 });
@@ -156,19 +156,8 @@ const app=initializeApp({
 const db=getFirestore(app);
 const auth=getAuth(app);
 
-/* ✅ FIXED AUTH (NO LOOP) */
 onAuthStateChanged(auth,user=>{
- if(!user){
-  location.href="auth.html";
-  return;
- }
-
- if(user.email !== ADMIN_EMAIL){
-  alert("Not authorized as admin");
-  signOut(auth);
-  return;
- }
-
+ if(!user) location.href="auth.html";
  document.body.style.display="block";
  init();
 });
