@@ -95,7 +95,7 @@ const app = initializeApp({
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-/* SELECTED PRODUCT */
+/* SELECTED */
 let selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
 let productData = null;
@@ -104,41 +104,49 @@ let requiresSize = false;
 /* LOAD PRODUCT */
 async function loadProduct(){
 
-  // ✅ FIRST: Try using full object (FAST)
-  if(selectedGift && selectedGift.name && selectedGift.price){
-    productData = selectedGift;
+  try{
+    // ✅ USE FULL OBJECT FIRST
+    if(selectedGift && selectedGift.name && selectedGift.price){
+      productData = selectedGift;
+    }
+
+    // 🔄 FALLBACK FETCH
+    if(!productData && selectedGift.name){
+      const snap = await getDocs(collection(db,"giftProducts"));
+
+      snap.forEach(d=>{
+        const p = d.data();
+        if(p.name === selectedGift.name){
+          productData = p;
+        }
+      });
+    }
+
+    // ❌ CLEAN ERROR (NO ALERT)
+    if(!productData){
+      document.getElementById("giftTitle").innerText = "❌ Gift not available";
+      document.getElementById("sendBtn").disabled = true;
+      return;
+    }
+
+    /* UI */
+    document.getElementById("giftTitle").innerText =
+      "Send: " + productData.name + " (₦" + productData.price + ")";
+
+    /* SIZE */
+    requiresSize = productData.requiresSize || false;
+
+    if(requiresSize){
+      document.getElementById("size").style.display = "block";
+    }
+
+    /* ENABLE */
+    document.getElementById("sendBtn").disabled = false;
+
+  }catch(err){
+    console.error(err);
+    document.getElementById("giftTitle").innerText = "⚠️ Failed to load gift";
   }
-
-  // ❗ FALLBACK: fetch from Firestore if incomplete
-  if(!productData){
-    const snap = await getDocs(collection(db,"giftProducts"));
-
-    snap.forEach(d=>{
-      const p = d.data();
-      if(p.name === selectedGift.name){
-        productData = p;
-      }
-    });
-  }
-
-  if(!productData){
-    alert("Product not found");
-    return;
-  }
-
-  /* UI UPDATE */
-  document.getElementById("giftTitle").innerText =
-    "Send: " + productData.name + " (₦" + productData.price + ")";
-
-  /* SIZE LOGIC */
-  requiresSize = productData.requiresSize || false;
-
-  if(requiresSize){
-    document.getElementById("size").style.display = "block";
-  }
-
-  /* ENABLE BUTTON */
-  document.getElementById("sendBtn").disabled = false;
 }
 
 loadProduct();
@@ -151,6 +159,7 @@ window.submitGift = async function(){
   btn.innerText = "Processing...";
 
   const user = auth.currentUser;
+
   if(!user){
     alert("Please login");
     btn.disabled = false;
@@ -159,7 +168,8 @@ window.submitGift = async function(){
   }
 
   if(!productData){
-    alert("Product not loaded");
+    btn.disabled = false;
+    btn.innerText = "Send Gift";
     return;
   }
 
@@ -212,7 +222,7 @@ window.submitGift = async function(){
       balance: balance - price
     });
 
-    /* SAVE ORDER */
+    /* SAVE */
     await addDoc(collection(db,"giftOrders"),{
       userId: user.uid,
       userEmail: user.email,
