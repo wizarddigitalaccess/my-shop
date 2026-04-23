@@ -28,7 +28,9 @@ body {
   margin:15px;
 }
 
-input, textarea {
+.hidden { display:none; }
+
+input {
   width:100%;
   padding:10px;
   margin-top:8px;
@@ -47,36 +49,11 @@ button {
   cursor:pointer;
 }
 
-/* SIZE TOGGLE */
-.size-toggle {
-  margin-top:10px;
-  padding:10px;
-  border-radius:10px;
-  background:#111;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  border:1px solid #333;
-}
-
-.size-toggle span {
-  font-weight:bold;
-  color:#4da3ff;
-}
-
-.size-toggle input {
-  width:20px;
-  height:20px;
-  cursor:pointer;
-}
-
 .item {
   display:flex;
-  align-items:center;
   justify-content:space-between;
   border-bottom:1px solid #333;
   padding:10px;
-  gap:10px;
 }
 
 .nav {
@@ -105,32 +82,55 @@ button {
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboard" class="card">
-  <h3>Revenue</h3>
+<div id="dashboard" class="card page">
+  <h3>Total Revenue</h3>
   ₦<span id="revenue"></span>
+</div>
 
-  <hr>
+<!-- CATEGORIES -->
+<div id="categoriesPage" class="card page hidden">
+  <h3>Main Categories</h3>
+  <input id="catName" placeholder="Category name">
+  <button onclick="addCategory()">Add</button>
+  <div id="categories"></div>
+</div>
 
+<!-- PRODUCTS -->
+<div id="productsPage" class="card page hidden">
+  <h3>Main Products</h3>
+  <input id="pName" placeholder="Name">
+  <input id="pCategory" placeholder="Category">
+  <input id="pPrice" type="number" placeholder="Price">
+  <button onclick="addProduct()">Add</button>
+  <div id="products"></div>
+</div>
+
+<!-- ORDERS -->
+<div id="ordersPage" class="card page hidden">
+  <h3>Main Orders</h3>
+  <div id="orders"></div>
+</div>
+
+<!-- USERS -->
+<div id="usersPage" class="card page hidden">
+  <h3>Users</h3>
+  <div id="users"></div>
+</div>
+
+<!-- GIFTS -->
+<div id="giftsPage" class="card page hidden">
   <h3>Gift Categories</h3>
-  <input id="giftCatName" placeholder="Category name">
-  <input id="giftCatImage" placeholder="Image URL">
-
-  <div class="size-toggle">
-    <span>✔ Size Required</span>
-    <input type="checkbox" id="giftCatSize">
-  </div>
-
-  <button onclick="addGiftCategory()">Add Category</button>
+  <input id="giftCatName" placeholder="Name">
+  <button onclick="addGiftCategory()">Add</button>
   <div id="giftCategories"></div>
 
   <hr>
 
   <h3>Gift Products</h3>
-  <input id="giftName" placeholder="Gift name">
+  <input id="giftName" placeholder="Name">
   <input id="giftCategory" placeholder="Category">
   <input id="giftPrice" type="number" placeholder="Price">
-  <input id="giftImage" placeholder="Image URL">
-  <button onclick="addGiftProduct()">Add Gift</button>
+  <button onclick="addGiftProduct()">Add</button>
   <div id="giftProducts"></div>
 
   <hr>
@@ -139,8 +139,14 @@ button {
   <div id="giftOrders"></div>
 </div>
 
+<!-- NAV -->
 <div class="nav">
-  <button data-page="dashboard" class="active">Dashboard</button>
+  <button data-page="dashboard" class="active">Home</button>
+  <button data-page="categoriesPage">Categories</button>
+  <button data-page="productsPage">Products</button>
+  <button data-page="ordersPage">Orders</button>
+  <button data-page="usersPage">Users</button>
+  <button data-page="giftsPage">Gifts</button>
 </div>
 
 <script type="module">
@@ -148,10 +154,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, doc,
-  addDoc, getDoc, updateDoc, deleteDoc
+  addDoc, getDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ✅ FIXED CONFIG */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -161,153 +166,197 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* 🔥 FIXED AUTH (NO MORE FREEZE) */
-onAuthStateChanged(auth, async (user)=>{
-  try{
-    if(!user){
-      location.replace("auth.html");
-      return;
-    }
+/* AUTH */
+onAuthStateChanged(auth, async user=>{
+  if(!user) return location.href="auth.html";
 
-    const snap = await getDoc(doc(db,"users",user.uid));
+  const snap = await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists() || snap.data().role !== "admin"){
+    alert("Not admin");
+    return location.href="index.html";
+  }
 
-    if(!snap.exists()){
-      alert("User not found");
-      return location.replace("index.html");
-    }
+  document.body.style.display="block";
+  init();
+});
 
-    if(snap.data().role !== "admin"){
-      alert("Not admin");
-      return location.replace("index.html");
-    }
+/* NAV */
+document.querySelectorAll(".nav button").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
+    document.getElementById(btn.dataset.page).classList.remove("hidden");
 
-    document.body.style.display="block";
-    init();
-
-  }catch(err){
-    console.error(err);
-    alert("Admin load error: " + err.message);
+    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
   }
 });
 
 /* INIT */
-async function init(){
-  loadDashboard();
+function init(){
+  loadRevenue();
+  loadCategories();
+  loadProducts();
+  loadOrders();
+  loadUsers();
   loadGiftCategories();
   loadGiftProducts();
   loadGiftOrders();
 }
 
-/* DASHBOARD */
-async function loadDashboard(){
-  const snap = await getDocs(collection(db,"orders"));
-  let total = 0;
-  snap.forEach(d=> total += Number(d.data().price||0));
-  revenue.innerText = total;
-}
+/* REVENUE */
+async function loadRevenue(){
+  let total=0;
 
-/* GIFT CATEGORY */
-window.addGiftCategory = async ()=>{
-  await addDoc(collection(db,"giftCategories"),{
-    name: giftCatName.value,
-    image: giftCatImage.value,
-    requiresSize: giftCatSize.checked
+  (await getDocs(collection(db,"orders"))).forEach(d=>{
+    total+=Number(d.data().price||0);
   });
 
-  giftCatName.value="";
-  giftCatImage.value="";
-  giftCatSize.checked=false;
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    total+=Number(d.data().price||0);
+  });
 
+  revenue.innerText=total;
+}
+
+/* CATEGORIES */
+window.addCategory=async()=>{
+  await addDoc(collection(db,"categories"),{name:catName.value});
+  loadCategories();
+};
+
+async function loadCategories(){
+  categories.innerHTML="";
+  (await getDocs(collection(db,"categories"))).forEach(d=>{
+    categories.innerHTML+=`
+      <div class="item">
+        ${d.data().name}
+        <button onclick="deleteCategory('${d.id}')">Delete</button>
+      </div>`;
+  });
+}
+
+window.deleteCategory=async(id)=>{
+  await deleteDoc(doc(db,"categories",id));
+  loadCategories();
+};
+
+/* PRODUCTS */
+window.addProduct=async()=>{
+  await addDoc(collection(db,"products"),{
+    name:pName.value,
+    category:pCategory.value,
+    price:Number(pPrice.value)
+  });
+  loadProducts();
+};
+
+async function loadProducts(){
+  products.innerHTML="";
+  (await getDocs(collection(db,"products"))).forEach(d=>{
+    const p=d.data();
+    products.innerHTML+=`
+      <div class="item">
+        ${p.name} - ₦${p.price}
+        <button onclick="deleteProduct('${d.id}')">Delete</button>
+      </div>`;
+  });
+}
+
+window.deleteProduct=async(id)=>{
+  await deleteDoc(doc(db,"products",id));
+  loadProducts();
+};
+
+/* ORDERS */
+async function loadOrders(){
+  orders.innerHTML="";
+  (await getDocs(collection(db,"orders"))).forEach(d=>{
+    const o=d.data();
+    orders.innerHTML+=`
+      <div class="item">
+        ₦${o.price}
+        <button onclick="deleteOrder('${d.id}')">Delete</button>
+      </div>`;
+  });
+}
+
+window.deleteOrder=async(id)=>{
+  await deleteDoc(doc(db,"orders",id));
+  loadOrders();
+};
+
+/* USERS */
+async function loadUsers(){
+  users.innerHTML="";
+  (await getDocs(collection(db,"users"))).forEach(d=>{
+    users.innerHTML+=`
+      <div class="item">
+        ${d.data().email || d.id}
+      </div>`;
+  });
+}
+
+/* GIFTS (kept working) */
+window.addGiftCategory=async()=>{
+  await addDoc(collection(db,"giftCategories"),{name:giftCatName.value});
   loadGiftCategories();
 };
 
 async function loadGiftCategories(){
   giftCategories.innerHTML="";
-  const snap = await getDocs(collection(db,"giftCategories"));
-
-  snap.forEach(d=>{
-    const c = d.data();
-    giftCategories.innerHTML += `
+  (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
+    giftCategories.innerHTML+=`
       <div class="item">
-        ${c.name} ${c.requiresSize ? '<span style="color:#4da3ff;font-weight:bold;">✔ Size</span>' : ''}
+        ${d.data().name}
         <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
-      </div>
-    `;
+      </div>`;
   });
 }
 
-window.deleteGiftCategory = async (id)=>{
+window.deleteGiftCategory=async(id)=>{
   await deleteDoc(doc(db,"giftCategories",id));
   loadGiftCategories();
 };
 
-/* GIFT PRODUCTS */
-window.addGiftProduct = async ()=>{
+window.addGiftProduct=async()=>{
   await addDoc(collection(db,"giftProducts"),{
-    name: giftName.value,
-    category: giftCategory.value,
-    price: Number(giftPrice.value),
-    image: giftImage.value
+    name:giftName.value,
+    category:giftCategory.value,
+    price:Number(giftPrice.value)
   });
-
   loadGiftProducts();
 };
 
 async function loadGiftProducts(){
   giftProducts.innerHTML="";
-  const snap = await getDocs(collection(db,"giftProducts"));
-
-  snap.forEach(d=>{
-    const g = d.data();
-    giftProducts.innerHTML += `
+  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
+    const g=d.data();
+    giftProducts.innerHTML+=`
       <div class="item">
         ${g.name} - ₦${g.price}
         <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
-      </div>
-    `;
+      </div>`;
   });
 }
 
-window.deleteGiftProduct = async (id)=>{
+window.deleteGiftProduct=async(id)=>{
   await deleteDoc(doc(db,"giftProducts",id));
   loadGiftProducts();
 };
 
-/* GIFT ORDERS */
 async function loadGiftOrders(){
-  giftOrders.innerHTML="Loading...";
-  const snap = await getDocs(collection(db,"giftOrders"));
-
   giftOrders.innerHTML="";
-
-  snap.forEach(docSnap=>{
-    const g = docSnap.data();
-
-    giftOrders.innerHTML += `
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    const g=d.data();
+    giftOrders.innerHTML+=`
       <div class="item">
-        <div>
-          <b>${g.type}</b> - ₦${g.price}<br>
-          ${g.receiver?.city || ""}, ${g.receiver?.country || ""}
-          <br><small>${g.receiver?.phone || ""}</small>
-          <br><span style="color:#4da3ff">${g.status || "placed"}</span>
-        </div>
-
-        <div>
-          <button onclick="updateGiftStatus('${docSnap.id}','on delivery')">🚚</button>
-          <button onclick="updateGiftStatus('${docSnap.id}','delivered')">✅</button>
-          <button onclick="deleteGiftOrder('${docSnap.id}')">🗑</button>
-        </div>
-      </div>
-    `;
+        ₦${g.price}
+        <button onclick="deleteGiftOrder('${d.id}')">Delete</button>
+      </div>`;
   });
 }
 
-window.updateGiftStatus = async (id,status)=>{
-  await updateDoc(doc(db,"giftOrders",id),{status});
-  loadGiftOrders();
-};
-
-window.deleteGiftOrder = async (id)=>{
+window.deleteGiftOrder=async(id)=>{
   await deleteDoc(doc(db,"giftOrders",id));
   loadGiftOrders();
 };
