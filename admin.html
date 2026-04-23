@@ -23,10 +23,17 @@ button { padding:6px 10px; border:none; border-radius:8px; background:#1877f2; c
   display:flex;
   background:#111;
 }
-.nav button { flex:1; background:none; color:gray; }
+.nav button { flex:1; background:none; color:gray; font-size:12px; }
 .nav button.active { color:#1877f2; }
 
 img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
+
+.toggle {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -49,10 +56,31 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
   <div id="users"></div>
 </div>
 
+<!-- MAIN CATEGORIES -->
+<div id="categoriesPage" class="card page hidden">
+  <h3>Main Categories</h3>
+  <input id="catName" placeholder="Category name">
+  <button onclick="addCategory()">Add</button>
+  <div id="categories"></div>
+</div>
+
+<!-- MAIN ORDERS -->
+<div id="ordersPage" class="card page hidden">
+  <h3>Main Orders</h3>
+  <div id="orders"></div>
+</div>
+
 <!-- GIFT DASHBOARD -->
 <div id="giftDashboard" class="card page hidden">
   <h3>Gift Categories</h3>
+
   <input id="gCatName" placeholder="Category name">
+
+  <div class="toggle">
+    <label>Require Size</label>
+    <input type="checkbox" id="gRequireSize">
+  </div>
+
   <button onclick="addGiftCategory()">Add</button>
   <div id="gCategories"></div>
 
@@ -62,6 +90,12 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
   <input id="gName" placeholder="Product name">
   <input id="gCategory" placeholder="Category">
   <input id="gPrice" type="number" placeholder="Price">
+
+  <div class="toggle">
+    <label>Require Size</label>
+    <input type="checkbox" id="gProductSize">
+  </div>
+
   <input type="file" id="gImageFile">
   <button onclick="addGiftProduct()">Add</button>
   <div id="gProducts"></div>
@@ -77,7 +111,9 @@ img { width:40px; height:40px; object-fit:cover; border-radius:6px; }
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
-  <button data-page="giftDashboard">Gift Dashboard</button>
+  <button data-page="categoriesPage">Categories</button>
+  <button data-page="ordersPage">Orders</button>
+  <button data-page="giftDashboard">Gifts</button>
   <button data-page="giftOrdersPage">Gift Orders</button>
 </div>
 
@@ -131,41 +167,30 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 function init(){
   loadAnalytics();
   loadUsers();
+  loadCategories();
+  loadOrders();
   loadGiftCategories();
   loadGiftProducts();
   loadGiftOrders();
 }
 
-/* IMAGE UPLOAD */
-async function uploadImage(file){
-  const storageRef = ref(storage,"gifts/"+Date.now());
-  await uploadBytes(storageRef,file);
-  return await getDownloadURL(storageRef);
-}
-
-/* ANALYTICS (IMPROVED) */
+/* ANALYTICS */
 async function loadAnalytics(){
-  let total=0, count=0;
-
+  let total=0;
   (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
     total+=Number(d.data().price||0);
-    count++;
   });
-
-  analytics.innerHTML = `
-    💰 Revenue: ₦${total}<br>
-    📦 Orders: ${count}
-  `;
+  analytics.innerHTML = "Revenue ₦"+total;
 }
 
-/* USERS (SAFE FUND/DEDUCT) */
+/* USERS */
 async function loadUsers(){
   users.innerHTML="";
   (await getDocs(collection(db,"users"))).forEach(d=>{
     const u=d.data();
     users.innerHTML+=`
       <div class="item">
-        ${u.email || d.id} | ₦${u.balance||0}
+        ${u.email} ₦${u.balance||0}
         <div>
           <button onclick="fundUser('${d.id}')">+₦</button>
           <button onclick="deductUser('${d.id}')">-₦</button>
@@ -176,40 +201,139 @@ async function loadUsers(){
 }
 
 window.fundUser=async(id)=>{
-  const amt=Number(prompt("Amount to ADD"));
-  if(!amt || amt<=0) return;
-
+  const amt=Number(prompt("Amount"));
   const refDoc = doc(db,"users",id);
   const snap = await getDoc(refDoc);
-
   await updateDoc(refDoc,{balance:(snap.data().balance||0)+amt});
   loadUsers();
 };
 
 window.deductUser=async(id)=>{
-  const amt=Number(prompt("Amount to REMOVE"));
-  if(!amt || amt<=0) return;
-
+  const amt=Number(prompt("Amount"));
   const refDoc = doc(db,"users",id);
   const snap = await getDoc(refDoc);
-
-  let newBal = (snap.data().balance||0)-amt;
-  if(newBal < 0) newBal = 0;
-
-  await updateDoc(refDoc,{balance:newBal});
+  await updateDoc(refDoc,{balance:(snap.data().balance||0)-amt});
   loadUsers();
 };
 
 window.deleteUser=async(id)=>{
-  if(!confirm("Delete this user?")) return;
   await deleteDoc(doc(db,"users",id));
   loadUsers();
 };
 
-/* (ALL YOUR GIFT FUNCTIONS LEFT UNCHANGED — SAFE) */
+/* MAIN CATEGORIES */
+window.addCategory=async()=>{
+  await addDoc(collection(db,"categories"),{name:catName.value});
+  catName.value="";
+  loadCategories();
+};
+
+async function loadCategories(){
+  categories.innerHTML="";
+  (await getDocs(collection(db,"categories"))).forEach(d=>{
+    categories.innerHTML+=`
+      <div class="item">
+        ${d.data().name}
+        <button onclick="deleteCategory('${d.id}')">Delete</button>
+      </div>`;
+  });
+}
+
+window.deleteCategory=async(id)=>{
+  await deleteDoc(doc(db,"categories",id));
+  loadCategories();
+};
+
+/* MAIN ORDERS */
+async function loadOrders(){
+  orders.innerHTML="";
+  (await getDocs(collection(db,"orders"))).forEach(d=>{
+    const o=d.data();
+    orders.innerHTML+=`
+      <div class="item">
+        ${o.userEmail || ""} - ₦${o.price}
+      </div>`;
+  });
+}
+
+/* GIFT CATEGORY */
+window.addGiftCategory=async()=>{
+  await addDoc(collection(db,"giftCategories"),{
+    name:gCatName.value,
+    requiresSize:gRequireSize.checked
+  });
+  loadGiftCategories();
+};
+
+async function loadGiftCategories(){
+  gCategories.innerHTML="";
+  (await getDocs(collection(db,"giftCategories"))).forEach(d=>{
+    const c=d.data();
+    gCategories.innerHTML+=`
+      <div class="item">
+        ${c.name} ${c.requiresSize?"(Size)":""}
+        <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
+      </div>`;
+  });
+}
+
+window.deleteGiftCategory=async(id)=>{
+  await deleteDoc(doc(db,"giftCategories",id));
+  loadGiftCategories();
+};
+
+/* GIFT PRODUCTS */
+async function uploadImage(file){
+  const r=ref(storage,"gifts/"+Date.now());
+  await uploadBytes(r,file);
+  return await getDownloadURL(r);
+}
+
+window.addGiftProduct=async()=>{
+  const img=await uploadImage(gImageFile.files[0]);
+
+  await addDoc(collection(db,"giftProducts"),{
+    name:gName.value,
+    category:gCategory.value,
+    price:Number(gPrice.value),
+    image:img,
+    requiresSize:gProductSize.checked
+  });
+
+  loadGiftProducts();
+};
+
+async function loadGiftProducts(){
+  gProducts.innerHTML="";
+  (await getDocs(collection(db,"giftProducts"))).forEach(d=>{
+    const p=d.data();
+    gProducts.innerHTML+=`
+      <div class="item">
+        ${p.name} ₦${p.price} ${p.requiresSize?"(Size)":""}
+        <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
+      </div>`;
+  });
+}
+
+window.deleteGiftProduct=async(id)=>{
+  await deleteDoc(doc(db,"giftProducts",id));
+  loadGiftProducts();
+};
+
+/* GIFT ORDERS */
+async function loadGiftOrders(){
+  giftOrders.innerHTML="";
+  (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
+    const o=d.data();
+    giftOrders.innerHTML+=`
+      <div class="item">
+        ${o.userEmail} - ${o.receiver?.name} - ₦${o.price}
+      </div>`;
+  });
+}
 
 /* LOGOUT */
-logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
+logoutBtn.onclick=()=>signOut(auth);
 </script>
 
 </body>
