@@ -47,7 +47,7 @@ button {
   cursor:pointer;
 }
 
-/* 🔥 NEW SIZE TOGGLE STYLE */
+/* SIZE TOGGLE */
 .size-toggle {
   margin-top:10px;
   padding:10px;
@@ -77,14 +77,6 @@ button {
   border-bottom:1px solid #333;
   padding:10px;
   gap:10px;
-}
-
-.logo {
-  width:40px;
-  height:40px;
-  object-fit:contain;
-  border-radius:6px;
-  background:#111;
 }
 
 .nav {
@@ -119,12 +111,11 @@ button {
 
   <hr>
 
-  <!-- 🎁 GIFT CATEGORIES -->
+  <!-- GIFT CATEGORIES -->
   <h3>Gift Categories</h3>
   <input id="giftCatName" placeholder="Category name">
   <input id="giftCatImage" placeholder="Image URL">
 
-  <!-- 🔥 IMPROVED SIZE TOGGLE -->
   <div class="size-toggle">
     <span>✔ Size Required</span>
     <input type="checkbox" id="giftCatSize">
@@ -135,7 +126,7 @@ button {
 
   <hr>
 
-  <!-- 🎁 GIFT PRODUCTS -->
+  <!-- GIFT PRODUCTS -->
   <h3>Gift Products</h3>
   <input id="giftName" placeholder="Gift name">
   <input id="giftCategory" placeholder="Category">
@@ -143,6 +134,12 @@ button {
   <input id="giftImage" placeholder="Image URL">
   <button onclick="addGiftProduct()">Add Gift</button>
   <div id="giftProducts"></div>
+
+  <hr>
+
+  <!-- 🎁 GIFT ORDERS -->
+  <h3>Gift Orders</h3>
+  <div id="giftOrders"></div>
 
 </div>
 
@@ -164,10 +161,10 @@ button {
   <input id="nameInput" placeholder="Name">
   <input id="categoryInput" placeholder="Category">
   <input id="priceInput" type="number" placeholder="Price">
-  <input id="domain" placeholder="Website (e.g facebook.com)">
-  <input id="logoInput" placeholder="Custom Logo URL">
+  <input id="domain" placeholder="Website">
+  <input id="logoInput" placeholder="Logo URL">
   <input id="previewLink" placeholder="Preview Link">
-  <textarea id="description" placeholder="Product Description"></textarea>
+  <textarea id="description" placeholder="Description"></textarea>
   <textarea id="stockData" placeholder="email:password"></textarea>
 
   <button id="addProductBtn">Add Product</button>
@@ -196,11 +193,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, doc,
-  addDoc, getDoc, setDoc, updateDoc, deleteDoc
+  addDoc, getDoc, updateDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  apiKey: "AIzaSy...",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
   projectId: "wizard-shop-52a50"
 });
@@ -226,6 +223,7 @@ async function init(){
   loadDashboard();
   loadGiftCategories();
   loadGiftProducts();
+  loadGiftOrders();
 }
 
 /* DASHBOARD */
@@ -236,16 +234,12 @@ async function loadDashboard(){
   revenue.innerText = total;
 }
 
-/* 🎁 ADD GIFT CATEGORY */
+/* GIFT CATEGORY */
 window.addGiftCategory = async ()=>{
-  const name = giftCatName.value;
-  const image = giftCatImage.value;
-  const requiresSize = giftCatSize.checked;
-
   await addDoc(collection(db,"giftCategories"),{
-    name,
-    image,
-    requiresSize
+    name: giftCatName.value,
+    image: giftCatImage.value,
+    requiresSize: giftCatSize.checked
   });
 
   giftCatName.value="";
@@ -255,7 +249,6 @@ window.addGiftCategory = async ()=>{
   loadGiftCategories();
 };
 
-/* 🎁 LOAD GIFT CATEGORIES */
 async function loadGiftCategories(){
   giftCategories.innerHTML="";
   const snap = await getDocs(collection(db,"giftCategories"));
@@ -264,10 +257,8 @@ async function loadGiftCategories(){
     const c = d.data();
     giftCategories.innerHTML += `
       <div class="item">
-        ${c.name} ${c.requiresSize ? '<span style="color:#4da3ff;font-weight:bold;">(Size)</span>' : ''}
-        <div>
-          <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
-        </div>
+        ${c.name} ${c.requiresSize ? '<span style="color:#4da3ff;font-weight:bold;">✔ Size</span>' : ''}
+        <button onclick="deleteGiftCategory('${d.id}')">Delete</button>
       </div>
     `;
   });
@@ -278,7 +269,7 @@ window.deleteGiftCategory = async (id)=>{
   loadGiftCategories();
 };
 
-/* 🎁 ADD GIFT PRODUCT */
+/* GIFT PRODUCTS */
 window.addGiftProduct = async ()=>{
   await addDoc(collection(db,"giftProducts"),{
     name: giftName.value,
@@ -287,15 +278,9 @@ window.addGiftProduct = async ()=>{
     image: giftImage.value
   });
 
-  giftName.value="";
-  giftCategory.value="";
-  giftPrice.value="";
-  giftImage.value="";
-
   loadGiftProducts();
 };
 
-/* 🎁 LOAD GIFT PRODUCTS */
 async function loadGiftProducts(){
   giftProducts.innerHTML="";
   const snap = await getDocs(collection(db,"giftProducts"));
@@ -305,9 +290,7 @@ async function loadGiftProducts(){
     giftProducts.innerHTML += `
       <div class="item">
         ${g.name} - ₦${g.price}
-        <div>
-          <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
-        </div>
+        <button onclick="deleteGiftProduct('${d.id}')">Delete</button>
       </div>
     `;
   });
@@ -316,6 +299,45 @@ async function loadGiftProducts(){
 window.deleteGiftProduct = async (id)=>{
   await deleteDoc(doc(db,"giftProducts",id));
   loadGiftProducts();
+};
+
+/* 🎁 GIFT ORDERS */
+async function loadGiftOrders(){
+  giftOrders.innerHTML="Loading...";
+  const snap = await getDocs(collection(db,"giftOrders"));
+
+  giftOrders.innerHTML="";
+
+  snap.forEach(docSnap=>{
+    const g = docSnap.data();
+
+    giftOrders.innerHTML += `
+      <div class="item">
+        <div>
+          <b>${g.type}</b> - ₦${g.price}<br>
+          ${g.receiver?.city || ""}, ${g.receiver?.country || ""}
+          <br><small>${g.receiver?.phone || ""}</small>
+          <br><span style="color:#4da3ff">${g.status || "placed"}</span>
+        </div>
+
+        <div>
+          <button onclick="updateGiftStatus('${docSnap.id}','on delivery')">🚚</button>
+          <button onclick="updateGiftStatus('${docSnap.id}','delivered')">✅</button>
+          <button onclick="deleteGiftOrder('${docSnap.id}')">🗑</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+window.updateGiftStatus = async (id,status)=>{
+  await updateDoc(doc(db,"giftOrders",id),{status});
+  loadGiftOrders();
+};
+
+window.deleteGiftOrder = async (id)=>{
+  await deleteDoc(doc(db,"giftOrders",id));
+  loadGiftOrders();
 };
 
 /* NAV */
