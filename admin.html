@@ -439,6 +439,7 @@ function loadTracking(){
      </div>
 
      <div>👤 ${userEmail}</div>
+     <div>🧾 Sender: ${g.senders?.name || "-"}</div>
 
      <div>📦 Receiver: ${g.receiver?.name || "-"}</div>
      <div>📞 ${g.receiver?.phone || "-"}</div>
@@ -451,6 +452,9 @@ function loadTracking(){
        <button class="btn-status" onclick="updateStatus('${d.id}','processing')">Processing</button>
        <button class="btn-status" onclick="updateStatus('${d.id}','delivery')">Delivery</button>
        <button class="btn-status" onclick="updateStatus('${d.id}','delivered')">Delivered</button>
+
+       <button class="btn-del" onclick="deleteOrder('${d.id}')">Delete</button>
+       <button class="btn-del" onclick="cancelOrder('${d.id}')">Cancel</button>
      </div>
    </div>`;
   }
