@@ -103,6 +103,11 @@ window.goBack = function(){
   }
 };
 
+/* IMAGE SAFE FUNCTION */
+function safeImage(src){
+  return src && src.trim() !== "" ? src : "fallback.png";
+}
+
 /* LOAD CATEGORIES */
 async function loadCategories(){
   currentCategory = null;
@@ -124,11 +129,13 @@ async function loadCategories(){
     snap.forEach(docSnap=>{
       const g = docSnap.data();
 
+      if(!g.name) return;
+
       const div = document.createElement("div");
       div.className = "gift-card";
 
       div.innerHTML = `
-        <img src="${g.image || 'fallback.png'}"
+        <img src="${safeImage(g.image)}"
         onerror="this.src='fallback.png'">
         <div>${g.name}</div>
       `;
@@ -146,7 +153,7 @@ async function loadCategories(){
   }
 }
 
-/* LOAD PRODUCTS BY CATEGORY */
+/* LOAD PRODUCTS */
 async function loadProducts(categoryName){
   currentCategory = categoryName;
 
@@ -165,7 +172,8 @@ async function loadProducts(categoryName){
     snap.forEach(docSnap=>{
       const p = docSnap.data();
 
-      /* ✅ MATCH CATEGORY */
+      if(!p.name) return;
+
       if((p.category || "").toLowerCase() === categoryName.toLowerCase()){
 
         found = true;
@@ -174,14 +182,13 @@ async function loadProducts(categoryName){
         div.className = "gift-card";
 
         div.innerHTML = `
-          <img src="${p.image || 'fallback.png'}"
+          <img src="${safeImage(p.image)}"
           onerror="this.src='fallback.png'">
           <div>${p.name}</div>
           <small>₦${p.price}</small>
         `;
 
         div.onclick = ()=>{
-          /* ✅ SAVE FULL PRODUCT */
           const productData = {
             id: docSnap.id,
             name: p.name,
@@ -192,7 +199,6 @@ async function loadProducts(categoryName){
           };
 
           localStorage.setItem("selectedGift", JSON.stringify(productData));
-
           location.href = "gift-details.html";
         };
 
