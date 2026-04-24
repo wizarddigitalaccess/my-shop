@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Send Gift details</title>
+<title>Send Gift Details</title>
 
 <style>
 body{
@@ -24,40 +24,26 @@ body{
   padding:20px;
 }
 
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
+input{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
 }
 
-.card{
-  background:#1c1c2e;
-  padding:15px;
-  border-radius:12px;
-  text-align:center;
-  cursor:pointer;
-}
-
-.card img{
-  width:60px;
-  height:60px;
-  object-fit:cover;
-  margin-bottom:10px;
-}
-
-.back{
-  margin-bottom:10px;
-  cursor:pointer;
-  color:#4da3ff;
-}
-
-.tag{
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
   background:#1877f2;
-  padding:3px 6px;
-  border-radius:6px;
-  font-size:10px;
-  display:inline-block;
-  margin-top:4px;
+  color:white;
+  font-size:15px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -65,23 +51,47 @@ body{
 <body>
 
 <div class="header">
-  <div onclick="goBack()">←</div>
-  <b id="title">Select Category</b>
+  <div onclick="history.back()">←</div>
+  <b>Send Gift</b>
 </div>
 
 <div class="container">
 
-  <div id="backBtn" class="back" style="display:none;" onclick="showCategories()">← Back to Categories</div>
+  <h3 id="productName"></h3>
+  <div id="price"></div>
 
-  <div class="grid" id="grid"></div>
+  <!-- RECEIVER -->
+  <h4>Receiver Details</h4>
+
+  <input id="rName" placeholder="Full Name">
+  <input id="rPhone" placeholder="Phone (optional)">
+  <input id="rHouse" placeholder="House / Apt Number">
+  <input id="rStreet" placeholder="Street Address">
+  <input id="rCity" placeholder="City / Province">
+  <input id="rState" placeholder="State">
+  <input id="rZip" placeholder="Zip / Postal Code">
+  <input id="rCountry" placeholder="Country">
+
+  <!-- SIZE (ONLY IF REQUIRED) -->
+  <div id="sizeBox" style="display:none;">
+    <h4>Size</h4>
+    <input id="rSize" placeholder="Enter Size (e.g 42, XL, 7)">
+  </div>
+
+  <!-- SENDER -->
+  <h4>Sender</h4>
+  <input id="sName" placeholder="Your Name">
+
+  <button onclick="placeOrder()">Send Gift 🎁</button>
 
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* CONFIG */
+/* FIREBASE */
 const app = initializeApp({
   apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
   authDomain: "wizard-shop-52a50.firebaseapp.com",
@@ -89,99 +99,61 @@ const app = initializeApp({
 });
 
 const db = getFirestore(app);
+const auth = getAuth(app);
 
-const grid = document.getElementById("grid");
-const title = document.getElementById("title");
-const backBtn = document.getElementById("backBtn");
+/* GET PRODUCT */
+const gift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
-let allProducts = [];
+document.getElementById("productName").innerText = gift.name || "Gift";
+document.getElementById("price").innerText = "₦" + (gift.price || 0);
 
-/* LOAD CATEGORIES */
-async function showCategories(){
-  title.innerText = "Select Category";
-  backBtn.style.display = "none";
-  grid.innerHTML = "";
-
-  const snap = await getDocs(collection(db,"giftCategories"));
-
-  snap.forEach(doc=>{
-    const c = doc.data();
-
-    const div = document.createElement("div");
-    div.className = "card";
-
-    div.innerHTML = `<div>${c.name}</div>`;
-
-    div.onclick = ()=> showProducts(c.name);
-
-    grid.appendChild(div);
-  });
+/* SHOW SIZE IF REQUIRED */
+if(gift.requiresSize){
+  document.getElementById("sizeBox").style.display = "block";
 }
 
-/* LOAD PRODUCTS */
-async function showProducts(category){
-  title.innerText = category;
-  backBtn.style.display = "block";
-  grid.innerHTML = "Loading...";
+/* PLACE ORDER */
+window.placeOrder = async ()=>{
 
-  if(allProducts.length === 0){
-    const snap = await getDocs(collection(db,"giftProducts"));
-    snap.forEach(d=>{
-      const p = d.data();
-      p.id = d.id;
-      allProducts.push(p);
-    });
+  const user = auth.currentUser;
+  if(!user) return alert("Login required");
+
+  const data = {
+    userId: user.uid,
+    type: gift.name,
+    price: gift.price,
+
+    receiver:{
+      name: rName.value,
+      phone: rPhone.value,
+      house: rHouse.value,
+      street: rStreet.value,
+      city: rCity.value,
+      state: rState.value,
+      zip: rZip.value,
+      country: rCountry.value,
+      size: gift.requiresSize ? rSize.value : null
+    },
+
+    sender:{
+      name: sName.value
+    },
+
+    status: "placed",
+    createdAt: Date.now()
+  };
+
+  /* VALIDATION */
+  if(!data.receiver.name || !data.receiver.street || !data.receiver.city || !data.receiver.country){
+    return alert("Fill all required fields");
   }
 
-  grid.innerHTML = "";
+  await addDoc(collection(db,"giftOrders"), data);
 
-  const filtered = allProducts.filter(p=>p.category === category);
+  alert("Gift sent successfully 🎁");
 
-  if(filtered.length === 0){
-    grid.innerHTML = "No products available";
-    return;
-  }
-
-  filtered.forEach(p=>{
-    const div = document.createElement("div");
-    div.className = "card";
-
-    div.innerHTML = `
-      <img src="${p.image || 'fallback.png'}" onerror="this.src='fallback.png'">
-      <div>${p.name}</div>
-      <div>₦${p.price}</div>
-      ${p.requiresSize ? `<div class="tag">Size Required</div>` : ""}
-    `;
-
-    div.onclick = ()=>{
-      localStorage.setItem("selectedGift", JSON.stringify({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        image: p.image || "",
-        category: p.category,
-        requiresSize: p.requiresSize || false
-      }));
-
-      /* ✅ FIXED CORRECT PAGE */
-      location.href = "send-gift.html";
-    };
-
-    grid.appendChild(div);
-  });
-}
-
-/* BACK */
-window.goBack = ()=>{
-  if(backBtn.style.display === "block"){
-    showCategories();
-  }else{
-    history.back();
-  }
+  location.href = "orders.html";
 };
-
-/* INIT */
-showCategories();
 </script>
 
 </body>

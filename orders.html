@@ -60,7 +60,6 @@ body {
 
 .price { color:#4da3ff; font-weight:bold; }
 
-/* 🔥 CLEAN FIELDS */
 .field {
   background:#111;
   padding:10px;
@@ -70,7 +69,7 @@ body {
   word-break:break-word;
 }
 
-/* 🔥 STATUS (UPGRADED) */
+/* STATUS */
 .status {
   margin-top:12px;
   padding:8px;
@@ -81,21 +80,10 @@ body {
   letter-spacing:.5px;
 }
 
-/* STATES */
-.placed {
-  background:#333;
-  color:#ffcc00;
-}
-
-.delivery {
-  background:#0a3d91;
-  color:#6ab7ff;
-}
-
-.delivered {
-  background:#0f5132;
-  color:#4ade80;
-}
+.placed { background:#333; color:#ffcc00; }
+.processing { background:#5a2d82; color:#d0b3ff; }
+.delivery { background:#0a3d91; color:#6ab7ff; }
+.delivered { background:#0f5132; color:#4ade80; }
 
 /* NAV */
 .nav {
@@ -142,9 +130,9 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import {
   getFirestore,
   collection,
-  getDocs,
   query,
-  where
+  where,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -161,57 +149,58 @@ const appDiv = document.getElementById("app");
 const ordersDiv = document.getElementById("orders");
 
 /* AUTH */
-onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    return location.href="auth.html";
-  }
+onAuthStateChanged(auth, (user)=>{
+  if(!user) return location.href="auth.html";
 
-  await loadOrders(user.uid);
+  loadOrdersLive(user.uid);
 
   loader.style.display="none";
   appDiv.style.display="block";
 });
 
-/* LOAD ORDERS */
-async function loadOrders(uid){
-  ordersDiv.innerHTML="";
+/* 🔥 LIVE ORDERS */
+function loadOrdersLive(uid){
 
-  let allOrders = [];
-
-  /* NORMAL ORDERS */
   const normalQ = query(collection(db,"orders"), where("userId","==",uid));
-  const normalSnap = await getDocs(normalQ);
-
-  normalSnap.forEach(docSnap=>{
-    const o = docSnap.data();
-    o.type = "normal";
-    allOrders.push(o);
-  });
-
-  /* GIFT ORDERS */
   const giftQ = query(collection(db,"giftOrders"), where("userId","==",uid));
-  const giftSnap = await getDocs(giftQ);
 
-  giftSnap.forEach(docSnap=>{
-    const g = docSnap.data();
-    g.type = "gift";
-    allOrders.push(g);
+  let normalOrders = [];
+  let giftOrders = [];
+
+  onSnapshot(normalQ, snap=>{
+    normalOrders = [];
+    snap.forEach(d=>{
+      const o=d.data();
+      o.type="normal";
+      normalOrders.push(o);
+    });
+    render();
   });
 
-  /* 🔥 SORT NEWEST FIRST */
-  allOrders.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  onSnapshot(giftQ, snap=>{
+    giftOrders = [];
+    snap.forEach(d=>{
+      const g=d.data();
+      g.type="gift";
+      giftOrders.push(g);
+    });
+    render();
+  });
 
-  /* RENDER */
-  allOrders.forEach(o=>{
+  function render(){
+    const allOrders = [...normalOrders, ...giftOrders]
+      .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
 
-    const div = document.createElement("div");
-    div.className="card";
+    ordersDiv.innerHTML="";
 
-    /* NORMAL PRODUCT */
-    if(o.type === "normal"){
-      div.innerHTML = `
+    allOrders.forEach(o=>{
+      const div=document.createElement("div");
+      div.className="card";
+
+      /* NORMAL */
+      if(o.type==="normal"){
+        div.innerHTML=`
         <img src="${o.logo || ''}" class="logo">
-
         <div class="content">
           <b>${o.name}</b>
           <div class="price">₦${o.price}</div>
@@ -220,30 +209,32 @@ async function loadOrders(uid){
           <div class="field">Password: ${o.password}</div>
 
           <div class="status delivered">Delivered ✅</div>
-        </div>
-      `;
-    }
-
-    /* 🔥 GIFT PRODUCT */
-    else{
-      let statusClass = "placed";
-      let statusText = "Order Placed 🟡";
-
-      if(o.status === "on the way"){
-        statusClass = "delivery";
-        statusText = "On The Way 🚚";
+        </div>`;
       }
 
-      if(o.status === "delivered"){
-        statusClass = "delivered";
-        statusText = "Delivered 🎁";
-      }
+      /* 🔥 GIFT */
+      else{
+        let statusClass="placed";
+        let statusText="Order Placed 🟡";
 
-      div.innerHTML = `
+        if(o.status==="processing"){
+          statusClass="processing";
+          statusText="Processing 🟣";
+        }
+        if(o.status==="delivery"){
+          statusClass="delivery";
+          statusText="On The Way 🚚";
+        }
+        if(o.status==="delivered"){
+          statusClass="delivered";
+          statusText="Delivered 🎁";
+        }
+
+        div.innerHTML=`
         <img src="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" class="logo">
 
         <div class="content">
-          <b>${o.type || "Gift"} Gift</b>
+          <b>${o.productName || "Gift"}</b>
           <div class="price">₦${o.price}</div>
 
           <div class="field">
@@ -257,15 +248,15 @@ async function loadOrders(uid){
           ${o.receiver?.size ? `<div class="field">Size: ${o.receiver.size}</div>` : ""}
 
           <div class="status ${statusClass}">${statusText}</div>
-        </div>
-      `;
+        </div>`;
+      }
+
+      ordersDiv.appendChild(div);
+    });
+
+    if(allOrders.length===0){
+      ordersDiv.innerHTML="<div style='text-align:center;color:gray;margin-top:40px;'>No orders yet 🛒</div>";
     }
-
-    ordersDiv.appendChild(div);
-  });
-
-  if(allOrders.length === 0){
-    ordersDiv.innerHTML = "<div style='text-align:center;color:gray;margin-top:40px;'>No orders yet 🛒</div>";
   }
 }
 </script>
