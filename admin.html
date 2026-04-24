@@ -41,7 +41,7 @@ button {
   cursor:pointer;
 }
 
-/* ACTION BUTTONS */
+/* BUTTONS */
 .btn-edit{background:#1877f2;color:white;}
 .btn-del{background:#e74c3c;color:white;}
 .btn-fund{background:#2ecc71;color:white;}
@@ -94,7 +94,6 @@ button {
   padding:6px;
   border-radius:6px;
   font-size:12px;
-  display:inline-block;
 }
 
 .placed{background:#665c00;}
@@ -113,7 +112,7 @@ button {
 
 <!-- HOME -->
 <div id="home" class="card page">
-  <h3>Tracking System (Live)</h3>
+  <h3>Tracking (Live)</h3>
   <div id="tracking"></div>
 </div>
 
@@ -135,12 +134,6 @@ button {
   <div id="products"></div>
 </div>
 
-<!-- ORDERS -->
-<div id="ordersPage" class="card page hidden">
-  <h3>Main Orders</h3>
-  <div id="orders"></div>
-</div>
-
 <!-- GIFTS -->
 <div id="giftDashboard" class="card page hidden">
   <h3>Gift Categories</h3>
@@ -153,32 +146,25 @@ button {
   <div id="gProducts"></div>
 </div>
 
-<!-- GIFT ORDERS -->
-<div id="giftOrdersPage" class="card page hidden">
-  <h3>Gift Orders (Live)</h3>
-  <div id="giftOrders"></div>
-</div>
-
 <!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
   <button data-page="categoriesPage">Main</button>
-  <button data-page="ordersPage">Orders</button>
   <button data-page="giftDashboard">Gifts</button>
-  <button data-page="giftOrdersPage">Gift Orders</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { 
-  getFirestore,collection,getDocs,doc,updateDoc,
+  getFirestore,collection,getDocs,doc,
+  updateDoc,deleteDoc,addDoc,getDoc,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ADMIN LOCK */
-const ADMIN_EMAIL = "etee77366@gmail.com".toLowerCase();
+const ADMIN_EMAIL="etee77366@gmail.com".toLowerCase();
 
 const app=initializeApp({
  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
@@ -216,11 +202,217 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 
 /* INIT */
 function init(){
+ loadUsers();
+ loadCategories();
+ loadProducts();
+ loadGiftCategories();
+ loadGiftProducts();
  loadTracking();
- loadGiftOrders();
 }
 
-/* 🔥 LIVE TRACKING */
+/* USERS */
+async function loadUsers(){
+ users.innerHTML="";
+ const snap=await getDocs(collection(db,"users"));
+
+ snap.forEach(d=>{
+  const u=d.data();
+  users.innerHTML+=`
+  <div class="item">
+   <div class="topRow">
+    ${u.email}
+    ₦${u.wallet||0}
+   </div>
+
+   <div class="actions">
+    <button class="btn-fund" onclick="fund('${d.id}')">+ Fund</button>
+    <button class="btn-deduct" onclick="deduct('${d.id}')">- Deduct</button>
+    <button class="btn-del" onclick="delUser('${d.id}')">Delete</button>
+   </div>
+  </div>`;
+ });
+}
+
+window.fund=async(id)=>{
+ let amt=prompt("Amount");
+ if(!amt) return;
+ let ref=doc(db,"users",id);
+ let u=(await getDoc(ref)).data();
+ await updateDoc(ref,{wallet:(u.wallet||0)+Number(amt)});
+ loadUsers();
+};
+
+window.deduct=async(id)=>{
+ let amt=prompt("Amount");
+ if(!amt) return;
+ let ref=doc(db,"users",id);
+ let u=(await getDoc(ref)).data();
+ await updateDoc(ref,{wallet:(u.wallet||0)-Number(amt)});
+ loadUsers();
+};
+
+window.delUser=async(id)=>{
+ if(confirm("Delete user?")){
+  await deleteDoc(doc(db,"users",id));
+  loadUsers();
+ }
+};
+
+/* MAIN CATEGORIES */
+window.addCategory=async()=>{
+ if(!catName.value) return;
+ await addDoc(collection(db,"categories"),{name:catName.value});
+ catName.value="";
+ loadCategories();
+};
+
+async function loadCategories(){
+ categories.innerHTML="";
+ const snap=await getDocs(collection(db,"categories"));
+
+ snap.forEach(d=>{
+  const c=d.data();
+  categories.innerHTML+=`
+  <div class="item">
+    ${c.name}
+    <div class="actions">
+      <button class="btn-edit" onclick="editCat('${d.id}','${c.name}')">Edit</button>
+      <button class="btn-del" onclick="delCat('${d.id}')">Delete</button>
+    </div>
+  </div>`;
+ });
+}
+
+window.editCat=async(id,name)=>{
+ let n=prompt("Edit",name);
+ if(!n) return;
+ await updateDoc(doc(db,"categories",id),{name:n});
+ loadCategories();
+};
+
+window.delCat=async(id)=>{
+ await deleteDoc(doc(db,"categories",id));
+ loadCategories();
+};
+
+/* MAIN PRODUCTS */
+window.addProduct=async()=>{
+ if(!pName.value||!pCategory.value||!pPrice.value) return alert("Fill all");
+ await addDoc(collection(db,"products"),{
+  name:pName.value,
+  category:pCategory.value,
+  price:Number(pPrice.value)
+ });
+ loadProducts();
+};
+
+async function loadProducts(){
+ products.innerHTML="";
+ const snap=await getDocs(collection(db,"products"));
+
+ snap.forEach(d=>{
+  const p=d.data();
+  products.innerHTML+=`
+  <div class="item">
+    ${p.name} ₦${p.price}
+    <div class="actions">
+      <button class="btn-edit" onclick="editProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
+      <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
+    </div>
+  </div>`;
+ });
+}
+
+window.editProd=async(id,n,c,p)=>{
+ let name=prompt("Name",n);
+ let cat=prompt("Category",c);
+ let price=prompt("Price",p);
+ await updateDoc(doc(db,"products",id),{name,category:cat,price:Number(price)});
+ loadProducts();
+};
+
+window.delProd=async(id)=>{
+ await deleteDoc(doc(db,"products",id));
+ loadProducts();
+};
+
+/* GIFT CATEGORIES */
+window.addGiftCategory=async()=>{
+ if(!gCatName.value) return;
+ await addDoc(collection(db,"giftCategories"),{name:gCatName.value});
+ loadGiftCategories();
+};
+
+async function loadGiftCategories(){
+ gCategories.innerHTML="";
+ const snap=await getDocs(collection(db,"giftCategories"));
+
+ snap.forEach(d=>{
+  const c=d.data();
+  gCategories.innerHTML+=`
+  <div class="item">
+    ${c.name}
+    <div class="actions">
+      <button class="btn-edit" onclick="editGCat('${d.id}','${c.name}')">Edit</button>
+      <button class="btn-del" onclick="delGCat('${d.id}')">Delete</button>
+    </div>
+  </div>`;
+ });
+}
+
+window.editGCat=async(id,n)=>{
+ let name=prompt("Edit",n);
+ await updateDoc(doc(db,"giftCategories",id),{name});
+ loadGiftCategories();
+};
+
+window.delGCat=async(id)=>{
+ await deleteDoc(doc(db,"giftCategories",id));
+ loadGiftCategories();
+};
+
+/* GIFT PRODUCTS */
+window.addGiftProduct=async()=>{
+ if(!gName.value||!gCategory.value||!gPrice.value) return;
+ await addDoc(collection(db,"giftProducts"),{
+  name:gName.value,
+  category:gCategory.value,
+  price:Number(gPrice.value)
+ });
+ loadGiftProducts();
+};
+
+async function loadGiftProducts(){
+ gProducts.innerHTML="";
+ const snap=await getDocs(collection(db,"giftProducts"));
+
+ snap.forEach(d=>{
+  const p=d.data();
+  gProducts.innerHTML+=`
+  <div class="item">
+    ${p.name} ₦${p.price}
+    <div class="actions">
+      <button class="btn-edit" onclick="editGProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
+      <button class="btn-del" onclick="delGProd('${d.id}')">Delete</button>
+    </div>
+  </div>`;
+ });
+}
+
+window.editGProd=async(id,n,c,p)=>{
+ let name=prompt("Name",n);
+ let cat=prompt("Category",c);
+ let price=prompt("Price",p);
+ await updateDoc(doc(db,"giftProducts",id),{name,category:cat,price:Number(price)});
+ loadGiftProducts();
+};
+
+window.delGProd=async(id)=>{
+ await deleteDoc(doc(db,"giftProducts",id));
+ loadGiftProducts();
+};
+
+/* LIVE TRACKING */
 function loadTracking(){
  onSnapshot(collection(db,"giftOrders"),snap=>{
   tracking.innerHTML="";
@@ -231,11 +423,9 @@ function loadTracking(){
    tracking.innerHTML+=`
    <div class="item">
      <div class="topRow">
-       <b>${g.productName || g.type || "Gift"}</b>
+       ${g.productName || "Gift"}
        <span class="statusBox ${g.status||'placed'}">${g.status||'placed'}</span>
      </div>
-
-     <div>${g.receiverName || ""}</div>
 
      <div class="actions">
        <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
@@ -248,30 +438,9 @@ function loadTracking(){
  });
 }
 
-/* 🔥 UPDATE STATUS */
-window.updateStatus = async(id,status)=>{
+window.updateStatus=async(id,status)=>{
  await updateDoc(doc(db,"giftOrders",id),{status});
 };
-
-/* 🔥 LIVE GIFT ORDERS PAGE */
-function loadGiftOrders(){
- onSnapshot(collection(db,"giftOrders"),snap=>{
-  giftOrders.innerHTML="";
-
-  snap.forEach(d=>{
-   const g=d.data();
-
-   giftOrders.innerHTML+=`
-   <div class="item">
-     <div class="topRow">
-       ${g.productName || "Gift"}
-       <span class="statusBox ${g.status||'placed'}">${g.status||'placed'}</span>
-     </div>
-     <div>${g.receiverName || ""}</div>
-   </div>`;
-  });
- });
-}
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
