@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Send Gift Details</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f0f1a;
+  color:white;
+}
+
+.header{
+  padding:15px;
+  background:#1c1c2e;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.container{
+  padding:20px;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
+  background:#1877f2;
+  color:white;
+  font-size:15px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div onclick="history.back()">←</div>
+  <b>Send Gift</b>
+</div>
+
+<div class="container">
+
+  <h3 id="productName"></h3>
+  <div id="price"></div>
+
+  <!-- RECEIVER -->
+  <h4>Receiver Details</h4>
+
+  <input id="rName" placeholder="Full Name">
+  <input id="rPhone" placeholder="Phone (optional)">
+  <input id="rHouse" placeholder="House / Apt Number">
+  <input id="rStreet" placeholder="Street Address">
+  <input id="rCity" placeholder="City / Province">
+  <input id="rState" placeholder="State">
+  <input id="rZip" placeholder="Zip / Postal Code">
+  <input id="rCountry" placeholder="Country">
+
+  <!-- SIZE (ONLY IF REQUIRED) -->
+  <div id="sizeBox" style="display:none;">
+    <h4>Size</h4>
+    <input id="rSize" placeholder="Enter Size (e.g 42, XL, 7)">
+  </div>
+
+  <!-- SENDER -->
+  <h4>Sender</h4>
+  <input id="sName" placeholder="Your Name">
+
+  <button onclick="placeOrder()">Send Gift 🎁</button>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+/* FIREBASE */
+const app = initializeApp({
+  apiKey: "AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
+  authDomain: "wizard-shop-52a50.firebaseapp.com",
+  projectId: "wizard-shop-52a50"
+});
+
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+/* GET PRODUCT */
+const gift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
+
+document.getElementById("productName").innerText = gift.name || "Gift";
+document.getElementById("price").innerText = "₦" + (gift.price || 0);
+
+/* SHOW SIZE IF REQUIRED */
+if(gift.requiresSize){
+  document.getElementById("sizeBox").style.display = "block";
+}
+
+/* PLACE ORDER */
+window.placeOrder = async ()=>{
+
+  const user = auth.currentUser;
+  if(!user) return alert("Login required");
+
+  const data = {
+    userId: user.uid,
+    type: gift.name,
+    price: gift.price,
+
+    receiver:{
+      name: rName.value,
+      phone: rPhone.value,
+      house: rHouse.value,
+      street: rStreet.value,
+      city: rCity.value,
+      state: rState.value,
+      zip: rZip.value,
+      country: rCountry.value,
+      size: gift.requiresSize ? rSize.value : null
+    },
+
+    sender:{
+      name: sName.value
+    },
+
+    status: "placed",
+    createdAt: Date.now()
+  };
+
+  /* VALIDATION */
+  if(!data.receiver.name || !data.receiver.street || !data.receiver.city || !data.receiver.country){
+    return alert("Fill all required fields");
+  }
+
+  await addDoc(collection(db,"giftOrders"), data);
+
+  alert("Gift sent successfully 🎁");
+
+  location.href = "orders.html";
+};
+</script>
+
+</body>
+</html>
