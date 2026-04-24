@@ -147,6 +147,9 @@ import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/fire
 import { getFirestore,collection,getDocs,doc,addDoc,getDoc,updateDoc,deleteDoc }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+/* ✅ ADMIN LOCK */
+const ADMIN_EMAIL = "etee77366@gmail.com".toLowerCase();
+
 const app=initializeApp({
  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
  authDomain:"wizard-shop-52a50.firebaseapp.com",
@@ -156,8 +159,21 @@ const app=initializeApp({
 const db=getFirestore(app);
 const auth=getAuth(app);
 
+/* ✅ FIXED AUTH (NO LOOP + ADMIN ONLY) */
 onAuthStateChanged(auth,user=>{
- if(!user) location.href="auth.html";
+ if(!user){
+  location.href="auth.html";
+  return;
+ }
+
+ const email = (user.email || "").toLowerCase();
+
+ if(email !== ADMIN_EMAIL){
+  alert("Access denied: Admin only");
+  signOut(auth);
+  return;
+ }
+
  document.body.style.display="block";
  init();
 });
@@ -179,6 +195,8 @@ function init(){
  loadGiftProducts();
  loadTracking();
 }
+
+/* 🔥 EVERYTHING ELSE BELOW IS UNCHANGED */
 
 /* USERS */
 async function loadUsers(){
