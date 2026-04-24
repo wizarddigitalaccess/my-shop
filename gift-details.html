@@ -59,7 +59,7 @@ body{
   margin-top:5px;
 }
 
-/* 🔥 SMALL TAG FOR SIZE ITEMS */
+/* 🔥 SIZE TAG */
 .tag{
   background:#1877f2;
   padding:3px 6px;
@@ -124,7 +124,7 @@ async function loadProducts(){
     snap.forEach(docSnap=>{
       const p = docSnap.data();
 
-      /* ✅ MATCH CATEGORY */
+      /* ✅ STRICT CATEGORY MATCH */
       if((p.category || "").toLowerCase() !== selectedGift.name.toLowerCase()) return;
 
       found = true;
@@ -141,7 +141,7 @@ async function loadProducts(){
 
       div.onclick = ()=>{
 
-        /* ✅ SAVE FULL PRODUCT (INCLUDING SIZE FLAG) */
+        /* ✅ SAVE FULL PRODUCT CLEANLY */
         const productData = {
           id: docSnap.id,
           name: p.name,
