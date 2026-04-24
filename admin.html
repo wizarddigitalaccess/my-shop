@@ -46,20 +46,26 @@ button {
 .btn-del{background:#e74c3c;color:white;}
 .btn-fund{background:#2ecc71;color:white;}
 .btn-deduct{background:#f39c12;color:white;}
+.btn-status{background:#9b59b6;color:white;}
 
 .item {
   display:flex;
-  justify-content:space-between;
-  align-items:center;
+  flex-direction:column;
+  gap:6px;
   border-bottom:1px solid #333;
   padding:10px;
+}
+
+.topRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 .actions {
   display:flex;
   gap:6px;
-  min-width:140px;
-  justify-content:flex-end;
+  flex-wrap:wrap;
 }
 
 /* NAV */
@@ -83,13 +89,16 @@ button {
   color:white;
 }
 
+/* STATUS */
 .statusBox{
   padding:6px;
   border-radius:6px;
   font-size:12px;
+  display:inline-block;
 }
 
 .placed{background:#665c00;}
+.processing{background:#5a2d82;}
 .delivery{background:#003366;}
 .delivered{background:#003300;}
 </style>
@@ -104,7 +113,7 @@ button {
 
 <!-- HOME -->
 <div id="home" class="card page">
-  <h3>Tracking System</h3>
+  <h3>Tracking System (Live)</h3>
   <div id="tracking"></div>
 </div>
 
@@ -146,11 +155,11 @@ button {
 
 <!-- GIFT ORDERS -->
 <div id="giftOrdersPage" class="card page hidden">
-  <h3>Gift Orders</h3>
+  <h3>Gift Orders (Live)</h3>
   <div id="giftOrders"></div>
 </div>
 
-<!-- ✅ 6 BUTTON NAV -->
+<!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
@@ -163,8 +172,10 @@ button {
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore,collection,getDocs,doc,addDoc,getDoc,updateDoc,deleteDoc }
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getFirestore,collection,getDocs,doc,updateDoc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ADMIN LOCK */
 const ADMIN_EMAIL = "etee77366@gmail.com".toLowerCase();
@@ -180,15 +191,10 @@ const auth=getAuth(app);
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
- if(!user){
-  location.href="auth.html";
-  return;
- }
+ if(!user){ location.href="auth.html"; return; }
 
- const email=(user.email||"").toLowerCase();
-
- if(email!==ADMIN_EMAIL){
-  alert("Access denied: Admin only");
+ if((user.email||"").toLowerCase()!==ADMIN_EMAIL){
+  alert("Admin only");
   signOut(auth);
   return;
  }
@@ -197,7 +203,7 @@ onAuthStateChanged(auth,user=>{
  init();
 });
 
-/* NAV FIX */
+/* NAV */
 document.querySelectorAll(".nav button").forEach(btn=>{
  btn.onclick=()=>{
   document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
@@ -210,61 +216,62 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 
 /* INIT */
 function init(){
- loadUsers();
- loadCategories();
- loadProducts();
- loadGiftCategories();
- loadGiftProducts();
  loadTracking();
- loadOrders();
  loadGiftOrders();
 }
 
-/* ORDERS */
-async function loadOrders(){
- orders.innerHTML="";
- (await getDocs(collection(db,"orders"))).forEach(d=>{
-  let o=d.data();
-  orders.innerHTML+=`
-  <div class="item">
-   ${o.name} ₦${o.price}
-  </div>`;
+/* 🔥 LIVE TRACKING */
+function loadTracking(){
+ onSnapshot(collection(db,"giftOrders"),snap=>{
+  tracking.innerHTML="";
+
+  snap.forEach(d=>{
+   const g=d.data();
+
+   tracking.innerHTML+=`
+   <div class="item">
+     <div class="topRow">
+       <b>${g.productName || g.type || "Gift"}</b>
+       <span class="statusBox ${g.status||'placed'}">${g.status||'placed'}</span>
+     </div>
+
+     <div>${g.receiverName || ""}</div>
+
+     <div class="actions">
+       <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
+       <button class="btn-status" onclick="updateStatus('${d.id}','processing')">Processing</button>
+       <button class="btn-status" onclick="updateStatus('${d.id}','delivery')">Delivery</button>
+       <button class="btn-status" onclick="updateStatus('${d.id}','delivered')">Delivered</button>
+     </div>
+   </div>`;
+  });
  });
 }
 
-/* GIFT ORDERS */
-async function loadGiftOrders(){
- giftOrders.innerHTML="";
- (await getDocs(collection(db,"giftOrders"))).forEach(d=>{
-  let g=d.data();
-  giftOrders.innerHTML+=`
-  <div class="item">
-   ${g.type}
-   <div class="statusBox ${g.status||'placed'}">${g.status||'placed'}</div>
-  </div>`;
+/* 🔥 UPDATE STATUS */
+window.updateStatus = async(id,status)=>{
+ await updateDoc(doc(db,"giftOrders",id),{status});
+};
+
+/* 🔥 LIVE GIFT ORDERS PAGE */
+function loadGiftOrders(){
+ onSnapshot(collection(db,"giftOrders"),snap=>{
+  giftOrders.innerHTML="";
+
+  snap.forEach(d=>{
+   const g=d.data();
+
+   giftOrders.innerHTML+=`
+   <div class="item">
+     <div class="topRow">
+       ${g.productName || "Gift"}
+       <span class="statusBox ${g.status||'placed'}">${g.status||'placed'}</span>
+     </div>
+     <div>${g.receiverName || ""}</div>
+   </div>`;
+  });
  });
 }
-
-/* KEEP ALL YOUR OLD FUNCTIONS BELOW (UNCHANGED) */
-
-/* USERS */
-async function loadUsers(){
- users.innerHTML="";
- (await getDocs(collection(db,"users"))).forEach(d=>{
-  const u=d.data();
-  users.innerHTML+=`
-  <div class="item">
-   ${u.email} ₦${u.wallet||0}
-   <div class="actions">
-    <button class="btn-fund" onclick="fund('${d.id}')">+</button>
-    <button class="btn-deduct" onclick="deduct('${d.id}')">-</button>
-    <button class="btn-del" onclick="delUser('${d.id}')">X</button>
-   </div>
-  </div>`;
- });
-}
-
-/* KEEP REST EXACTLY SAME */
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
