@@ -72,7 +72,7 @@ button{
   <input id="rZip" placeholder="Zip / Postal Code">
   <input id="rCountry" placeholder="Country">
 
-  <!-- SIZE (ONLY IF REQUIRED) -->
+  <!-- SIZE -->
   <div id="sizeBox" style="display:none;">
     <h4>Size</h4>
     <input id="rSize" placeholder="Enter Size (e.g 42, XL, 7)">
@@ -88,7 +88,7 @@ button{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, addDoc, collection, serverTimestamp, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 /* FIREBASE */
@@ -107,16 +107,31 @@ const gift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 document.getElementById("productName").innerText = gift.name || "Gift";
 document.getElementById("price").innerText = "₦" + (gift.price || 0);
 
-/* SHOW SIZE IF REQUIRED */
+/* SIZE */
 if(gift.requiresSize){
   document.getElementById("sizeBox").style.display = "block";
 }
 
-/* PLACE ORDER */
+/* 🔥 UPDATED FUNCTION ONLY */
 window.placeOrder = async ()=>{
 
   const user = auth.currentUser;
   if(!user) return alert("Login required");
+
+  const userRef = doc(db,"users",user.uid);
+  const userSnap = await getDoc(userRef);
+
+  if(!userSnap.exists()){
+    return alert("User not found");
+  }
+
+  const userData = userSnap.data();
+  const wallet = userData.wallet || 0;
+
+  /* ❌ CHECK BALANCE */
+  if(wallet < gift.price){
+    return alert("Insufficient balance ❌");
+  }
 
   const data = {
     userId: user.uid,
@@ -148,6 +163,12 @@ window.placeOrder = async ()=>{
     return alert("Fill all required fields");
   }
 
+  /* 💸 DEDUCT WALLET */
+  await updateDoc(userRef,{
+    wallet: wallet - gift.price
+  });
+
+  /* 📦 SAVE ORDER */
   await addDoc(collection(db,"giftOrders"), data);
 
   alert("Gift sent successfully 🎁");
