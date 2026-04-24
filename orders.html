@@ -126,14 +126,15 @@ body {
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore,
   collection,
   query,
   where,
-  onSnapshot
+  onSnapshot,
+  doc,
+  deleteDoc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -264,6 +265,25 @@ function loadOrdersLive(uid){
     }
   }
 }
+
+window.deleteOrderLive = async(id)=>{
+  try{
+    await deleteDoc(doc(db,"giftOrders",id));
+  }catch(e){
+    console.error(e);
+  }
+};
+
+window.cancelOrderLive = async(id)=>{
+  try{
+    await updateDoc(doc(db,"giftOrders",id),{
+      status:"cancelled"
+    });
+  }catch(e){
+    console.error(e);
+  }
+};
+
 </script>
 
 </body>
