@@ -416,18 +416,35 @@ window.delGProd=async(id)=>{
 
 /* LIVE TRACKING */
 function loadTracking(){
- onSnapshot(collection(db,"giftOrders"),snap=>{
+ onSnapshot(collection(db,"giftOrders"),async snap=>{
   tracking.innerHTML="";
 
-  snap.forEach(d=>{
+  for(const d of snap.docs){
    const g=d.data();
+
+   let userEmail = "Unknown";
+
+   try{
+     const userSnap = await getDoc(doc(db,"users",g.userId));
+     if(userSnap.exists()){
+       userEmail = userSnap.data().email || "No email";
+     }
+   }catch(e){}
 
    tracking.innerHTML+=`
    <div class="item">
      <div class="topRow">
-       ${g.productName || "Gift"}
+       ${g.type || "Gift"} - ₦${g.price || 0}
        <span class="statusBox ${g.status||'placed'}">${g.status||'placed'}</span>
      </div>
+
+     <div>👤 ${userEmail}</div>
+
+     <div>📦 Receiver: ${g.receiver?.name || "-"}</div>
+     <div>📞 ${g.receiver?.phone || "-"}</div>
+     <div>🏠 ${g.receiver?.house || ""} ${g.receiver?.street || ""}</div>
+     <div>🌍 ${g.receiver?.city || ""}, ${g.receiver?.state || ""}, ${g.receiver?.country || ""}</div>
+     ${g.receiver?.size ? `<div>📏 Size: ${g.receiver.size}</div>` : ""}
 
      <div class="actions">
        <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
@@ -436,7 +453,7 @@ function loadTracking(){
        <button class="btn-status" onclick="updateStatus('${d.id}','delivered')">Delivered</button>
      </div>
    </div>`;
-  });
+  }
  });
 }
 
