@@ -58,6 +58,16 @@ body{
   font-weight:bold;
   margin-top:5px;
 }
+
+/* 🔥 SMALL TAG FOR SIZE ITEMS */
+.tag{
+  background:#1877f2;
+  padding:3px 6px;
+  border-radius:6px;
+  font-size:10px;
+  display:inline-block;
+  margin-top:4px;
+}
 </style>
 </head>
 
@@ -115,7 +125,7 @@ async function loadProducts(){
       const p = docSnap.data();
 
       /* ✅ MATCH CATEGORY */
-      if(p.category !== selectedGift.name) return;
+      if((p.category || "").toLowerCase() !== selectedGift.name.toLowerCase()) return;
 
       found = true;
 
@@ -126,16 +136,18 @@ async function loadProducts(){
         <img src="${p.image || 'fallback.png'}" onerror="this.src='fallback.png'">
         <h4>${p.name}</h4>
         <div class="price">₦${p.price}</div>
+        ${p.requiresSize ? `<div class="tag">Size Required</div>` : ""}
       `;
 
       div.onclick = ()=>{
 
-        /* ✅ SAVE FULL PRODUCT */
+        /* ✅ SAVE FULL PRODUCT (INCLUDING SIZE FLAG) */
         const productData = {
           id: docSnap.id,
           name: p.name,
           price: p.price,
           image: p.image || "",
+          category: p.category,
           requiresSize: p.requiresSize || false
         };
 
