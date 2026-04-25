@@ -419,7 +419,9 @@ function loadTracking(){
  onSnapshot(collection(db,"giftOrders"),async snap=>{
   tracking.innerHTML="";
 
-  for(const d of snap.docs){
+  const sorted = snap.docs.sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
+
+  for(const d of sorted){
    const g=d.data();
 
    let userEmail = "Unknown";
@@ -435,7 +437,9 @@ function loadTracking(){
    <div class="item">
      <div class="topRow">
        ${g.type || "Gift"} - ₦${g.price || 0}
-       <span class="statusBox ${g.status||'placed'}">${g.status||'placed'}</span>
+      <span class="statusBox ${g.status||'placed'}">
+  ${g.status||'placed'} ${!g.status || g.status==="placed" ? "🆕 NEW" : ""}
+     </span>
      </div>
 
      <div>👤 ${userEmail}</div>
