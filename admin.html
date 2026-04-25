@@ -465,6 +465,20 @@ window.updateStatus=async(id,status)=>{
  await updateDoc(doc(db,"giftOrders",id),{status});
 };
 
+/* 🔥 DELETE ORDER */
+window.deleteOrder = async(id)=>{
+  if(confirm("Delete this order?")){
+    await deleteDoc(doc(db,"giftOrders",id));
+  }
+};
+
+/* 🔥 CANCEL ORDER (LIVE FOR USER) */
+window.cancelOrder = async(id)=>{
+  await updateDoc(doc(db,"giftOrders",id),{
+    status: "cancelled"
+  });
+};
+
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 
