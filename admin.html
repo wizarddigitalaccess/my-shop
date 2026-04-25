@@ -150,7 +150,30 @@ button {
 
   <input id="gImage" placeholder="Image URL (paste link)">
   <label style="display:flex;gap:8px;margin-top:8px;">
-  <input type="checkbox" id="gSizeToggle">
+  <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+  <span>Requires Size</span>
+  <label style="position:relative; display:inline-block; width:40px; height:20px;">
+    <input type="checkbox" id="gRequiresSize" style="opacity:0; width:0; height:0;">
+    <span style="
+      position:absolute;
+      cursor:pointer;
+      top:0; left:0; right:0; bottom:0;
+      background:#555;
+      border-radius:20px;
+      transition:.3s;
+    "></span>
+    <span style="
+      position:absolute;
+      height:16px;
+      width:16px;
+      left:2px;
+      bottom:2px;
+      background:white;
+      border-radius:50%;
+      transition:.3s;
+    " id="toggleCircle"></span>
+  </label>
+</div>
   Requires Size
 </label>
 </div>
