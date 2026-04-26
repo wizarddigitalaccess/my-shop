@@ -105,7 +105,8 @@ const storage = getStorage(app); // only needed in admin/gift upload pages
 
 const grid = document.getElementById("giftGrid");
 
-let currentCategory = null;
+let categoryListener = null;
+let productListener = null;
 
 /* BACK BUTTON */
 window.goBack = function(){
@@ -118,7 +119,10 @@ window.goBack = function(){
 
 /* IMAGE SAFE FUNCTION */
 function safeImage(src){
-  return src && src.trim() !== "" ? src : "fallback.png";
+  if(!src || src.trim() === ""){
+    return "fallback.png";
+  }
+  return src;
 }
 
 /* LOAD CATEGORIES */
@@ -131,7 +135,9 @@ function loadCategories(){
 
   grid.innerHTML = "Loading...";
 
-  onSnapshot(collection(db,"giftCategories"), (snap)=>{
+if(categoryListener) categoryListener(); // stop old listener
+
+categoryListener = onSnapshot(collection(db,"giftCategories"), (snap)=>{
     grid.innerHTML = "";
 
     if(snap.empty){
@@ -170,7 +176,9 @@ function loadProducts(categoryName){
 
   grid.innerHTML = "Loading...";
 
-  onSnapshot(collection(db,"giftProducts"), (snap)=>{
+  if(productListener) productListener(); // stop old listener
+
+productListener = onSnapshot(collection(db,"giftProducts"), (snap)=>{
     grid.innerHTML = "";
 
     let found = false;
