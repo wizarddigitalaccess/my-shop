@@ -120,9 +120,9 @@ button {
 </div>
 
 <!-- USERS -->
-<div id="usersPage" class="card page hidden">
-  <h3>Users</h3>
-  <div id="users"></div>
+<h3>Users</h3>
+<input id="userSearch" placeholder="Search by email...">
+<div id="users"></div>
 </div>
 
 <!-- MAIN -->
@@ -268,25 +268,30 @@ function init(){
 
 /* USERS */
 async function loadUsers(){
- users.innerHTML="";
- const snap=await getDocs(collection(db,"users"));
+  users.innerHTML="";
+  const snap=await getDocs(collection(db,"users"));
 
- snap.forEach(d=>{
-  const u=d.data();
-  users.innerHTML+=`
-  <div class="item">
-   <div class="topRow">
-    ${u.email}
-    ₦${u.wallet||0}
-   </div>
+  const search = (document.getElementById("userSearch")?.value || "").toLowerCase();
 
-   <div class="actions">
-    <button class="btn-fund" onclick="fund('${d.id}')">+ Fund</button>
-    <button class="btn-deduct" onclick="deduct('${d.id}')">- Deduct</button>
-    <button class="btn-del" onclick="delUser('${d.id}')">Delete</button>
-   </div>
-  </div>`;
- });
+  snap.forEach(d=>{
+    const u=d.data();
+
+    if(search && !u.email?.toLowerCase().includes(search)) return;
+
+    users.innerHTML+=`
+    <div class="item">
+      <div class="topRow">
+        ${u.email}
+        ₦${u.wallet||0}
+      </div>
+
+      <div class="actions">
+        <button class="btn-fund" onclick="fund('${d.id}')">+ Fund</button>
+        <button class="btn-deduct" onclick="deduct('${d.id}')">- Deduct</button>
+        <button class="btn-del" onclick="delUser('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  });
 }
 
 window.fund=async(id)=>{
@@ -641,6 +646,12 @@ function loadPayments(){
   <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
 `}
           <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+
+          window.rejectPayment = async(id)=>{
+  await updateDoc(doc(db,"transactions",id),{
+    status: "rejected"
+  });
+};
         </div>
       </div>`;
     }
