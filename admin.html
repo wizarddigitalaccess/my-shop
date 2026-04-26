@@ -156,7 +156,29 @@ button {
   <span>Requires Size</span>
 
   <label style="position:relative; width:45px; height:22px; display:inline-block;">
-    <input type="checkbox" id="gRequiresSize" style="opacity:0; width:0; height:0;">
+    <input type="checkbox" id="gRequiresSize" style="display:none;">
+</div>
+
+    <span id="toggleTrack" style="
+      position:absolute;
+      inset:0;
+      background:#555;
+      border-radius:20px;
+      transition:.3s;
+    "></span>
+
+    <span id="toggleCircle" style="
+      position:absolute;
+      width:18px;
+      height:18px;
+      left:2px;
+      top:2px;
+      background:white;
+      border-radius:50%;
+      transition:.3s;
+    "></span>
+  </label>
+</div>
 
     <!-- TRACK -->
     <span id="toggleTrack" style="
@@ -433,23 +455,7 @@ window.addGiftProduct = async()=>{
  gCategory.value="";
  gPrice.value="";
  gImage.value="";
- gSizeToggle.checked=false;
-
-const toggle = document.getElementById("gRequiresSize");
-const track = document.getElementById("toggleTrack");
-const circle = document.getElementById("toggleCircle");
-
-if(toggle){
-  toggle.addEventListener("change", ()=>{
-    if(toggle.checked){
-      track.style.background = "#1877f2";
-      circle.style.transform = "translateX(22px)";
-    }else{
-      track.style.background = "#555";
-      circle.style.transform = "translateX(0)";
-    }
-  });
-}
+ document.getElementById("gRequiresSize").checked = false;
  loadGiftProducts();
 };
 
@@ -594,7 +600,20 @@ window.cancelOrder = async(id)=>{
 };
 
 const toggle = document.getElementById("gRequiresSize");
+const track = document.getElementById("toggleTrack");
 const circle = document.getElementById("toggleCircle");
+
+if(toggle){
+  toggle.addEventListener("change", ()=>{
+    if(toggle.checked){
+      track.style.background = "#1877f2";
+      circle.style.transform = "translateX(22px)";
+    } else {
+      track.style.background = "#555";
+      circle.style.transform = "translateX(0)";
+    }
+  });
+}
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
