@@ -75,9 +75,11 @@ button {
 .nav {
   position:fixed;
   bottom:0;
+  left:0;
   width:100%;
   display:flex;
   background:#111;
+  z-index:999;
 }
 
 .nav button {
@@ -124,6 +126,8 @@ button {
   </div>
 
   <h3>Tracking (Live)</h3>
+<div id="tracking"></div>
+</div> <!-- ✅ CLOSE HOME PROPERLY -->
 
 <!-- USERS -->
 <div id="usersPage" class="card page hidden">
@@ -555,6 +559,7 @@ function loadAllOrders(){
     for(const d of list){
       const o = d.data();
 
+      const filter = document.getElementById("orderFilter")?.value || "all";
       if(filter !== "all" && o.status !== filter) continue;
       totalSales += o.price || 0;
       totalUsers.add(o.userId);
@@ -665,10 +670,22 @@ function loadPayments(){
       <div class="item">
         <div><b>${userEmail}</b></div>
         <div>Amount: ₦${t.amount}</div>
-        <div>
-  Status: 
-  <span style="
-    <div class="actions">
+        <div>Status: ${t.status || "pending"}</div>
+
+${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
+
+<div class="actions">
+  ${
+    t.status==="approved"
+      ? `<div style="color:#2ecc71;">✔ Approved</div>`
+      : t.status==="rejected"
+      ? `<div style="color:#e74c3c;">✖ Rejected</div>`
+      : `
+        <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+        <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+      `
+  }
+</div>
   ${
     t.status==="approved"
       ? `<div style="color:#2ecc71;">✔ Approved</div>`
