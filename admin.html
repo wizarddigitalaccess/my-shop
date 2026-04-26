@@ -425,6 +425,14 @@ window.addGiftProduct = async()=>{
  gImage.value="";
  gSizeToggle.checked=false;
 
+const toggle = document.getElementById("gRequiresSize");
+const circle = document.getElementById("toggleCircle");
+
+if(toggle){
+  toggle.addEventListener("change", ()=>{
+    circle.style.transform = toggle.checked ? "translateX(20px)" : "translateX(0)";
+  });
+}
  loadGiftProducts();
 };
 
@@ -528,6 +536,9 @@ window.cancelOrder = async(id)=>{
     status: "cancelled"
   });
 };
+
+const toggle = document.getElementById("gRequiresSize");
+const circle = document.getElementById("toggleCircle");
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
