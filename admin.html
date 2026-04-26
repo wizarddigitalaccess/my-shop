@@ -434,33 +434,46 @@ window.delGCat=async(id)=>{
 
 /* GIFT PRODUCTS */
 window.addGiftProduct = async()=>{
- if(!gName.value || !gCategory.value || !gPrice.value) return;
+  try{
+    if(!gName.value || !gCategory.value || !gPrice.value){
+      alert("Fill all fields");
+      return;
+    }
 
- let imageUrl = "";
+    let imageUrl = "";
+    const file = document.getElementById("gImage").files[0];
 
- const file = document.getElementById("gImage").files[0];
+    // OPTIONAL IMAGE (won’t break if empty)
+    if(file){
+      const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
+      await uploadBytes(storageRef, file);
+      imageUrl = await getDownloadURL(storageRef);
+    }
 
- if(file){
-   const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
-   await uploadBytes(storageRef, file);
-   imageUrl = await getDownloadURL(storageRef);
- }
+    await addDoc(collection(db,"giftProducts"),{
+      name: gName.value.trim(),
+      category: gCategory.value.trim(),
+      price: Number(gPrice.value),
+      image: imageUrl,
+      requiresSize: document.getElementById("gRequiresSize").checked,
+      createdAt: new Date()
+    });
 
- await addDoc(collection(db,"giftProducts"),{
-  name:gName.value,
-  category:gCategory.value,
-  price:Number(gPrice.value),
-  image:imageUrl,
-  requiresSize: document.getElementById("gRequiresSize")?.checked || false
- });
+    // RESET
+    gName.value="";
+    gCategory.value="";
+    gPrice.value="";
+    document.getElementById("gImage").value="";
+    document.getElementById("gRequiresSize").checked=false;
 
- gName.value="";
- gCategory.value="";
- gPrice.value="";
- document.getElementById("gImage").value="";
- document.getElementById("gRequiresSize").checked = false;
+    alert("Gift product added ✔️");
 
- loadGiftProducts();
+    loadGiftProducts();
+
+  }catch(err){
+    console.error(err);
+    alert("Error: " + err.message);
+  }
 };
 
 async function loadGiftProducts(){
@@ -604,12 +617,29 @@ function loadPayments(){
       <div class="item">
         <div><b>${userEmail}</b></div>
         <div>Amount: ₦${t.amount}</div>
-        <div>Status: ${t.status}</div>
+        <div>
+  Status: 
+  <span style="
+    color:
+    ${t.status==="approved" ? "#2ecc71" :
+      t.status==="rejected" ? "#e74c3c" :
+      "#f1c40f"}
+  ">
+    ${t.status || "pending"}
+  </span>
+</div>f
 
         ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
 
         <div class="actions">
-          <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+          ${t.status==="approved" ? `
+  <div style="color:#2ecc71;">✔ Approved</div>
+` : t.status==="rejected" ? `
+  <div style="color:#e74c3c;">✖ Rejected</div>
+` : `
+  <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+  <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+`}
           <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
         </div>
       </div>`;
