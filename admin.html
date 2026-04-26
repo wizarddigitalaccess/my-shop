@@ -143,7 +143,8 @@ button {
 <!-- GIFTS -->
 <div id="giftDashboard" class="card page hidden">
   <h3>Gift Categories</h3>
-  <input id="gCatName"><button onclick="addGiftCategory()">Add</button>
+  <input id="gCatName">
+  <button onclick="addGiftCategory()">Add</button>
   <div id="gCategories"></div>
 
   <h3>Gift Products</h3>
@@ -151,56 +152,36 @@ button {
   <input id="gCategory" placeholder="Category (must match exactly)">
   <input id="gPrice" placeholder="Price (e.g. 5000)">
   <input type="file" id="gImage" accept="image/*">
-  <label style="display:flex;gap:8px;margin-top:8px;">
+
   <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
-  <span>Requires Size</span>
+    <span>Requires Size</span>
 
-  <label style="position:relative; width:45px; height:22px; display:inline-block;">
-    <input type="checkbox" id="gRequiresSize" style="display:none;">
-</div>
+    <label style="position:relative; width:45px; height:22px;">
+      <input type="checkbox" id="gRequiresSize" style="display:none;">
 
-    <span id="toggleTrack" style="
-      position:absolute;
-      inset:0;
-      background:#555;
-      border-radius:20px;
-      transition:.3s;
-    "></span>
+      <span id="toggleTrack" style="
+        position:absolute;
+        inset:0;
+        background:#555;
+        border-radius:20px;
+        transition:.3s;
+      "></span>
 
-    <span id="toggleCircle" style="
-      position:absolute;
-      width:18px;
-      height:18px;
-      left:2px;
-      top:2px;
-      background:white;
-      border-radius:50%;
-      transition:.3s;
-    "></span>
-  </label>
-</div>
+      <span id="toggleCircle" style="
+        position:absolute;
+        width:18px;
+        height:18px;
+        left:2px;
+        top:2px;
+        background:white;
+        border-radius:50%;
+        transition:.3s;
+      "></span>
+    </label>
+  </div>
 
-    <!-- TRACK -->
-    <span id="toggleTrack" style="
-      position:absolute;
-      inset:0;
-      background:#555;
-      border-radius:20px;
-      transition:.3s;
-    "></span>
-
-    <!-- CIRCLE -->
-    <span id="toggleCircle" style="
-      position:absolute;
-      width:18px;
-      height:18px;
-      left:2px;
-      top:2px;
-      background:white;
-      border-radius:50%;
-      transition:.3s;
-    "></span>
-  </label>
+  <button onclick="addGiftProduct()">Add</button>
+  <div id="gProducts"></div>
 </div>
 
 <div id="ordersPage" class="card page hidden">
