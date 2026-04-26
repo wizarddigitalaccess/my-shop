@@ -253,9 +253,13 @@ const firebaseConfig = {
   measurementId: "G-MR76QMKXKM"
 };
 
-const db=getFirestore(app);
-const auth=getAuth(app);
-const storage = getStorage(app);
+/* 🔥 THIS LINE WAS MISSING */
+const app = initializeApp(firebaseConfig);
+
+/* THEN these */
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app); // only needed in admin/gift upload pages
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
