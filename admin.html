@@ -150,7 +150,7 @@ button {
   <input id="gName" placeholder="Product Name">
   <input id="gCategory" placeholder="Category (must match exactly)">
   <input id="gPrice" placeholder="Price (e.g. 5000)">
-  <input id="gImage" placeholder="Image URL (paste image link)">
+  <input type="file" id="gImage" accept="image/*">
   <label style="display:flex;gap:8px;margin-top:8px;">
   <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
   <span>Requires Size</span>
@@ -226,6 +226,9 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import {
+  getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 /* ADMIN LOCK */
 const ADMIN_EMAIL="etee77366@gmail.com".toLowerCase();
 
@@ -237,6 +240,7 @@ const app=initializeApp({
 
 const db=getFirestore(app);
 const auth=getAuth(app);
+const storage = getStorage(app);
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
@@ -443,19 +447,30 @@ window.delGCat=async(id)=>{
 window.addGiftProduct = async()=>{
  if(!gName.value || !gCategory.value || !gPrice.value) return;
 
+ let imageUrl = "";
+
+ const file = gImage.files[0];
+
+ if(file){
+   const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
+   await uploadBytes(storageRef, file);
+   imageUrl = await getDownloadURL(storageRef);
+ }
+
  await addDoc(collection(db,"giftProducts"),{
   name:gName.value,
   category:gCategory.value,
   price:Number(gPrice.value),
-  image:gImage.value || "",
+  image:imageUrl,
   requiresSize: document.getElementById("gRequiresSize")?.checked || false
-});;
+ });
 
  gName.value="";
  gCategory.value="";
  gPrice.value="";
  gImage.value="";
  document.getElementById("gRequiresSize").checked = false;
+
  loadGiftProducts();
 };
 
