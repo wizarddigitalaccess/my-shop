@@ -120,9 +120,10 @@ button {
 </div>
 
 <!-- USERS -->
-<h3>Users</h3>
-<input id="userSearch" placeholder="Search by email...">
-<div id="users"></div>
+<div id="usersPage" class="card page hidden">
+  <h3>Users</h3>
+  <input id="userSearch" placeholder="Search by email...">
+  <div id="users"></div>
 </div>
 
 <!-- MAIN -->
@@ -222,7 +223,8 @@ const ADMIN_EMAIL="etee77366@gmail.com".toLowerCase();
 const app=initializeApp({
  apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
  authDomain:"wizard-shop-52a50.firebaseapp.com",
- projectId:"wizard-shop-52a50"
+ projectId:"wizard-shop-52a50",
+ storageBucket:"wizard-shop-52a50.appspot.com" // ✅ ADD THIS LINE
 });
 
 const db=getFirestore(app);
@@ -241,6 +243,7 @@ onAuthStateChanged(auth,user=>{
 
  document.body.style.display="block";
  init();
+ document.getElementById("userSearch")?.addEventListener("input", loadUsers);
 });
 
 /* NAV */
@@ -521,33 +524,47 @@ window.delGProd=async(id)=>{
 };
 
 function loadAllOrders(){
-  onSnapshot(collection(db,"giftOrders"),snap=>{
+  onSnapshot(collection(db,"giftOrders"), async snap=>{
     const list = [...snap.docs].sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
 
-    let total = 0, delivered = 0, pending = 0, cancelled = 0;
+    let totalSales = 0;
+    let totalOrders = list.length;
+    let totalUsers = new Set();
+    let totalDeposits = 0;
 
     allOrders.innerHTML = "";
 
-    list.forEach(d=>{
+    for(const d of list){
       const o = d.data();
 
-      total += o.price || 0;
-      if(o.status==="delivered") delivered += o.price || 0;
-      else if(o.status==="cancelled") cancelled += o.price || 0;
-      else pending += o.price || 0;
+      totalSales += o.price || 0;
+      totalUsers.add(o.userId);
+
+      let userEmail = "Unknown";
+
+      try{
+        const u = await getDoc(doc(db,"users",o.userId));
+        if(u.exists()) userEmail = u.data().email;
+      }catch(e){}
 
       allOrders.innerHTML += `
       <div class="item">
-        ${o.productName || "Gift"} - ₦${o.price || 0}
+        <div class="topRow">
+          ${o.productName || "Gift"} - ₦${o.price || 0}
+        </div>
+
+        <div>👤 ${userEmail}</div>
+        <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
         <div>Status: ${o.status || "placed"}</div>
+
+        ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
       </div>`;
-    });
+    }
 
     allOrders.innerHTML = `
-      <div class="item">💰 Total Sales: ₦${total}</div>
-      <div class="item">✅ Successful: ₦${delivered}</div>
-      <div class="item">⏳ Pending: ₦${pending}</div>
-      <div class="item">❌ Cancelled: ₦${cancelled}</div>
+      <div class="item">💰 Total Sales: ₦${totalSales}</div>
+      <div class="item">📦 Total Orders: ${totalOrders}</div>
+      <div class="item">👥 Total Users: ${totalUsers.size}</div>
     ` + allOrders.innerHTML;
   });
 }
@@ -625,14 +642,18 @@ function loadPayments(){
         <div>
   Status: 
   <span style="
-    color:
-    ${t.status==="approved" ? "#2ecc71" :
-      t.status==="rejected" ? "#e74c3c" :
-      "#f1c40f"}
-  ">
-    ${t.status || "pending"}
-  </span>
-</div>f
+    <div class="actions">
+  ${
+    t.status==="approved"
+      ? `<div style="color:#2ecc71;">✔ Approved</div>`
+      : t.status==="rejected"
+      ? `<div style="color:#e74c3c;">✖ Rejected</div>`
+      : `
+        <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+        <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+      `
+  }
+</div>
 
         ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
 
@@ -645,18 +666,33 @@ function loadPayments(){
   <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
   <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
 `}
-          <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+          <div class="actions">
+  ${t.status==="approved" ? `
+    <div style="color:#2ecc71;">✔ Approved</div>
+  ` : t.status==="rejected" ? `
+    <div style="color:#e74c3c;">✖ Rejected</div>
+  ` : `
+    <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+    <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+  `}
+</div>
 
-          window.rejectPayment = async(id)=>{
-  await updateDoc(doc(db,"transactions",id),{
-    status: "rejected"
-  });
-};
+
         </div>
       </div>`;
     }
   });
 }
+
+window.rejectPayment = async(id)=>{
+  try{
+    await updateDoc(doc(db,"transactions",id),{
+      status: "rejected"
+    });
+  }catch(err){
+    alert(err.message);
+  }
+};
 
 window.updateStatus=async(id,status)=>{
  await updateDoc(doc(db,"giftOrders",id),{status});
