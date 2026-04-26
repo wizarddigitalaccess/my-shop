@@ -89,8 +89,33 @@ button {
 
 <div class="card">
 <h3>Fund Wallet</h3>
-<input id="amount" placeholder="Enter amount">
-<button onclick="submitPayment()">Submit</button>
+
+<button onclick="startFunding()">Fund Wallet</button>
+
+<div id="fundFlow" style="display:none; margin-top:10px;">
+
+  <!-- STEP 1 -->
+  <div id="step1">
+    <input id="amount" type="number" placeholder="Enter amount">
+    <button onclick="toStep2()">Continue</button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step2" style="display:none;">
+    <p><b>Send to:</b></p>
+    <p>Bank: Monie Point MFB</p>
+    <p>Name: Abraham Samuel</p>
+    <p>Account: 6048761014</p>
+
+    <button onclick="toStep3()">I've Sent It</button>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="step3" style="display:none;">
+    <input type="file" id="proof" accept="image/*">
+    <button id="submitBtn" onclick="submitPayment()" disabled>Submit Payment</button>
+  </div>
+
 </div>
 
 </div>
@@ -150,23 +175,80 @@ onAuthStateChanged(auth, (user)=>{
 });
 
 /* 💳 SUBMIT PAYMENT */
+let proofBase64 = "";
+
+/* STEP CONTROL */
+window.startFunding = ()=>{
+  document.getElementById("fundFlow").style.display = "block";
+};
+
+window.toStep2 = ()=>{
+  const amt = Number(document.getElementById("amount").value);
+
+  if(!amt || amt <= 0){
+    alert("Enter valid amount");
+    return;
+  }
+
+  document.getElementById("step1").style.display = "none";
+  document.getElementById("step2").style.display = "block";
+};
+
+window.toStep3 = ()=>{
+  document.getElementById("step2").style.display = "none";
+  document.getElementById("step3").style.display = "block";
+};
+
+/* PROOF UPLOAD */
+document.addEventListener("DOMContentLoaded", ()=>{
+  const proofInput = document.getElementById("proof");
+  const btn = document.getElementById("submitBtn");
+
+  proofInput.addEventListener("change", ()=>{
+    const file = proofInput.files[0];
+
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      proofBase64 = reader.result;
+      btn.disabled = false; // enable only after upload
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+/* FINAL SUBMIT */
 window.submitPayment = async ()=>{
   const user = auth.currentUser;
   const amt = Number(document.getElementById("amount").value);
 
-  if(!amt || amt <= 0) return alert("Enter valid amount");
+  if(!proofBase64){
+    alert("Upload payment proof");
+    return;
+  }
 
   try{
     await addDoc(collection(db,"transactions"),{
       uid: user.uid,
       amount: amt,
+      proof: proofBase64,
       status: "pending",
       createdAt: new Date()
     });
 
+    // reset UI
+    document.getElementById("fundFlow").style.display = "none";
+    document.getElementById("step1").style.display = "block";
+    document.getElementById("step2").style.display = "none";
+    document.getElementById("step3").style.display = "none";
     document.getElementById("amount").value = "";
+    document.getElementById("proof").value = "";
+    document.getElementById("submitBtn").disabled = true;
+    proofBase64 = "";
 
     alert("Payment submitted ✔️ Waiting for admin approval");
+
   }catch(err){
     alert(err.message);
   }
