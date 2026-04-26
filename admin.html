@@ -25,6 +25,9 @@ body { margin:0; font-family:Arial; background:#0f0f1a; color:white; display:non
   overflow-y:auto;
 }
 
+.page {
+  padding-bottom: 80px;
+}
 .hidden { display:none; }
 
 input {
@@ -126,8 +129,9 @@ button {
   </div>
 
   <h3>Tracking (Live)</h3>
-<div id="tracking"></div>
-</div> <!-- ✅ CLOSE HOME PROPERLY -->
+  <div id="tracking"></div>
+
+</div> <!-- ✅ VERY IMPORTANT -->
 
 <!-- USERS -->
 <div id="usersPage" class="card page hidden">
@@ -546,6 +550,7 @@ window.delGProd=async(id)=>{
 };
 
 function loadAllOrders(){
+  const filter = document.getElementById("orderFilter")?.value || "all";
   onSnapshot(collection(db,"giftOrders"), async snap=>{
     const list = [...snap.docs].sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
 
