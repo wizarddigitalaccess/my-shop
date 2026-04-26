@@ -253,13 +253,26 @@ const firebaseConfig = {
   measurementId: "G-MR76QMKXKM"
 };
 
-/* 🔥 THIS LINE WAS MISSING */
 const app = initializeApp(firebaseConfig);
 
-/* THEN these */
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app); // only needed in admin/gift upload pages
+const storage = getStorage(app);
+
+async function uploadToCloudinary(file){
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "YOUR_UPLOAD_PRESET"); // 🔴 replace
+  formData.append("folder", "gift-products");
+
+  const res = await fetch("https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  return data.secure_url;
+}
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
@@ -485,34 +498,15 @@ window.addGiftProduct = async () => {
     let imageUrl = "";
     const file = document.getElementById("gImage").files[0];
 
-    // OPTIONAL IMAGE UPLOAD
+    
+    // CLOUDINARY IMAGE UPLOAD
     if(file){
-      try{
-        const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
-        await uploadBytes(storageRef, file);
-        imageUrl = await getDownloadURL(storageRef);
-      }catch(e){
-        console.error("UPLOAD ERROR:", e);
-        alert("Image upload failed, product will still be added.");
-      }
-    }
-
-    async function loadGiftCategoryOptions(){
-  const select = document.getElementById("gCategory");
-  select.innerHTML = "";
-
-  const snap = await getDocs(collection(db,"giftCategories"));
-
-  snap.forEach(d=>{
-    const c = d.data();
-    if(!c.name) return;
-
-    const opt = document.createElement("option");
-    opt.value = c.name;
-    opt.textContent = c.name;
-
-    select.appendChild(opt);
-  });
+  try{
+    imageUrl = await uploadToCloudinary(file);
+  }catch(e){
+    console.error("UPLOAD ERROR:", e);
+    alert("Image upload failed");
+  }
 }
 
     // SAVE PRODUCT
