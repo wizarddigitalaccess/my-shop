@@ -115,9 +115,15 @@ button {
 
 <!-- HOME -->
 <div id="home" class="card page">
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+    <div class="card" id="cardUsers">Users: 0</div>
+    <div class="card" id="cardSales">Sales: ₦0</div>
+    <div class="card" id="cardDeposits">Deposits: ₦0</div>
+    <div class="card" id="cardOrders">Orders: 0</div>
+  </div>
+
   <h3>Tracking (Live)</h3>
-  <div id="tracking"></div>
-</div>
 
 <!-- USERS -->
 <div id="usersPage" class="card page hidden">
@@ -187,6 +193,15 @@ button {
 
 <div id="ordersPage" class="card page hidden">
   <h3>All Orders</h3>
+
+  <select id="orderFilter" onchange="loadAllOrders()" style="margin-bottom:10px;">
+    <option value="all">All</option>
+    <option value="placed">Placed</option>
+    <option value="processing">Processing</option>
+    <option value="delivery">Delivery</option>
+    <option value="delivered">Delivered</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
   <div id="allOrders"></div>
 </div>
 
@@ -211,7 +226,7 @@ import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/fire
 import { 
   getFirestore,collection,getDocs,doc,
   updateDoc,deleteDoc,addDoc,getDoc,
-  onSnapshot
+  onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import {
@@ -259,6 +274,7 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 
 /* INIT */
 function init(){
+ loadDashboard();
  loadUsers();
  loadCategories();
  loadProducts();
@@ -275,6 +291,8 @@ async function loadUsers(){
   const snap=await getDocs(collection(db,"users"));
 
   const search = (document.getElementById("userSearch")?.value || "").toLowerCase();
+
+  const filter = document.getElementById("orderFilter")?.value || "all";
 
   snap.forEach(d=>{
     const u=d.data();
@@ -464,7 +482,7 @@ window.addGiftProduct = async()=>{
       price: Number(gPrice.value),
       image: imageUrl,
       requiresSize: document.getElementById("gRequiresSize").checked,
-      createdAt: new Date()
+      createdAt: serverTimestamp()
     });
 
     // RESET
@@ -537,6 +555,7 @@ function loadAllOrders(){
     for(const d of list){
       const o = d.data();
 
+      if(filter !== "all" && o.status !== filter) continue;
       totalSales += o.price || 0;
       totalUsers.add(o.userId);
 
@@ -555,7 +574,9 @@ function loadAllOrders(){
 
         <div>👤 ${userEmail}</div>
         <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
-        <div>Status: ${o.status || "placed"}</div>
+        <div class="statusBox ${o.status || 'placed'}">
+  ${o.status || 'placed'}
+</div>
 
         ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
       </div>`;
@@ -571,7 +592,12 @@ function loadAllOrders(){
 
 /* LIVE TRACKING */
 function loadTracking(){
+  let lastCount = 0;
  onSnapshot(collection(db,"giftOrders"),async snap=>{
+  if(snap.size > lastCount){
+  alert("🚨 New Order Received!");
+}
+lastCount = snap.size;
   tracking.innerHTML="";
 
   const sorted = snap.docs.sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
@@ -750,6 +776,27 @@ if(toggle){
       circle.style.transform = "translateX(0)";
     }
   });
+}
+
+async function loadDashboard(){
+  const usersSnap = await getDocs(collection(db,"users"));
+  cardUsers.innerText = "Users: " + usersSnap.size;
+
+  const ordersSnap = await getDocs(collection(db,"giftOrders"));
+  let sales = 0;
+  ordersSnap.forEach(d=> sales += d.data().price || 0);
+  cardSales.innerText = "Sales: ₦" + sales;
+
+  const transSnap = await getDocs(collection(db,"transactions"));
+  let deposits = 0;
+  transSnap.forEach(d=>{
+    if(d.data().status==="approved"){
+      deposits += d.data().amount || 0;
+    }
+  });
+  cardDeposits.innerText = "Deposits: ₦" + deposits;
+
+  cardOrders.innerText = "Orders: " + ordersSnap.size;
 }
 
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
