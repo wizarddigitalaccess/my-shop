@@ -100,7 +100,13 @@ const firebaseConfig = {
   measurementId: "G-MR76QMKXKM"
 };
 
+/* 🔥 THIS LINE WAS MISSING */
+const app = initializeApp(firebaseConfig);
+
+/* THEN these */
+const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app); // only needed in admin/gift upload pages
 
 /* GET SELECTED CATEGORY */
 const selectedGift = JSON.parse(localStorage.getItem("selectedGift") || "{}");

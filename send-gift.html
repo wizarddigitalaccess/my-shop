@@ -102,8 +102,12 @@ const firebaseConfig = {
   measurementId: "G-MR76QMKXKM"
 };
 
-const db = getFirestore(app);
+/* 🔥 THIS LINE WAS MISSING */
+const app = initializeApp(firebaseConfig);
+
+/* THEN these */
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 /* GET PRODUCT */
 const gift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
