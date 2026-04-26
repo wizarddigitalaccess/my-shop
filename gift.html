@@ -122,16 +122,16 @@ function safeImage(src){
 }
 
 /* LOAD CATEGORIES */
-async function loadCategories(){
+import { onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+function loadCategories(){
   currentCategory = null;
   document.getElementById("pageTitle").innerText = "Send Gift";
   document.getElementById("subTitle").innerText = "Choose a gift category";
 
   grid.innerHTML = "Loading...";
 
-  try{
-    const snap = await getDocs(collection(db,"giftCategories"));
-
+  onSnapshot(collection(db,"giftCategories"), (snap)=>{
     grid.innerHTML = "";
 
     if(snap.empty){
@@ -148,8 +148,7 @@ async function loadCategories(){
       div.className = "gift-card";
 
       div.innerHTML = `
-        <img src="${safeImage(g.image)}"
-        onerror="this.src='fallback.png'">
+        <img src="${safeImage(g.image)}" onerror="this.src='fallback.png'">
         <div>${g.name}</div>
       `;
 
@@ -159,15 +158,11 @@ async function loadCategories(){
 
       grid.appendChild(div);
     });
-
-  }catch(err){
-    console.error(err);
-    grid.innerHTML = "Failed to load categories";
-  }
+  });
 }
 
 /* LOAD PRODUCTS */
-async function loadProducts(categoryName){
+function loadProducts(categoryName){
   currentCategory = categoryName;
 
   document.getElementById("pageTitle").innerText = categoryName;
@@ -175,9 +170,7 @@ async function loadProducts(categoryName){
 
   grid.innerHTML = "Loading...";
 
-  try{
-    const snap = await getDocs(collection(db,"giftProducts"));
-
+  onSnapshot(collection(db,"giftProducts"), (snap)=>{
     grid.innerHTML = "";
 
     let found = false;
@@ -187,7 +180,7 @@ async function loadProducts(categoryName){
 
       if(!p.name) return;
 
-      if((p.category || "").toLowerCase() === categoryName.toLowerCase()){
+      if((p.category || "").toLowerCase().trim() === categoryName.toLowerCase().trim()){
 
         found = true;
 
@@ -195,8 +188,7 @@ async function loadProducts(categoryName){
         div.className = "gift-card";
 
         div.innerHTML = `
-          <img src="${safeImage(p.image)}"
-          onerror="this.src='fallback.png'">
+          <img src="${safeImage(p.image)}" onerror="this.src='fallback.png'">
           <div>${p.name}</div>
           <small>₦${p.price}</small>
         `;
@@ -222,11 +214,7 @@ async function loadProducts(categoryName){
     if(!found){
       grid.innerHTML = "No products in this category";
     }
-
-  }catch(err){
-    console.error(err);
-    grid.innerHTML = "Failed to load products";
-  }
+  });
 }
 
 /* INIT */
