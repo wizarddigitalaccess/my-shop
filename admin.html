@@ -189,6 +189,11 @@ button {
   <div id="allOrders"></div>
 </div>
 
+<div id="paymentsPage" class="card page hidden">
+  <h3>Wallet Payments</h3>
+  <div id="payments"></div>
+</div>
+
 <!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
@@ -196,6 +201,7 @@ button {
   <button data-page="categoriesPage">Main</button>
   <button data-page="giftDashboard">Gifts</button>
   <button data-page="ordersPage">Orders</button>
+  <button data-page="paymentsPage">Payments</button>
 </div>
 
 <script type="module">
@@ -257,6 +263,7 @@ function init(){
  loadGiftProducts();
  loadTracking();
  loadAllOrders();
+ loadPayments();
 }
 
 /* USERS */
@@ -306,6 +313,7 @@ window.delUser=async(id)=>{
   loadUsers();
  }
 };
+
 
 /* MAIN CATEGORIES */
 window.addCategory=async()=>{
@@ -430,7 +438,7 @@ window.addGiftProduct = async()=>{
 
  let imageUrl = "";
 
- const file = gImage.files[0];
+ const file = document.getElementById("gImage").files[0];
 
  if(file){
    const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
@@ -449,7 +457,7 @@ window.addGiftProduct = async()=>{
  gName.value="";
  gCategory.value="";
  gPrice.value="";
- gImage.value="";
+ document.getElementById("gImage").value="";
  document.getElementById("gRequiresSize").checked = false;
 
  loadGiftProducts();
@@ -577,6 +585,38 @@ function loadTracking(){
  });
 }
 
+function loadPayments(){
+  onSnapshot(collection(db,"transactions"), async snap=>{
+    payments.innerHTML = "";
+
+    const list = snap.docs.sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
+
+    for(const d of list){
+      const t = d.data();
+
+      let userEmail = "Unknown";
+      try{
+        const u = await getDoc(doc(db,"users",t.uid));
+        if(u.exists()) userEmail = u.data().email;
+      }catch(e){}
+
+      payments.innerHTML += `
+      <div class="item">
+        <div><b>${userEmail}</b></div>
+        <div>Amount: ₦${t.amount}</div>
+        <div>Status: ${t.status}</div>
+
+        ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
+
+        <div class="actions">
+          <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+          <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+        </div>
+      </div>`;
+    }
+  });
+}
+
 window.updateStatus=async(id,status)=>{
  await updateDoc(doc(db,"giftOrders",id),{status});
 };
@@ -593,6 +633,30 @@ window.cancelOrder = async(id)=>{
   await updateDoc(doc(db,"giftOrders",id),{
     status: "cancelled"
   });
+};
+
+window.approvePayment = async(id, uid, amount)=>{
+  try{
+    const userRef = doc(db,"users",uid);
+    const userSnap = await getDoc(userRef);
+
+    if(!userSnap.exists()) return;
+
+    const current = userSnap.data().wallet || 0;
+
+    // add money
+    await updateDoc(userRef,{
+      wallet: current + Number(amount)
+    });
+
+    // update transaction
+    await updateDoc(doc(db,"transactions",id),{
+      status: "approved"
+    });
+
+  }catch(err){
+    alert(err.message);
+  }
 };
 
 const toggle = document.getElementById("gRequiresSize");
