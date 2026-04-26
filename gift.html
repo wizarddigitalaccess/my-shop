@@ -128,7 +128,6 @@ async function loadCategories(){
   document.getElementById("subTitle").innerText = "Choose a gift category";
 
   grid.innerHTML = "Loading...";
-  const grid = document.getElementById("giftGrid");
 
   try{
     const snap = await getDocs(collection(db,"giftCategories"));
