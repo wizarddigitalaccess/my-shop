@@ -164,7 +164,7 @@ button {
 
   <h3>Gift Products</h3>
   <input id="gName" placeholder="Product Name">
-  <input id="gCategory" placeholder="Category (must match exactly)">
+  <select id="gCategory"></select>
   <input id="gPrice" placeholder="Price (e.g. 5000)">
   <input type="file" id="gImage" accept="image/*">
 
@@ -295,6 +295,7 @@ function init(){
  loadProducts();
  loadGiftCategories();
  loadGiftProducts();
+ loadGiftCategoryOptions();
  loadTracking();
  loadAllOrders();
  loadPayments();
@@ -495,6 +496,24 @@ window.addGiftProduct = async () => {
         alert("Image upload failed, product will still be added.");
       }
     }
+
+    async function loadGiftCategoryOptions(){
+  const select = document.getElementById("gCategory");
+  select.innerHTML = "";
+
+  const snap = await getDocs(collection(db,"giftCategories"));
+
+  snap.forEach(d=>{
+    const c = d.data();
+    if(!c.name) return;
+
+    const opt = document.createElement("option");
+    opt.value = c.name;
+    opt.textContent = c.name;
+
+    select.appendChild(opt);
+  });
+}
 
     // SAVE PRODUCT
     await addDoc(collection(db,"giftProducts"),{
