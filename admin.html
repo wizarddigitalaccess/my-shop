@@ -20,6 +20,9 @@ body { margin:0; font-family:Arial; background:#0f0f1a; color:white; display:non
   padding:15px;
   border-radius:12px;
   margin:15px;
+
+  max-height:80vh;
+  overflow-y:auto;
 }
 
 .hidden { display:none; }
@@ -178,12 +181,18 @@ button {
 </label>
 </div>
 
+<div id="ordersPage" class="card page hidden">
+  <h3>All Orders</h3>
+  <div id="allOrders"></div>
+</div>
+
 <!-- NAV -->
 <div class="nav">
   <button data-page="home" class="active">Home</button>
   <button data-page="usersPage">Users</button>
   <button data-page="categoriesPage">Main</button>
   <button data-page="giftDashboard">Gifts</button>
+  <button data-page="ordersPage">Orders</button>
 </div>
 
 <script type="module">
@@ -240,6 +249,7 @@ function init(){
  loadGiftCategories();
  loadGiftProducts();
  loadTracking();
+ loadAllOrders();
 }
 
 /* USERS */
@@ -426,11 +436,19 @@ window.addGiftProduct = async()=>{
  gSizeToggle.checked=false;
 
 const toggle = document.getElementById("gRequiresSize");
-const circle = document.getElementById("toggleCircle");
 
 if(toggle){
+  const track = toggle.parentElement.querySelector("span"); // background
+  const circle = document.getElementById("toggleCircle");
+
   toggle.addEventListener("change", ()=>{
-    circle.style.transform = toggle.checked ? "translateX(20px)" : "translateX(0)";
+    if(toggle.checked){
+      circle.style.transform = "translateX(20px)";
+      track.style.background = "#1877f2"; // ON color
+    }else{
+      circle.style.transform = "translateX(0)";
+      track.style.background = "#555"; // OFF color
+    }
   });
 }
  loadGiftProducts();
@@ -467,6 +485,38 @@ window.delGProd=async(id)=>{
  await deleteDoc(doc(db,"giftProducts",id));
  loadGiftProducts();
 };
+
+function loadAllOrders(){
+  onSnapshot(collection(db,"giftOrders"),snap=>{
+    const list = [...snap.docs].sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
+
+    let total = 0, delivered = 0, pending = 0, cancelled = 0;
+
+    allOrders.innerHTML = "";
+
+    list.forEach(d=>{
+      const o = d.data();
+
+      total += o.price || 0;
+      if(o.status==="delivered") delivered += o.price || 0;
+      else if(o.status==="cancelled") cancelled += o.price || 0;
+      else pending += o.price || 0;
+
+      allOrders.innerHTML += `
+      <div class="item">
+        ${o.productName || "Gift"} - ₦${o.price || 0}
+        <div>Status: ${o.status || "placed"}</div>
+      </div>`;
+    });
+
+    allOrders.innerHTML = `
+      <div class="item">💰 Total Sales: ₦${total}</div>
+      <div class="item">✅ Successful: ₦${delivered}</div>
+      <div class="item">⏳ Pending: ₦${pending}</div>
+      <div class="item">❌ Cancelled: ₦${cancelled}</div>
+    ` + allOrders.innerHTML;
+  });
+}
 
 /* LIVE TRACKING */
 function loadTracking(){
