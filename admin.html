@@ -243,12 +243,15 @@ import {
 /* ADMIN LOCK */
 const ADMIN_EMAIL="etee77366@gmail.com".toLowerCase();
 
-const app=initializeApp({
- apiKey:"AIzaSyCkby_UR3E1d60RiNwzMUs3syzUqnOF2ow",
- authDomain:"wizard-shop-52a50.firebaseapp.com",
- projectId:"wizard-shop-52a50",
- storageBucket:"wizard-shop-52a50.appspot.com" // ✅ ADD THIS LINE
-});
+const firebaseConfig = {
+  apiKey: "AIzaSyBt09iUFQdxWHxqLYtMKy_YJ91fK67eMMs",
+  authDomain: "wizarddigitalaccess.firebaseapp.com",
+  projectId: "wizarddigitalaccess",
+  storageBucket: "wizarddigitalaccess.firebasestorage.app",
+  messagingSenderId: "836340307615",
+  appId: "1:836340307615:web:13a8f1eff9360d5c7e34aa",
+  measurementId: "G-MR76QMKXKM"
+};
 
 const db=getFirestore(app);
 const auth=getAuth(app);
@@ -467,8 +470,7 @@ window.delGCat=async(id)=>{
 };
 
 /* GIFT PRODUCTS */
-window.addGiftProduct = async()=>{
-  console.log("ADDING...");
+window.addGiftProduct = async () => {
   try{
     if(!gName.value || !gCategory.value || !gPrice.value){
       alert("Fill all fields");
@@ -478,13 +480,19 @@ window.addGiftProduct = async()=>{
     let imageUrl = "";
     const file = document.getElementById("gImage").files[0];
 
-    // OPTIONAL IMAGE (won’t break if empty)
+    // OPTIONAL IMAGE UPLOAD
     if(file){
-      const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
-      await uploadBytes(storageRef, file);
-      imageUrl = await getDownloadURL(storageRef);
+      try{
+        const storageRef = ref(storage, "giftProducts/" + Date.now() + "_" + file.name);
+        await uploadBytes(storageRef, file);
+        imageUrl = await getDownloadURL(storageRef);
+      }catch(e){
+        console.error("UPLOAD ERROR:", e);
+        alert("Image upload failed, product will still be added.");
+      }
     }
 
+    // SAVE PRODUCT
     await addDoc(collection(db,"giftProducts"),{
       name: gName.value.trim(),
       category: gCategory.value.trim(),
@@ -494,7 +502,7 @@ window.addGiftProduct = async()=>{
       createdAt: serverTimestamp()
     });
 
-    // RESET
+    // RESET FORM
     gName.value="";
     gCategory.value="";
     gPrice.value="";
