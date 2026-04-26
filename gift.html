@@ -75,12 +75,15 @@ body{
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
 import {
   getFirestore,
   collection,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 /* FIREBASE */
 const firebaseConfig = {
@@ -97,6 +100,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app); // only needed in admin/gift upload pages
+
+const grid = document.getElementById("giftGrid");
 
 let currentCategory = null;
 
@@ -121,6 +126,7 @@ async function loadCategories(){
   document.getElementById("subTitle").innerText = "Choose a gift category";
 
   grid.innerHTML = "Loading...";
+  const grid = document.getElementById("giftGrid");
 
   try{
     const snap = await getDocs(collection(db,"giftCategories"));
