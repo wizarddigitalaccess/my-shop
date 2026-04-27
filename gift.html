@@ -155,7 +155,18 @@ categoryListener = onSnapshot(collection(db,"giftCategories"), (snap)=>{
       div.className = "gift-card";
 
       div.innerHTML = `
-  ${g.image ? `<img src="${g.image}" onerror="this.style.display='none'">` : ""}
+  <div style="
+    height:60px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#111;
+    border-radius:10px;
+    margin-bottom:10px;
+    font-weight:bold;
+  ">
+    🎁
+  </div>
   <div>${g.name}</div>
 `;
 
