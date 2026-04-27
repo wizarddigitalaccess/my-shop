@@ -445,66 +445,70 @@ function preview(p){
 }
 
 /* BUY SYSTEM UNCHANGED */
+import { runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 async function buy(id){
   try{
-    const pRef = doc(db,"products",id);
-    const userRef = doc(db,"users",user.uid);
 
-    const pSnap = await getDoc(pRef);
-    const uSnap = await getDoc(userRef);
+    await runTransaction(db, async (transaction) => {
 
-    if(!pSnap.exists()) return alert("Product not found");
+      const pRef = doc(db,"products",id);
+      const userRef = doc(db,"users",user.uid);
 
-    const p = pSnap.data();
-    const u = uSnap.data();
+      const pSnap = await transaction.get(pRef);
+      const uSnap = await transaction.get(userRef);
 
-    // 💰 CHECK BALANCE
-    if((u.wallet || 0) < p.price){
-      alert("Insufficient balance");
-      return;
-    }
+      if(!pSnap.exists()) throw "Product not found";
 
-    // 📦 CHECK STOCK
-    if(!p.accounts || p.accounts.length === 0){
-      alert("Out of stock");
-      return;
-    }
+      const p = pSnap.data();
+      const u = uSnap.data();
 
-    // 🎯 TAKE ONE ACCOUNT
-    const account = p.accounts[0];
-    const remaining = p.accounts.slice(1);
+      // 💰 CHECK BALANCE
+      if((u.wallet || 0) < p.price){
+        throw "Insufficient balance";
+      }
 
-    // 💳 DEDUCT BALANCE
-    await updateDoc(userRef,{
-      wallet: (u.wallet || 0) - p.price
-    });
+      // 📦 CHECK STOCK
+      if(!p.accounts || p.accounts.length === 0){
+        throw "Out of stock";
+      }
 
-    // 📉 UPDATE PRODUCT STOCK
-    await updateDoc(pRef,{
-      accounts: remaining,
-      stock: remaining.length
-    });
+      // 🎯 TAKE ONE ACCOUNT SAFELY
+      const account = p.accounts[0];
+      const remaining = p.accounts.slice(1);
 
-    // 🧾 SAVE ORDER
-    await addDoc(collection(db,"orders"),{
-      userId: user.uid,
-      productId: id,
-      name: p.name,
-      price: p.price,
-      account: account, // 🔥 FULL LOGIN HERE
-      logo: p.logo,
-      createdAt: Date.now()
+      // 📉 UPDATE PRODUCT
+      transaction.update(pRef,{
+        accounts: remaining,
+        stock: remaining.length
+      });
+
+      // 💳 DEDUCT WALLET
+      transaction.update(userRef,{
+        wallet: (u.wallet || 0) - p.price
+      });
+
+      // 🧾 SAVE ORDER
+      const orderRef = doc(collection(db,"orders"));
+      transaction.set(orderRef,{
+        userId: user.uid,
+        productId: id,
+        name: p.name,
+        price: p.price,
+        account: account,
+        logo: p.logo,
+        createdAt: Date.now()
+      });
+
     });
 
     alert("✅ Purchase successful");
     location.href="orders.html";
 
   }catch(e){
-    console.error(e);
-    alert("Purchase failed");
+    alert(e);
   }
 }
-
 window.openMenu = () => {
   document.getElementById("sideMenu").style.right = "0";
   document.getElementById("menuOverlay").style.display = "block";
