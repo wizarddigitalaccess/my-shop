@@ -396,36 +396,39 @@ p.logo = p.logo || matchedLogo || "fallback.png";
 searchInput.addEventListener("input", loadProducts);
 
 function loadProducts(){
-  const search=searchInput.value.toLowerCase();
-  productsDiv.innerHTML="";
+  const search = searchInput.value.toLowerCase();
+  productsDiv.innerHTML = "";
 
-  allProducts.forEach(p=>{
-    if(currentCategory!=="all" && (p.category||"").toLowerCase() !== currentCategory.toLowerCase()) return;
+  allProducts.forEach(p => {
+    if(currentCategory !== "all" && (p.category || "").toLowerCase() !== currentCategory.toLowerCase()) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
-    const card=document.createElement("div");
-    card.className="card";
+    const card = document.createElement("div");
+    card.className = "card";
 
-    card.innerHTML=`
+    card.innerHTML = `
       <div class="card-top">
         <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
         <h4>${p.name}</h4>
         <div class="price">₦${p.price}</div>
+        <div style="font-size:11px;color:gray;">
+          ${(p.stock || 0) > 0 ? "Available" : "Out of stock"}
+        </div>
       </div>
     `;
 
-    const row=document.createElement("div");
-    row.className="row";
+    const row = document.createElement("div");
+    row.className = "row";
 
-    const previewBtn=document.createElement("button");
-    previewBtn.textContent="Preview";
-    previewBtn.onclick=()=>preview(p);
+    const previewBtn = document.createElement("button");
+    previewBtn.textContent = "Preview";
+    previewBtn.onclick = () => preview(p);
 
-    const buyBtn=document.createElement("button");
-    buyBtn.textContent="Buy";
-    buyBtn.onclick=()=>buy(p.id);
+    const buyBtn = document.createElement("button");
+    buyBtn.textContent = "Buy";
+    buyBtn.onclick = () => buy(p.id);
 
-    row.append(previewBtn,buyBtn);
+    row.append(previewBtn, buyBtn);
     card.appendChild(row);
 
     productsDiv.appendChild(card);
@@ -434,8 +437,8 @@ function loadProducts(){
 
 /* PREVIEW */
 function preview(p){
-  if(p.previewLink){
-    window.open(p.previewLink, "_blank");
+  if(p.preview){
+    window.open(p.preview, "_blank");
   }else{
     alert("No preview available");
   }
@@ -444,59 +447,53 @@ function preview(p){
 /* BUY SYSTEM UNCHANGED */
 async function buy(id){
   try{
-    const pDoc = await getDoc(doc(db,"products",id));
-    if(!pDoc.exists()){
-      alert("Product not found");
-      return;
-    }
-
-    const p = pDoc.data();
-
+    const pRef = doc(db,"products",id);
     const userRef = doc(db,"users",user.uid);
+
+    const pSnap = await getDoc(pRef);
     const uSnap = await getDoc(userRef);
+
+    if(!pSnap.exists()) return alert("Product not found");
+
+    const p = pSnap.data();
     const u = uSnap.data();
 
-    if((u.wallet||0) < p.price){
+    // 💰 CHECK BALANCE
+    if((u.wallet || 0) < p.price){
       alert("Insufficient balance");
       return;
     }
 
-    const stockSnap = await getDocs(collection(db,"stock"));
-
-    let found = null;
-    let stockId = null;
-
-    stockSnap.forEach(d=>{
-      const s = d.data();
-      if(!s.used && s.productId === id && !found){
-        found = s;
-        stockId = d.id;
-      }
-    });
-
-    if(!found){
+    // 📦 CHECK STOCK
+    if(!p.accounts || p.accounts.length === 0){
       alert("Out of stock");
       return;
     }
 
+    // 🎯 TAKE ONE ACCOUNT
+    const account = p.accounts[0];
+    const remaining = p.accounts.slice(1);
+
+    // 💳 DEDUCT BALANCE
     await updateDoc(userRef,{
-      wallet: (u.wallet||0) - p.price
+      wallet: (u.wallet || 0) - p.price
     });
 
-    await updateDoc(doc(db,"stock",stockId),{
-      used:true
+    // 📉 UPDATE PRODUCT STOCK
+    await updateDoc(pRef,{
+      accounts: remaining,
+      stock: remaining.length
     });
 
+    // 🧾 SAVE ORDER
     await addDoc(collection(db,"orders"),{
-      userId:user.uid,
-      productId:id,
-      name:p.name,
-      price:p.price,
-      email:found.email,
-      password:found.password,
-      extra:found.extra || "",
-      logo:p.logo,
-      createdAt:Date.now()
+      userId: user.uid,
+      productId: id,
+      name: p.name,
+      price: p.price,
+      account: account, // 🔥 FULL LOGIN HERE
+      logo: p.logo,
+      createdAt: Date.now()
     });
 
     alert("✅ Purchase successful");
