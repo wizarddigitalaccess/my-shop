@@ -282,18 +282,39 @@ async function uploadToCloudinary(file){
 }
 
 /* AUTH */
-onAuthStateChanged(auth,user=>{
- if(!user){ location.href="auth.html"; return; }
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){
+    location.href="auth.html";
+    return;
+  }
 
- if((user.email||"").toLowerCase()!==ADMIN_EMAIL){
-  alert("Admin only");
-  signOut(auth);
-  return;
- }
+  try{
+    const ref = doc(db,"users",user.uid);
+    const snap = await getDoc(ref);
 
- document.body.style.display="block";
- init();
- document.getElementById("userSearch")?.addEventListener("input", loadUsers);
+    if(!snap.exists()){
+      alert("Access denied");
+      signOut(auth);
+      return;
+    }
+
+    const data = snap.data();
+
+    if(data.role !== "admin"){
+      alert("Admin only");
+      signOut(auth);
+      return;
+    }
+
+    document.body.style.display="block";
+    init();
+
+    document.getElementById("userSearch")?.addEventListener("input", loadUsers);
+
+  }catch(e){
+    alert("Access error");
+    signOut(auth);
+  }
 });
 
 /* NAV */
