@@ -352,8 +352,43 @@ async function loadProductsData(){
     if(!p.name) return;
 
     p.id=d.id;
-    p.logo = p.logo || "fallback.png";
+    const logoMap = {
+  "facebook": "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
+  "telegram": "https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg",
+  "whatsapp": "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg",
+  "gmail": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png",
+  "instagram": "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+};
 
+const name = (p.name || "").toLowerCase();
+
+let matchedLogo = "";
+
+/* STEP 1: CHECK MAP */
+for (let key in logoMap) {
+  if (name.includes(key)) {
+    matchedLogo = logoMap[key];
+    break;
+  }
+}
+
+/* STEP 2: AUTO BRAND LOGO (IMPORTANT) */
+if (!matchedLogo) {
+  const words = name.replace(/[^a-z0-9 ]/g, "").split(" ");
+
+let domain = words.find(w =>
+  ["facebook","telegram","whatsapp","gmail","instagram","twitter","netflix","amazon"].includes(w)
+);
+
+if (!domain) {
+  domain = words[0]; // fallback
+}
+
+matchedLogo = `https://logo.clearbit.com/${domain}.com`;
+}
+
+/* STEP 3: FINAL FALLBACK */
+p.logo = p.logo || matchedLogo || "fallback.png";
     allProducts.push(p);
   });
 }
