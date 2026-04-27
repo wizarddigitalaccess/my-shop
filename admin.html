@@ -318,21 +318,27 @@ onAuthStateChanged(auth, async (user)=>{
 
   try{
     const ref = doc(db,"users",user.uid);
-    const snap = await getDoc(ref);
+const snap = await getDoc(ref);
 
-    if(!snap.exists()){
-      alert("Access denied");
-      signOut(auth);
-      return;
-    }
+if(!snap.exists()){
+  alert("Access denied");
+  await signOut(auth);
+  location.href = "auth.html";
+  return;
+}
 
-    const data = snap.data();
+const data = snap.data();
 
-    if(data.role !== "admin" || user.email.toLowerCase() !== ADMIN_EMAIL){
-      alert("Admin only");
-      signOut(auth);
-      return;
-    }
+// 🔒 STRICT ADMIN CHECK
+const isAdminEmail = user.email && user.email.toLowerCase() === ADMIN_EMAIL;
+const isAdminRole = data.role === "admin";
+
+if(!isAdminEmail || !isAdminRole){
+  alert("Access denied: Admin only");
+  await signOut(auth);
+  location.href = "auth.html";
+  return;
+}
 
     document.body.style.display="block";
     init();
@@ -357,17 +363,26 @@ document.querySelectorAll(".nav button").forEach(btn=>{
 });
 
 /* INIT */
+let unsubscribers = [];
+
+function clearListeners(){
+  unsubscribers.forEach(unsub => unsub());
+  unsubscribers = [];
+}
+
 function init(){
- loadDashboard();
- loadUsers();
- loadCategories();
- loadProducts();
- loadGiftCategories();
- loadGiftProducts();
- loadGiftCategoryOptions();
- loadTracking();
- loadAllOrders();
- loadPayments();
+  clearListeners(); // ✅ prevent duplicate listeners
+
+  loadDashboardLive(); // 🔥 upgraded (real-time)
+  loadUsers();
+  loadCategories();
+  loadProducts();
+  loadGiftCategories();
+  loadGiftProducts();
+  loadGiftCategoryOptions();
+  loadTracking();
+  loadAllOrders();
+  loadPayments();
 }
 
 /* USERS */
@@ -376,8 +391,6 @@ async function loadUsers(){
   const snap=await getDocs(collection(db,"users"));
 
   const search = (document.getElementById("userSearch")?.value || "").toLowerCase();
-
-  const filter = document.getElementById("orderFilter")?.value || "all";
 
   snap.forEach(d=>{
     const u=d.data();
@@ -700,14 +713,16 @@ window.delGProd=async(id)=>{
 };
 
 function loadAllOrders(){
-  const filter = document.getElementById("orderFilter")?.value || "all";
-  onSnapshot(collection(db,"giftOrders"), async snap=>{
-    const list = [...snap.docs].sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
+
+  const unsub = onSnapshot(collection(db,"giftOrders"), async snap=>{
+
+    const list = [...snap.docs].sort((a,b)=>
+      (b.data().createdAt || 0) - (a.data().createdAt || 0)
+    );
 
     let totalSales = 0;
     let totalOrders = list.length;
     let totalUsers = new Set();
-    let totalDeposits = 0;
 
     allOrders.innerHTML = "";
 
@@ -716,6 +731,7 @@ function loadAllOrders(){
 
       const filter = document.getElementById("orderFilter")?.value || "all";
       if(filter !== "all" && o.status !== filter) continue;
+
       totalSales += o.price || 0;
       totalUsers.add(o.userId);
 
@@ -734,28 +750,21 @@ function loadAllOrders(){
 
         <div>👤 ${userEmail}</div>
         <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
+
         <div class="statusBox ${o.status || 'placed'}">
-  ${o.status || 'placed'} 
-  ${!o.status || o.status === "placed" ? "🆕 NEW" : ""}
-</div>
+          ${o.status || 'placed'} 
+          ${!o.status || o.status === "placed" ? "🆕 NEW" : ""}
+        </div>
 
-<div>🧾 Sender: ${o.senders?.name || "-"}</div>
+        <div>🧾 Sender: ${o.senders?.name || "-"}</div>
 
-${o.senders?.location ? `
-  <div>📍 From: ${o.senders.location}</div>
-` : ""}
+        ${o.senders?.location ? `<div>📍 From: ${o.senders.location}</div>` : ""}
 
-${o.note ? `
-  <div style="
-    margin-top:6px;
-    padding:6px;
-    background:#111;
-    border-radius:6px;
-    font-size:12px;
-  ">
-    📝 ${o.note}
-  </div>
-` : ""}
+        ${o.note ? `
+          <div style="margin-top:6px;padding:6px;background:#111;border-radius:6px;font-size:12px;">
+            📝 ${o.note}
+          </div>
+        ` : ""}
 
         ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
       </div>`;
@@ -766,7 +775,11 @@ ${o.note ? `
       <div class="item">📦 Total Orders: ${totalOrders}</div>
       <div class="item">👥 Total Users: ${totalUsers.size}</div>
     ` + allOrders.innerHTML;
+
   });
+
+  // ✅ VERY IMPORTANT (prevents duplicate listeners)
+  unsubscribers.push(unsub);
 }
 
 /* LIVE TRACKING */
@@ -774,7 +787,7 @@ function loadTracking(){
   let lastCount = 0;
   let firstLoad = true;
 
-  onSnapshot(collection(db,"giftOrders"), async snap => {
+  const unsub = onSnapshot(collection(db,"giftOrders"), async snap => {
 
     // 🔇 Prevent sound on first load
     if(firstLoad){
@@ -859,46 +872,59 @@ function loadTracking(){
       </div>`;
     }
   });
+
+  // ✅ FIX: store listener OUTSIDE callback
+  unsubscribers.push(unsub);
 }
 
 function loadPayments(){
-  onSnapshot(collection(db,"transactions"), async snap=>{
+
+  const unsub = onSnapshot(collection(db,"transactions"), async snap=>{
+
     payments.innerHTML = "";
 
-    const list = snap.docs.sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
+    const list = [...snap.docs].sort((a,b)=>{
+      const A = a.data().createdAt?.toMillis ? a.data().createdAt.toMillis() : 0;
+      const B = b.data().createdAt?.toMillis ? b.data().createdAt.toMillis() : 0;
+      return B - A;
+    });
 
     for(const d of list){
       const t = d.data();
 
       let userEmail = "Unknown";
+
       try{
         const u = await getDoc(doc(db,"users",t.uid));
         if(u.exists()) userEmail = u.data().email;
       }catch(e){}
 
       payments.innerHTML += `
-<div class="item">
-  <div><b>${userEmail}</b></div>
-  <div>Amount: ₦${t.amount}</div>
-  <div>Status: ${t.status || "pending"}</div>
+      <div class="item">
+        <div><b>${userEmail}</b></div>
+        <div>Amount: ₦${t.amount}</div>
+        <div>Status: ${t.status || "pending"}</div>
 
-  ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
+        ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
 
-  <div class="actions">
-    ${
-      t.status==="approved"
-        ? `<div style="color:#2ecc71;">✔ Approved</div>`
-        : t.status==="rejected"
-        ? `<div style="color:#e74c3c;">✖ Rejected</div>`
-        : `
-          <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
-          <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
-        `
+        <div class="actions">
+          ${
+            t.status==="approved"
+              ? `<div style="color:#2ecc71;">✔ Approved</div>`
+              : t.status==="rejected"
+              ? `<div style="color:#e74c3c;">✖ Rejected</div>`
+              : `
+                <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+                <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+              `
+          }
+        </div>
+      </div>`;
     }
-  </div>
-</div>`;
-}
+
   });
+
+  unsubscribers.push(unsub);
 }
 
 window.rejectPayment = async(id)=>{
@@ -975,27 +1001,41 @@ if(toggle){
   });
 }
 
-async function loadDashboard(){
-  const usersSnap = await getDocs(collection(db,"users"));
-  cardUsers.innerText = "Users: " + usersSnap.size;
+function loadDashboardLive(){
 
-  const ordersSnap = await getDocs(collection(db,"giftOrders"));
-  let sales = 0;
-  ordersSnap.forEach(d=> sales += d.data().price || 0);
-  cardSales.innerText = "Sales: ₦" + sales;
-
-  const transSnap = await getDocs(collection(db,"transactions"));
-  let deposits = 0;
-  transSnap.forEach(d=>{
-    if(d.data().status==="approved"){
-      deposits += d.data().amount || 0;
-    }
+  // USERS
+  const unsubUsers = onSnapshot(collection(db,"users"), snap=>{
+    cardUsers.innerText = "Users: " + snap.size;
   });
-  cardDeposits.innerText = "Deposits: ₦" + deposits;
 
-  cardOrders.innerText = "Orders: " + ordersSnap.size;
+  // ORDERS + SALES
+  const unsubOrders = onSnapshot(collection(db,"giftOrders"), snap=>{
+    let sales = 0;
+
+    snap.forEach(d=>{
+      sales += d.data().price || 0;
+    });
+
+    cardSales.innerText = "Sales: ₦" + sales;
+    cardOrders.innerText = "Orders: " + snap.size;
+  });
+
+  // DEPOSITS
+  const unsubPayments = onSnapshot(collection(db,"transactions"), snap=>{
+    let deposits = 0;
+
+    snap.forEach(d=>{
+      if(d.data().status === "approved"){
+        deposits += d.data().amount || 0;
+      }
+    });
+
+    cardDeposits.innerText = "Deposits: ₦" + deposits;
+  });
+
+  // ✅ store listeners (important)
+  unsubscribers.push(unsubUsers, unsubOrders, unsubPayments);
 }
-
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 </script>
 
