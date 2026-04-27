@@ -79,8 +79,17 @@ button{
   </div>
 
   <!-- SENDER -->
-  <h4>Sender</h4>
-  <input id="sName" placeholder="Your Name">
+<h4>Sender</h4>
+<input id="sName" placeholder="Your Name">
+
+<!-- NOTE / DESCRIPTION -->
+<h4>Note (Optional)</h4>
+<textarea id="note" placeholder="Write a message (₦10,000 extra if added)" 
+style="width:100%;padding:10px;margin-top:10px;border:none;border-radius:8px;background:#111;color:white;height:80px;"></textarea>
+
+<small style="color:gray;">
+  Adding a note will cost an extra ₦10,000
+</small>
 
   <button onclick="placeOrder()">Send Gift 🎁</button>
 
@@ -110,7 +119,20 @@ const db = getFirestore(app);
 const gift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
 document.getElementById("productName").innerText = gift.name || "Gift";
-document.getElementById("price").innerText = "₦" + (gift.price || 0);
+const priceEl = document.getElementById("price");
+let extraFee = 0;
+
+function updatePrice(){
+  const noteValue = document.getElementById("note").value.trim();
+
+  extraFee = noteValue ? 10000 : 0;
+
+  priceEl.innerText = "₦" + ((gift.price || 0) + extraFee);
+}
+
+updatePrice();
+
+document.getElementById("note").addEventListener("input", updatePrice);
 
 /* SIZE */
 if(gift.requiresSize){
@@ -134,14 +156,19 @@ window.placeOrder = async ()=>{
   const wallet = userData.wallet || 0;
 
   /* ❌ CHECK BALANCE */
-  if(wallet < gift.price){
-    return alert("Insufficient balance ❌");
-  }
+  const noteValue = document.getElementById("note").value.trim();
+const extraFee = noteValue ? 10000 : 0;
+const totalPrice = (gift.price || 0) + extraFee;
+
+if(wallet < totalPrice){
+  return alert("Insufficient balance ❌");
+}
 
   const data = {
     userId: user.uid,
     type: gift.name,
-    price: gift.price,
+    price: totalPrice,
+note: noteValue || "",
 
     receiver:{
       name: rName.value,
@@ -170,7 +197,7 @@ window.placeOrder = async ()=>{
 
   /* 💸 DEDUCT WALLET */
   await updateDoc(userRef,{
-    wallet: wallet - gift.price
+    wallet: wallet - totalPrice
   });
 
   /* 📦 SAVE ORDER */
