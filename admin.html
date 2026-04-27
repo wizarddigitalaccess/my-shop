@@ -262,15 +262,21 @@ const storage = getStorage(app);
 async function uploadToCloudinary(file){
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "YOUR_UPLOAD_PRESET"); // 🔴 replace
+  formData.append("upload_preset", "adqk5pxt"); // ✅ your preset
   formData.append("folder", "gift-products");
 
-  const res = await fetch("https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload", {
+  const res = await fetch("https://api.cloudinary.com/v1_1/del024tsa/image/upload", {
     method: "POST",
     body: formData
   });
 
   const data = await res.json();
+
+  if(!data.secure_url){
+    console.error(data);
+    throw new Error("Upload failed");
+  }
+
   return data.secure_url;
 }
 
@@ -499,13 +505,14 @@ window.addGiftProduct = async () => {
     const file = document.getElementById("gImage").files[0];
 
     
-    // CLOUDINARY IMAGE UPLOAD
-    if(file){
+   // CLOUDINARY IMAGE UPLOAD (DEBUG VERSION)
+if(file){
   try{
     imageUrl = await uploadToCloudinary(file);
+    console.log("✅ IMAGE URL:", imageUrl);
   }catch(e){
-    console.error("UPLOAD ERROR:", e);
-    alert("Image upload failed");
+    console.error("❌ UPLOAD ERROR FULL:", e);
+    alert("Upload failed: " + e.message);
   }
 }
 
