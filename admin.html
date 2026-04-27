@@ -668,8 +668,27 @@ function loadAllOrders(){
         <div>👤 ${userEmail}</div>
         <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
         <div class="statusBox ${o.status || 'placed'}">
-  ${o.status || 'placed'}
+  ${o.status || 'placed'} 
+  ${!o.status || o.status === "placed" ? "🆕 NEW" : ""}
 </div>
+
+<div>🧾 Sender: ${o.senders?.name || "-"}</div>
+
+${o.senders?.location ? `
+  <div>📍 From: ${o.senders.location}</div>
+` : ""}
+
+${o.note ? `
+  <div style="
+    margin-top:6px;
+    padding:6px;
+    background:#111;
+    border-radius:6px;
+    font-size:12px;
+  ">
+    📝 ${o.note}
+  </div>
+` : ""}
 
         ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
       </div>`;
@@ -693,7 +712,11 @@ function loadTracking(){
 lastCount = snap.size;
   tracking.innerHTML="";
 
-  const sorted = snap.docs.sort((a,b)=>(b.data().createdAt||0)-(a.data().createdAt||0));
+  const list = [...snap.docs].sort((a,b)=>{
+  const A = a.data().createdAt?.toMillis ? a.data().createdAt.toMillis() : 0;
+  const B = b.data().createdAt?.toMillis ? b.data().createdAt.toMillis() : 0;
+  return B - A;
+});
 
   for(const d of sorted){
    const g=d.data();

@@ -81,6 +81,7 @@ button{
   <!-- SENDER -->
 <h4>Sender</h4>
 <input id="sName" placeholder="Your Name">
+<input id="sLocation" placeholder="Your Location (City, Country)">
 
 <!-- NOTE / DESCRIPTION -->
 <h4>Note (Optional)</h4>
@@ -183,8 +184,10 @@ note: noteValue || "",
     },
 
     senders:{
-      name: sName.value
-    },
+  name: sName.value,
+  location: sLocation.value || ""
+},
+note: noteValue || "",
 
     status: "placed",
     createdAt: Date.now()
