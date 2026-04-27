@@ -166,32 +166,33 @@ if(wallet < totalPrice){
 }
 
   const data = {
-    userId: user.uid,
-    type: gift.name,
-    price: totalPrice,
-note: noteValue || "",
+  userId: user.uid,
+  type: gift.name,
+  price: totalPrice,
 
-    receiver:{
-      name: rName.value,
-      phone: rPhone.value,
-      house: rHouse.value,
-      street: rStreet.value,
-      city: rCity.value,
-      state: rState.value,
-      zip: rZip.value,
-      country: rCountry.value,
-      size: gift.requiresSize ? rSize.value : null
-    },
+  note: noteValue || "", // ✅ ONLY ONCE
 
-    senders:{
-  name: sName.value,
-  location: sLocation.value || ""
-},
-note: noteValue || "",
+  receiver:{
+    name: rName.value,
+    phone: rPhone.value,
+    house: rHouse.value,
+    street: rStreet.value,
+    city: rCity.value,
+    state: rState.value,
+    zip: rZip.value,
+    country: rCountry.value,
+    size: gift.requiresSize ? rSize.value : null
+  },
 
-    status: "placed",
-    createdAt: serverTimestamp()
-  };
+  senders:{
+    name: sName.value,
+    location: sLocation.value || ""
+  },
+
+  status: "placed",
+  viewed: false, // ✅ THIS IS PERFECT
+  createdAt: serverTimestamp()
+};
 
   /* VALIDATION */
   if(!data.receiver.name || !data.receiver.street || !data.receiver.city || !data.receiver.country){
