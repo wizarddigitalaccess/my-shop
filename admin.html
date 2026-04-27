@@ -459,17 +459,36 @@ window.delProd=async(id)=>{
 };
 
 /* GIFT CATEGORIES */
-window.addGiftCategory=async()=>{
- if(!gCatName.value) return;
+window.addGiftCategory = async () => {
+  try{
+    if(!gCatName.value) return alert("Enter category name");
 
- await addDoc(collection(db,"giftCategories"),{
-   name: gCatName.value.trim()
- });
+    let imageUrl = "";
+    const file = document.createElement("input");
+    file.type = "file";
+    file.accept = "image/*";
+    file.click();
 
- gCatName.value = "";
+    file.onchange = async () => {
+      const selected = file.files[0];
 
- loadGiftCategories();
- loadGiftCategoryOptions(); // ✅ IMPORTANT
+      if(selected){
+        imageUrl = await uploadToCloudinary(selected);
+      }
+
+      await addDoc(collection(db,"giftCategories"),{
+        name: gCatName.value.trim(),
+        image: imageUrl // ✅ now saving image
+      });
+
+      gCatName.value="";
+      loadGiftCategories();
+      alert("Category added with image ✔️");
+    };
+
+  }catch(err){
+    alert(err.message);
+  }
 };
 
 async function loadGiftCategories(){
