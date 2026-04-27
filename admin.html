@@ -262,6 +262,32 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+function getAutoLogo(name){
+  const logoMap = {
+    "facebook": "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
+    "telegram": "https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg",
+    "whatsapp": "https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg",
+    "gmail": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png",
+    "instagram": "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png",
+    "twitter": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Logo_of_Twitter.svg",
+    "netflix": "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
+    "amazon": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg"
+  };
+
+  const n = (name || "").toLowerCase();
+
+  // STEP 1: match known brands
+  for(let key in logoMap){
+    if(n.includes(key)){
+      return logoMap[key];
+    }
+  }
+
+  // STEP 2: fallback (auto brand)
+  const first = n.split(" ")[0];
+  return `https://logo.clearbit.com/${first}.com`;
+}
+
 async function uploadToCloudinary(file){
   const formData = new FormData();
   formData.append("file", file);
@@ -302,7 +328,7 @@ onAuthStateChanged(auth, async (user)=>{
 
     const data = snap.data();
 
-    if(data.role !== "admin"){
+    if(data.role !== "admin" || user.email.toLowerCase() !== ADMIN_EMAIL){
       alert("Admin only");
       signOut(auth);
       return;
@@ -441,12 +467,21 @@ window.delCat=async(id)=>{
 window.addProduct=async()=>{
  if(!pName.value||!pCategory.value||!pPrice.value) return alert("Fill all");
 
+ const logo = getAutoLogo(pName.value);
+
  await addDoc(collection(db,"products"),{
   name: pName.value,
   category: pCategory.value,
   price: Number(pPrice.value),
-  details: pDetails?.value || ""
+  details: pDetails?.value || "",
+  logo: logo // ✅ SAVE LOGO
  });
+
+ // reset inputs
+ pName.value="";
+ pCategory.value="";
+ pPrice.value="";
+ if(pDetails) pDetails.value="";
 
  loadProducts();
 };
@@ -458,8 +493,17 @@ async function loadProducts(){
  snap.forEach(d=>{
   const p=d.data();
   products.innerHTML+=`
-  <div class="item">
-    ${p.name} ₦${p.price}
+<div class="item">
+  <div class="topRow">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <img src="${p.logo || 'https://via.placeholder.com/30?text=📦'}"
+     onerror="this.src='https://via.placeholder.com/30?text=📦'"
+     style="width:30px;height:30px;border-radius:6px;">
+      ${p.name}
+    </div>
+    ₦${p.price}
+  </div>
+
     <div style="font-size:12px;color:gray;">${p.details || ""}</div>
     <div class="actions">
       <button class="btn-edit" onclick="editProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
@@ -833,63 +877,27 @@ function loadPayments(){
       }catch(e){}
 
       payments.innerHTML += `
-      <div class="item">
-        <div><b>${userEmail}</b></div>
-        <div>Amount: ₦${t.amount}</div>
-        <div>Status: ${t.status || "pending"}</div>
+<div class="item">
+  <div><b>${userEmail}</b></div>
+  <div>Amount: ₦${t.amount}</div>
+  <div>Status: ${t.status || "pending"}</div>
 
-${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
+  ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
 
-<div class="actions">
-  ${
-    t.status==="approved"
-      ? `<div style="color:#2ecc71;">✔ Approved</div>`
-      : t.status==="rejected"
-      ? `<div style="color:#e74c3c;">✖ Rejected</div>`
-      : `
-        <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
-        <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
-      `
-  }
-</div>
-  ${
-    t.status==="approved"
-      ? `<div style="color:#2ecc71;">✔ Approved</div>`
-      : t.status==="rejected"
-      ? `<div style="color:#e74c3c;">✖ Rejected</div>`
-      : `
-        <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
-        <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
-      `
-  }
-</div>
-
-        ${t.proof ? `<img src="${t.proof}" style="width:100px;border-radius:8px;margin-top:5px;">` : ""}
-
-        <div class="actions">
-          ${t.status==="approved" ? `
-  <div style="color:#2ecc71;">✔ Approved</div>
-` : t.status==="rejected" ? `
-  <div style="color:#e74c3c;">✖ Rejected</div>
-` : `
-  <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
-  <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
-`}
-          <div class="actions">
-  ${t.status==="approved" ? `
-    <div style="color:#2ecc71;">✔ Approved</div>
-  ` : t.status==="rejected" ? `
-    <div style="color:#e74c3c;">✖ Rejected</div>
-  ` : `
-    <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
-    <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
-  `}
-</div>
-
-
-        </div>
-      </div>`;
+  <div class="actions">
+    ${
+      t.status==="approved"
+        ? `<div style="color:#2ecc71;">✔ Approved</div>`
+        : t.status==="rejected"
+        ? `<div style="color:#e74c3c;">✖ Rejected</div>`
+        : `
+          <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+          <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
+        `
     }
+  </div>
+</div>`;
+}
   });
 }
 
