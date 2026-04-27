@@ -461,8 +461,15 @@ window.delProd=async(id)=>{
 /* GIFT CATEGORIES */
 window.addGiftCategory=async()=>{
  if(!gCatName.value) return;
- await addDoc(collection(db,"giftCategories"),{name:gCatName.value});
+
+ await addDoc(collection(db,"giftCategories"),{
+   name: gCatName.value.trim()
+ });
+
+ gCatName.value = "";
+
  loadGiftCategories();
+ loadGiftCategoryOptions(); // ✅ IMPORTANT
 };
 
 async function loadGiftCategories(){
@@ -482,6 +489,24 @@ async function loadGiftCategories(){
  });
 }
 
+async function loadGiftCategoryOptions(){
+  const select = document.getElementById("gCategory");
+  select.innerHTML = "";
+
+  const snap = await getDocs(collection(db,"giftCategories"));
+
+  snap.forEach(d=>{
+    const c = d.data();
+    if(!c.name) return;
+
+    const opt = document.createElement("option");
+    opt.value = c.name;
+    opt.textContent = c.name;
+
+    select.appendChild(opt);
+  });
+}
+
 window.editGCat=async(id,n)=>{
  let name=prompt("Edit",n);
  await updateDoc(doc(db,"giftCategories",id),{name});
@@ -491,6 +516,7 @@ window.editGCat=async(id,n)=>{
 window.delGCat=async(id)=>{
  await deleteDoc(doc(db,"giftCategories",id));
  loadGiftCategories();
+ loadGiftCategoryOptions(); // ✅ keep dropdown updated
 };
 
 /* GIFT PRODUCTS */
