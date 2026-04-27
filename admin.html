@@ -149,6 +149,7 @@ button {
   <div id="categories"></div>
 
   <h3>Main Products</h3>
+  <input id="pPreview" placeholder="Preview Link (optional)">
   <input id="pName" placeholder="Product Name (e.g Facebook Account)">
   <input id="pCategory" placeholder="Category (must match exactly)">
   <input id="pPrice" placeholder="Price (e.g 5000)">
@@ -482,19 +483,37 @@ window.addProduct=async()=>{
 
  const logo = getAutoLogo(pName.value);
 
+ // 🔥 split accounts by line (each line = 1 account)
+ const accounts = (pDetails.value || "")
+   .split("\n")
+   .map(a => a.trim())
+   .filter(a => a !== "");
+
+ if(accounts.length === 0){
+   alert("Add at least one account in details");
+   return;
+ }
+
  await addDoc(collection(db,"products"),{
   name: pName.value,
   category: pCategory.value,
   price: Number(pPrice.value),
-  details: pDetails?.value || "",
-  logo: logo // ✅ SAVE LOGO
+
+  // ✅ NEW STRUCTURE
+  accounts: accounts,
+  stock: accounts.length,
+
+  preview: pPreview.value || "",
+  logo: logo,
+  createdAt: Date.now()
  });
 
  // reset inputs
  pName.value="";
  pCategory.value="";
  pPrice.value="";
- if(pDetails) pDetails.value="";
+ pDetails.value="";
+ pPreview.value="";
 
  loadProducts();
 };
@@ -517,7 +536,10 @@ async function loadProducts(){
     ₦${p.price}
   </div>
 
-    <div style="font-size:12px;color:gray;">${p.details || ""}</div>
+    <div style="font-size:12px;color:gray;">
+Stock: ${p.stock || 0} <br>
+Preview: ${p.preview ? "✔ Available" : "❌ None"}
+</div>
     <div class="actions">
       <button class="btn-edit" onclick="editProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
       <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
