@@ -75,6 +75,7 @@ body{
 </div>
 
 <script type="module">
+  let currentCategory = null;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -154,9 +155,9 @@ categoryListener = onSnapshot(collection(db,"giftCategories"), (snap)=>{
       div.className = "gift-card";
 
       div.innerHTML = `
-        <img src="${safeImage(g.image)}" onerror="this.src='fallback.png'">
-        <div>${g.name}</div>
-      `;
+  ${g.image ? `<img src="${g.image}" onerror="this.style.display='none'">` : ""}
+  <div>${g.name}</div>
+`;
 
       div.onclick = ()=>{
         loadProducts(g.name);
@@ -188,7 +189,10 @@ productListener = onSnapshot(collection(db,"giftProducts"), (snap)=>{
 
       if(!p.name) return;
 
-      if((p.category || "").toLowerCase().trim() === categoryName.toLowerCase().trim()){
+      if(
+  (p.category || "").toLowerCase().trim() ===
+  (categoryName || "").toLowerCase().trim()
+){
 
         found = true;
 
