@@ -13,6 +13,19 @@ body {
   color:white;
 }
 
+.menu-item{
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:8px;
+  background:#1c1c2e;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.menu-item:hover{
+  background:#1877f2;
+}
+
 /* LOADER */
 #loader {
   position:fixed;
@@ -182,7 +195,56 @@ body {
 <div class="header">
   <img id="siteLogo" class="site-logo" src="fallback.png">
   <div class="title">Wizard Digital Access</div>
+
+  <div style="margin-left:auto;font-size:22px;cursor:pointer;" onclick="openMenu()">
+    ☰
+  </div>
 </div>
+
+<div id="sideMenu" style="
+  position:fixed;
+  top:0;
+  right:-100%;
+  width:85%;
+  max-width:320px;
+  height:100%;
+  background:#0f0f1a;
+  z-index:9999;
+  transition:0.3s;
+  padding:20px;
+  overflow-y:auto;
+">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <b>Menu</b>
+    <span onclick="closeMenu()" style="cursor:pointer;font-size:20px;">✕</span>
+  </div>
+
+  <hr style="border-color:#333;margin:15px 0;">
+
+  <div class="menu-item" onclick="goHome(); closeMenu()">🏠 Dashboard</div>
+  <div class="menu-item" onclick="goGift(); closeMenu()">🎁 Send Gifts</div>
+
+  <div class="menu-item" onclick="openTelegram(); closeMenu()">📱 Buy Old USA WhatsApp</div>
+  <div class="menu-item" onclick="openTelegram(); closeMenu()">✉️ Buy Emails</div>
+  <div class="menu-item" onclick="openTelegram(); closeMenu()">💬 Buy Verified Telegram</div>
+  <div class="menu-item" onclick="openTelegram(); closeMenu()">⚡ Buy Normal Telegram</div>
+
+  <div class="menu-item" onclick="goSettings(); closeMenu()">⚙️ Settings</div>
+
+  <div class="menu-item" onclick="goOrders(); closeMenu()">📦 Order History</div>
+  <div class="menu-item" onclick="goTransactions(); closeMenu()">💰 Transactions</div>
+
+</div>
+
+<!-- ✅ OVERLAY MUST BE OUTSIDE -->
+<div id="menuOverlay" onclick="closeMenu()" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  z-index:9998;
+"></div>
 
 <div class="search-row">
   <input id="search" placeholder="Search...">
@@ -199,8 +261,6 @@ body {
   <a href="wallet.html">Wallet</a>
   <a href="orders.html">Orders</a>
   <a href="profile.html">Profile</a>
-</div>
-
 </div>
 
 <script type="module">
@@ -412,6 +472,40 @@ async function buy(id){
     alert("Purchase failed");
   }
 }
+
+window.openMenu = () => {
+  document.getElementById("sideMenu").style.right = "0";
+  document.getElementById("menuOverlay").style.display = "block";
+};
+
+window.closeMenu = () => {
+  document.getElementById("sideMenu").style.right = "-100%";
+  document.getElementById("menuOverlay").style.display = "none";
+};
+
+/* NAVIGATION */
+window.goHome = () => location.href = "index.html";
+window.goGift = () => location.href = "gift.html";
+window.goSettings = () => location.href = "profile.html";
+window.goOrders = () => location.href = "orders.html";
+window.goTransactions = () => location.href = "wallet.html";
+
+/* TELEGRAM LINKS */
+window.openTelegram = () => {
+  window.open("https://t.me/wizardigitalaccess", "_blank");
+};
+
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("sideMenu");
+
+  if (
+    (menu.style.right === "0px" || menu.style.right === "0") &&
+    !menu.contains(e.target) &&
+    !e.target.closest("[onclick='openMenu()']")
+  ) {
+    closeMenu();
+  }
+});
 </script>
 
 </body>
