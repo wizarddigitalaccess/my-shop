@@ -153,7 +153,9 @@ button {
   <input id="pName" placeholder="Product Name (e.g Facebook Account)">
   <input id="pCategory" placeholder="Category (must match exactly)">
   <input id="pPrice" placeholder="Price (e.g 5000)">
-  <input id="pDetails" placeholder="Details (e.g Email:..., Password:...)">
+  <textarea id="pAccounts" placeholder="Enter accounts (one per line)
+email:pass
+email:pass"></textarea>
   <button onclick="addProduct()">Add</button>
   <div id="products"></div>
 </div>
@@ -478,44 +480,44 @@ window.delCat=async(id)=>{
 };
 
 /* MAIN PRODUCTS */
-window.addProduct=async()=>{
- if(!pName.value||!pCategory.value||!pPrice.value) return alert("Fill all");
+window.addProduct = async () => {
+  if(!pName.value || !pCategory.value || !pPrice.value){
+    return alert("Fill all");
+  }
 
- const logo = getAutoLogo(pName.value);
+  // 🔥 PARSE ACCOUNTS
+  const raw = document.getElementById("pAccounts").value.trim();
 
- // 🔥 split accounts by line (each line = 1 account)
- const accounts = (pDetails.value || "")
-   .split("\n")
-   .map(a => a.trim())
-   .filter(a => a !== "");
+  const accounts = raw
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.includes(":"))
+    .map(line => {
+      const [email, password] = line.split(":");
+      return {
+        email: email.trim(),
+        password: password.trim()
+      };
+    });
 
- if(accounts.length === 0){
-   alert("Add at least one account in details");
-   return;
- }
+  const logo = getAutoLogo(pName.value);
 
- await addDoc(collection(db,"products"),{
-  name: pName.value,
-  category: pCategory.value,
-  price: Number(pPrice.value),
+  await addDoc(collection(db,"products"),{
+    name: pName.value,
+    category: pCategory.value,
+    price: Number(pPrice.value),
+    logo: logo,
+    accounts: accounts,
+    stock: accounts.length
+  });
 
-  // ✅ NEW STRUCTURE
-  accounts: accounts,
-  stock: accounts.length,
+  // RESET
+  pName.value="";
+  pCategory.value="";
+  pPrice.value="";
+  document.getElementById("pAccounts").value="";
 
-  preview: pPreview.value || "",
-  logo: logo,
-  createdAt: Date.now()
- });
-
- // reset inputs
- pName.value="";
- pCategory.value="";
- pPrice.value="";
- pDetails.value="";
- pPreview.value="";
-
- loadProducts();
+  loadProducts();
 };
 
 async function loadProducts(){

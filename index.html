@@ -450,53 +450,58 @@ import { runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/fireb
 async function buy(id){
   try{
 
-    await runTransaction(db, async (transaction) => {
+    const userRef = doc(db,"users",user.uid);
+    const productRef = doc(db,"products",id);
 
-      const pRef = doc(db,"products",id);
-      const userRef = doc(db,"users",user.uid);
+    await runTransaction(db, async (transaction)=>{
 
-      const pSnap = await transaction.get(pRef);
-      const uSnap = await transaction.get(userRef);
+      const userSnap = await transaction.get(userRef);
+      const productSnap = await transaction.get(productRef);
 
-      if(!pSnap.exists()) throw "Product not found";
+      if(!userSnap.exists()) throw "User not found";
+      if(!productSnap.exists()) throw "Product not found";
 
-      const p = pSnap.data();
-      const u = uSnap.data();
+      const userData = userSnap.data();
+      const productData = productSnap.data();
 
       // 💰 CHECK BALANCE
-      if((u.wallet || 0) < p.price){
+      if((userData.wallet || 0) < productData.price){
         throw "Insufficient balance";
       }
 
-      // 📦 CHECK STOCK
-      if(!p.accounts || p.accounts.length === 0){
+      // 📦 CHECK STOCK SAFELY
+      if(!productData.accounts || productData.accounts.length === 0){
         throw "Out of stock";
       }
 
-      // 🎯 TAKE ONE ACCOUNT SAFELY
-      const account = p.accounts[0];
-      const remaining = p.accounts.slice(1);
+      // 🎯 TAKE FIRST ACCOUNT
+      const account = productData.accounts[0];
 
-      // 📉 UPDATE PRODUCT
-      transaction.update(pRef,{
-        accounts: remaining,
-        stock: remaining.length
-      });
+      // 🔄 REMOVE IT FROM STOCK
+      const updatedAccounts = productData.accounts.slice(1);
 
-      // 💳 DEDUCT WALLET
+      // 💳 UPDATE USER BALANCE
       transaction.update(userRef,{
-        wallet: (u.wallet || 0) - p.price
+        wallet: (userData.wallet || 0) - productData.price
       });
 
-      // 🧾 SAVE ORDER
+      // 📉 UPDATE PRODUCT STOCK
+      transaction.update(productRef,{
+        accounts: updatedAccounts,
+        stock: updatedAccounts.length
+      });
+
+      // 🧾 CREATE ORDER (SAFE DELIVERY)
       const orderRef = doc(collection(db,"orders"));
+
       transaction.set(orderRef,{
         userId: user.uid,
         productId: id,
-        name: p.name,
-        price: p.price,
-        account: account,
-        logo: p.logo,
+        name: productData.name,
+        price: productData.price,
+        email: account.email,
+        password: account.password,
+        logo: productData.logo,
         createdAt: Date.now()
       });
 
@@ -506,9 +511,11 @@ async function buy(id){
     location.href="orders.html";
 
   }catch(e){
-    alert(e);
+    console.error(e);
+    alert(e || "Purchase failed");
   }
 }
+
 window.openMenu = () => {
   document.getElementById("sideMenu").style.right = "0";
   document.getElementById("menuOverlay").style.display = "block";
