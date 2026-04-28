@@ -518,46 +518,36 @@ window.addProduct = async () => {
       return;
     }
 
-    // 🔥 PARSE ACCOUNTS SAFELY
-if(!raw){
-  alert("Add at least 1 account");
-  return;
-}
+    const accounts = raw
+      .split("\n\n")
+      .map(acc => acc.trim())
+      .filter(acc => acc.length > 0)
+      .map(acc => {
+        return {
+          details: acc
+        };
+      });
 
-const accounts = raw
-  .split("\n")
-  .map(line => line.trim())
-  .filter(line => line.includes(":") && line.split(":")[1])
-  .map(line => {
-    const [email, password] = line.split(":");
-
-    return {
-      email: email.trim(),
-      password: password.trim()
-    };
-  })
-  .filter(acc => acc.email && acc.password);
-
-console.log("ACCOUNTS:", accounts);
-
-if(accounts.length === 0){
-  alert("Invalid account format. Use email:password");
-  return;
-}
+    if(accounts.length === 0){
+      alert("Please enter at least one account");
+      return;
+    }
 
     const logo = getAutoLogo(pName.value);
 
+    // ✅ SAVE
     await addDoc(collection(db,"products"),{
-  name: pName.value,
-  category: pCategory.value,
-  price: Number(pPrice.value),
-  logo: logo,
-  accounts: accounts,
-  stock: accounts.length,
-  previewLink: document.getElementById("pPreview")?.value || ""
-});
+      name: pName.value,
+      category: pCategory.value,
+      price: Number(pPrice.value),
+      logo: logo,
+      accounts: accounts,
+      stock: accounts.length,
+      previewLink: document.getElementById("pPreview")?.value || "",
+      createdAt: serverTimestamp()
+    });
 
-    // RESET FORM
+    // ✅ RESET AFTER SAVE
     pName.value="";
     pCategory.value="";
     pPrice.value="";
@@ -570,7 +560,7 @@ if(accounts.length === 0){
 
   }catch(e){
     console.error(e);
-    alert("Error: " + e);
+    alert("Error: " + e.message);
   }
 };
 
