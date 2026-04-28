@@ -488,17 +488,25 @@ window.addProduct = async () => {
   // 🔥 PARSE ACCOUNTS
   const raw = document.getElementById("pAccounts").value.trim();
 
-  const accounts = raw
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line.includes(":"))
-    .map(line => {
-      const [email, password] = line.split(":");
-      return {
-        email: email.trim(),
-        password: password.trim()
-      };
-    });
+  const rawAccount = productData.accounts[0];
+
+let account;
+
+// 🔥 HANDLE BOTH FORMATS (VERY IMPORTANT)
+if(typeof rawAccount === "string"){
+  const [email, password] = rawAccount.split(":");
+  account = {
+    email: email?.trim(),
+    password: password?.trim()
+  };
+}else{
+  account = rawAccount;
+}
+
+// 🚨 VALIDATION (CRITICAL)
+if(!account.email || !account.password){
+  throw "Invalid account format. Contact admin.";
+}
 
   const logo = getAutoLogo(pName.value);
 
