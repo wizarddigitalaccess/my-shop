@@ -519,14 +519,12 @@ window.addProduct = async () => {
     }
 
     const accounts = raw
-      .split("\n\n")
-      .map(acc => acc.trim())
-      .filter(acc => acc.length > 0)
-      .map(acc => {
-        return {
-          details: acc
-        };
-      });
+  .split("\n") // each line = one account
+  .map(acc => acc.trim())
+  .filter(acc => acc.length > 0)
+  .map(acc => ({
+    details: acc
+  }));
 
     if(accounts.length === 0){
       alert("Please enter at least one account");
@@ -579,7 +577,7 @@ async function loadProducts(){
      style="width:30px;height:30px;border-radius:6px;">
       ${p.name}
     </div>
-    ₦${p.price}
+    ₦${Number(p.price).toLocaleString()}
   </div>
 
     <div style="font-size:12px;color:gray;">
@@ -1088,7 +1086,7 @@ function loadDashboardLive(){
       sales += d.data().price || 0;
     });
 
-    cardSales.innerText = "Sales: ₦" + sales;
+    cardSales.innerText = "Sales: ₦" + sales.toLocaleString();
     cardOrders.innerText = "Orders: " + snap.size;
   });
 

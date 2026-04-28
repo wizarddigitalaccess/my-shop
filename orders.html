@@ -202,7 +202,7 @@ function loadOrdersLive(uid){
 
         <div class="content">
           <b>${o.name}</b>
-          <div class="price">₦${o.price}</div>
+          <div class="price">₦${Number(p.price || 0).toLocaleString()}</div>
 
           <div class="field">
 

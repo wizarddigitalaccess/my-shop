@@ -410,7 +410,7 @@ function loadProducts(){
       <div class="card-top">
         <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
         <h4>${p.name}</h4>
-        <div class="price">₦${p.price}</div>
+        <div class="price">₦${Number(p.price || 0).toLocaleString()}</div>
         <div style="font-size:11px;color:gray;">
           ${(p.stock || 0) > 0 ? "Available" : "Out of stock"}
         </div>
@@ -498,7 +498,7 @@ async function buy(id){
         productId: id,
         name: productData.name,
         price: productData.price,
-        details: account.details || `Email: ${account.email}\nPassword: ${account.password}`,
+        loginDetails: String(account.details || "").trim(),
         logo: productData.logo,
         createdAt: new Date()
       });
