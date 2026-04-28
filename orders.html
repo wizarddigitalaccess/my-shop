@@ -321,17 +321,28 @@ window.toggleData = (btn)=>{
 };
 
 window.copyData = (btn)=>{
-  const content = btn.closest(".content").querySelector(".field .blurred");
+  const contentBox = btn.closest(".content");
 
-  if(!content){
+  // Try new system first
+  let content = contentBox.querySelector(".field .blurred");
+
+  let text = "";
+
+  if(content){
+    text = content.innerText;
+  } else {
+    // fallback for old orders
+    const fallback = contentBox.innerText;
+    text = fallback;
+  }
+
+  if(!text){
     alert("No data found");
     return;
   }
 
-  const text = content.innerText;
-
   navigator.clipboard.writeText(text);
-  alert("Login details copied ✅");
+  alert("Copied ✅");
 };
 
 </script>
