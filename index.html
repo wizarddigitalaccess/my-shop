@@ -435,10 +435,9 @@ function loadProducts(){
   });
 }
 
-/* PREVIEW */
 function preview(p){
-  if(p.preview){
-    window.open(p.preview, "_blank");
+  if(p.previewLink){
+    window.open(p.previewLink, "_blank");
   }else{
     alert("No preview available");
   }
@@ -508,12 +507,21 @@ async function buy(id){
     });
 
     alert("✅ Purchase successful");
-    location.href="orders.html";
+location.href="orders.html";
 
-  }catch(e){
-    console.error(e);
-    alert(e || "Purchase failed");
+}catch(e){
+  console.error(e);
+
+  if((e+"").includes("permission-denied")){
+    alert("Service temporarily unavailable");
+  }else if((e+"").includes("Insufficient")){
+    alert("Insufficient balance");
+  }else if((e+"").includes("stock")){
+    alert("Out of stock");
+  }else{
+    alert("Something went wrong, try again");
   }
+}
 }
 
 window.openMenu = () => {

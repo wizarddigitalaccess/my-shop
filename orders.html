@@ -203,7 +203,11 @@ function loadOrdersLive(uid){
 
   function render(){
     const allOrders = [...normalOrders, ...giftOrders]
-      .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+      .sort((a,b)=>{
+  const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+  const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+  return B - A;
+});
 
     ordersDiv.innerHTML="";
 
