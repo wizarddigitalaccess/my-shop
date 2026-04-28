@@ -314,15 +314,24 @@ function loadOrdersLive(uid){
 }
 
 window.toggleData = (btn)=>{
-  const spans = btn.parentElement.parentElement.querySelectorAll(".blurred");
-  spans.forEach(el=> el.classList.toggle("blurred"));
+  const content = btn.closest(".content").querySelector(".field .blurred");
+  if(content){
+    content.classList.toggle("blurred");
+  }
 };
 
 window.copyData = (btn)=>{
-  const parent = btn.parentElement.parentElement;
-  const text = parent.innerText;
+  const content = btn.closest(".content").querySelector(".field .blurred");
+
+  if(!content){
+    alert("No data found");
+    return;
+  }
+
+  const text = content.innerText;
+
   navigator.clipboard.writeText(text);
-  alert("Copied!");
+  alert("Login details copied ✅");
 };
 
 </script>
