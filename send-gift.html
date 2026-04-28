@@ -183,6 +183,8 @@ async function placeOrder(){
       type: gift.name,
       price: totalPrice,
       note: noteValue || "",
+      productImage: gift.image || "",
+      productName: gift.name || "Gift",
 
       receiver:{
         name: rName.value,

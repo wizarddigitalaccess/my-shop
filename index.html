@@ -498,8 +498,7 @@ async function buy(id){
         productId: id,
         name: productData.name,
         price: productData.price,
-        email: account.email,
-        password: account.password,
+        loginDetails: account.details || `Email: ${account.email}\nPassword: ${account.password}`,
         logo: productData.logo,
         createdAt: Date.now()
       });

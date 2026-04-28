@@ -172,7 +172,7 @@ onAuthStateChanged(auth, (user)=>{
   appDiv.style.display="block";
 });
 
-/* 🔥 LIVE ORDERS */
+/* 🔥 LIVE ORDERS */ 
 function loadOrdersLive(uid){
 
   const normalQ = query(collection(db,"orders"), where("userId","==",uid));
@@ -184,8 +184,8 @@ function loadOrdersLive(uid){
   onSnapshot(normalQ, snap=>{
     normalOrders = [];
     snap.forEach(d=>{
-      const o=d.data();
-      o.type="normal";
+      const o = d.data();
+      o.type = "normal";
       normalOrders.push(o);
     });
     render();
@@ -194,125 +194,137 @@ function loadOrdersLive(uid){
   onSnapshot(giftQ, snap=>{
     giftOrders = [];
     snap.forEach(d=>{
-      const g=d.data();
-      g.type="gift";
+      const g = d.data();
+      g.type = "gift";
       giftOrders.push(g);
     });
     render();
   });
 
+} // ✅ THIS WAS MISSING
+
   function render(){
-    const allOrders = [...normalOrders, ...giftOrders]
-      .sort((a,b)=>{
-  const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
-  const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
-  return B - A;
-});
-
-    ordersDiv.innerHTML="";
-
-    allOrders.forEach(o=>{
-      const div=document.createElement("div");
-      div.className="card";
-
-      /* NORMAL */
-      if(o.type==="normal"){
-        div.innerHTML=`
-        <img src="${o.logo || ''}" class="logo">
-        <div class="content">
-          <b>${o.name}</b>
-          <div class="price">₦${o.price}</div>
-
-          <div class="field">
-  Email: 
-  <div class="field">
-  Email: 
-  <span class="blurred">${o.email}</span>
-</div>
-
-<div class="field">
-  Password: 
-  <span class="blurred">${o.password}</span>
-</div>
-
-<div style="display:flex;gap:6px;margin-top:6px;">
-  <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
-  <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
-</div>
-
-          <div class="status delivered">Delivered ✅</div>
-        </div>`;
-      }
-
-      /* GIFT */
-      else{
-        let statusClass="placed";
-        let statusText="Order Placed 🟡";
-
-        if(o.status==="processing"){
-          statusClass="processing";
-          statusText="Processing 🟣";
-        }
-        if(o.status==="delivery"){
-          statusClass="delivery";
-          statusText="On The Way 🚚";
-        }
-        if(o.status==="delivered"){
-          statusClass="delivered";
-          statusText="Delivered 🎁";
-        }
-        if(o.status==="cancelled"){
-          statusClass="cancelled";
-          statusText="Cancelled ❌";
-        }
-
-        div.innerHTML=`
-        <img src="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" class="logo">
-
-        <div class="content">
-          <b>${o.productName || "Gift"}</b>
-          <div class="price">₦${o.price}</div>
-
-          <div class="field">
-            📍 ${o.receiver?.city || "-"}, ${o.receiver?.country || "-"}
-          </div>
-
-          <div class="field">
-            📞 ${o.receiver?.phone || "-"}
-          </div>
-
-          ${o.receiver?.size ? `<div class="field">Size: ${o.receiver.size}</div>` : ""}
-
-          <div class="status ${statusClass}">${statusText}</div>
-        </div>`;
-      }
-
-      ordersDiv.appendChild(div);
+  const allOrders = [...normalOrders, ...giftOrders]
+    .sort((a,b)=>{
+      const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+      const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+      return B - A;
     });
 
-    if(allOrders.length===0){
-      ordersDiv.innerHTML="<div style='text-align:center;color:gray;margin-top:40px;'>No orders yet 🛒</div>";
+  ordersDiv.innerHTML="";
+
+  allOrders.forEach(o=>{
+    const div=document.createElement("div");
+    div.className="card";
+
+    /* NORMAL */
+    if(o.type==="normal"){
+      div.innerHTML=`
+      <img src="${o.logo || ''}" class="logo">
+
+      <div class="content">
+        <b>${o.name}</b>
+        <div class="price">₦${o.price}</div>
+
+        <div class="field">
+          Details:
+          <div class="blurred" style="margin-top:5px;white-space:pre-line;">
+${o.details || `Email: ${o.email}\nPassword: ${o.password}`}
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
+          <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
+        </div>
+
+        <div style="margin-top:10px;font-size:11px;color:gray;">
+          ${new Date(o.createdAt).toLocaleString()}
+        </div>
+      </div>`;
     }
+
+    /* GIFT */
+    else{
+      let statusClass="placed";
+      let statusText="Order Placed 🟡";
+
+      if(o.status==="processing"){
+        statusClass="processing";
+        statusText="Processing 🟣";
+      }
+      if(o.status==="delivery"){
+        statusClass="delivery";
+        statusText="On The Way 🚚";
+      }
+      if(o.status==="delivered"){
+        statusClass="delivered";
+        statusText="Delivered 🎁";
+      }
+      if(o.status==="cancelled"){
+        statusClass="cancelled";
+        statusText="Cancelled ❌";
+      }
+
+      const receiver = o.receiver || {};
+      const sender = o.senders || {};
+
+      div.innerHTML = `
+      <img src="${o.productImage || 'fallback.png'}" class="logo">
+
+      <div class="content">
+        <b>${o.productName || "Gift"}</b>
+        <div class="price">₦${o.price}</div>
+
+        <div class="field">👤 Name: ${receiver.name || "-"}</div>
+        <div class="field">📞 Phone: ${receiver.phone || "-"}</div>
+
+        <div class="field">
+          📍 Address:<br>
+          ${receiver.house || ""} ${receiver.street || ""}<br>
+          ${receiver.city || ""}, ${receiver.state || ""}<br>
+          ${receiver.country || ""}
+        </div>
+
+        ${receiver.size ? `<div class="field">📏 Size: ${receiver.size}</div>` : ""}
+        ${o.note ? `<div class="field">📝 Note: ${o.note}</div>` : ""}
+
+        <div class="field">🙋 Sender: ${sender.name || "-"}</div>
+        <div class="field">🌍 Sender Location: ${sender.location || "-"}</div>
+
+        <div class="status ${statusClass}">${statusText}</div>
+
+        <div style="margin-top:10px;font-size:11px;color:gray;">
+          ${
+            o.createdAt && o.createdAt.toDate
+              ? o.createdAt.toDate().toLocaleString()
+              : new Date(o.createdAt || Date.now()).toLocaleString()
+          }
+        </div>
+      </div>`;
+    }
+
+    // ✅ THIS MUST BE HERE (ONLY ONCE)
+    ordersDiv.appendChild(div);
+  });
+
+  if(allOrders.length===0){
+    ordersDiv.innerHTML="<div style='text-align:center;color:gray;margin-top:40px;'>No orders yet 🛒</div>";
   }
 }
 
 window.toggleData = (btn)=>{
-  const container = btn.parentElement.previousElementSibling;
   const spans = btn.parentElement.parentElement.querySelectorAll(".blurred");
-
-  spans.forEach(el=>{
-    el.classList.toggle("blurred");
-  });
+  spans.forEach(el=> el.classList.toggle("blurred"));
 };
 
 window.copyData = (btn)=>{
   const parent = btn.parentElement.parentElement;
   const text = parent.innerText;
-
   navigator.clipboard.writeText(text);
-
   alert("Copied!");
 };
+
 </script>
 
 </body>
