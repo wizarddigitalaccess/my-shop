@@ -206,10 +206,17 @@ function loadOrdersLive(uid){
 
           <div class="field">
 
-          <div style="display:flex;gap:6px;margin-top:6px;">
-            <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
-            <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
-          </div>
+          <div class="field">
+  Details:
+  <div class="blurred detailsBox" style="margin-top:5px;white-space:pre-line;">
+    ${o.loginDetails || "No details available"}
+  </div>
+</div>
+
+<div style="display:flex;gap:6px;margin-top:6px;">
+  <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
+  <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
+</div>
 
           <div style="margin-top:10px;font-size:11px;color:gray;">
             ${
@@ -314,17 +321,17 @@ function loadOrdersLive(uid){
 }
 
 window.toggleData = (btn)=>{
-  const content = btn.closest(".content").querySelector(".field .blurred");
-  if(content){
-    content.classList.toggle("blurred");
+  const box = btn.closest(".content").querySelector(".detailsBox");
+  if(box){
+    box.classList.toggle("blurred");
   }
 };
 
 window.copyData = (btn)=>{
   const contentBox = btn.closest(".content");
 
-  // Try new system first
-  let content = contentBox.querySelector(".field .blurred");
+  // Try new system firstlet content = contentBox.querySelector(".detailsBox");
+  let content = contentBox.querySelector(".detailsBox");
 
   let text = "";
 
