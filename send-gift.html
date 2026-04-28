@@ -119,6 +119,13 @@ const db = getFirestore(app);
 /* GET PRODUCT */
 const gift = JSON.parse(localStorage.getItem("selectedGift") || "{}");
 
+// 🔥 FORCE SAFE DEFAULTS
+gift.name = gift.name || "Gift";
+gift.price = gift.price || 0;
+gift.image = gift.image || "";
+gift.requiresSize = gift.requiresSize || false;
+console.log("SELECTED GIFT:", gift);
+
 document.getElementById("productName").innerText = gift.name || "Gift";
 const priceEl = document.getElementById("price");
 let extraFee = 0;
@@ -183,7 +190,9 @@ async function placeOrder(){
 
   // ✅ FIXED FIELDS
   productName: gift.name,
-  productImage: gift.image || "",
+  productImage: gift.image && gift.image !== "" 
+  ? gift.image 
+  : "https://via.placeholder.com/55?text=🎁",
   
   price: totalPrice,
 
