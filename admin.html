@@ -481,51 +481,73 @@ window.delCat=async(id)=>{
 
 /* MAIN PRODUCTS */
 window.addProduct = async () => {
-  if(!pName.value || !pCategory.value || !pPrice.value){
-    return alert("Fill all");
+  try{
+
+    if(!pName.value || !pCategory.value || !pPrice.value){
+      alert("Fill all fields");
+      return;
+    }
+
+    const accountsInput = document.getElementById("pAccounts");
+
+    if(!accountsInput){
+      alert("Accounts input missing (pAccounts)");
+      return;
+    }
+
+    const raw = accountsInput.value.trim();
+
+    if(!raw){
+      alert("Add at least 1 account");
+      return;
+    }
+
+    // 🔥 PARSE ACCOUNTS SAFELY
+    const accounts = raw
+      .split("\n")
+      .map(line => line.trim())
+      .filter(line => line.includes(":"))
+      .map(line => {
+        const parts = line.split(":");
+
+        return {
+          email: parts[0]?.trim() || "",
+          password: parts[1]?.trim() || ""
+        };
+      })
+      .filter(acc => acc.email && acc.password);
+
+    if(accounts.length === 0){
+      alert("Invalid account format. Use email:password");
+      return;
+    }
+
+    const logo = getAutoLogo(pName.value);
+
+    await addDoc(collection(db,"products"),{
+      name: pName.value,
+      category: pCategory.value,
+      price: Number(pPrice.value),
+      logo: logo,
+      accounts: accounts,
+      stock: accounts.length,
+      createdAt: Date.now()
+    });
+
+    // RESET FORM
+    pName.value="";
+    pCategory.value="";
+    pPrice.value="";
+    accountsInput.value="";
+
+    alert("✅ Product added successfully");
+
+    loadProducts();
+
+  }catch(e){
+    console.error(e);
+    alert("Error: " + e);
   }
-
-  // 🔥 PARSE ACCOUNTS
-  const raw = document.getElementById("pAccounts").value.trim();
-
-  const rawAccount = productData.accounts[0];
-
-let account;
-
-// 🔥 HANDLE BOTH FORMATS (VERY IMPORTANT)
-if(typeof rawAccount === "string"){
-  const [email, password] = rawAccount.split(":");
-  account = {
-    email: email?.trim(),
-    password: password?.trim()
-  };
-}else{
-  account = rawAccount;
-}
-
-// 🚨 VALIDATION (CRITICAL)
-if(!account.email || !account.password){
-  throw "Invalid account format. Contact admin.";
-}
-
-  const logo = getAutoLogo(pName.value);
-
-  await addDoc(collection(db,"products"),{
-    name: pName.value,
-    category: pCategory.value,
-    price: Number(pPrice.value),
-    logo: logo,
-    accounts: accounts,
-    stock: accounts.length
-  });
-
-  // RESET
-  pName.value="";
-  pCategory.value="";
-  pPrice.value="";
-  document.getElementById("pAccounts").value="";
-
-  loadProducts();
 };
 
 async function loadProducts(){
