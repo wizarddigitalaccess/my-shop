@@ -179,34 +179,37 @@ async function placeOrder(){
     }
 
     const data = {
-      userId: user.uid,
-      type: gift.name,
-      price: totalPrice,
-      note: noteValue || "",
-      productImage: gift.image || "",
-      productName: gift.name || "Gift",
+  userId: user.uid,
 
-      receiver:{
-        name: rName.value,
-        phone: rPhone.value,
-        house: rHouse.value,
-        street: rStreet.value,
-        city: rCity.value,
-        state: rState.value,
-        zip: rZip.value,
-        country: rCountry.value,
-        size: gift.requiresSize ? rSize.value : null
-      },
+  // ✅ FIXED FIELDS
+  productName: gift.name,
+  productImage: gift.image || "",
+  
+  price: totalPrice,
 
-      senders:{
-        name: sName.value,
-        location: sLocation.value || ""
-      },
+  note: noteValue || "",
 
-      status: "placed",
-      viewed: false,
-      createdAt: serverTimestamp()
-    };
+  receiver:{
+    name: rName.value,
+    phone: rPhone.value,
+    house: rHouse.value,
+    street: rStreet.value,
+    city: rCity.value,
+    state: rState.value,
+    zip: rZip.value,
+    country: rCountry.value,
+    size: gift.requiresSize ? rSize.value : null
+  },
+
+  senders:{
+    name: sName.value,
+    location: sLocation.value || ""
+  },
+
+  status: "placed",
+  viewed: false,
+  createdAt: serverTimestamp()
+};
 
     if(!data.receiver.name || !data.receiver.street || !data.receiver.city || !data.receiver.country){
       return alert("Fill all required fields");
