@@ -205,11 +205,6 @@ function loadOrdersLive(uid){
           <div class="price">₦${o.price}</div>
 
           <div class="field">
-            Details:
-            <div class="blurred" style="margin-top:5px;white-space:pre-line;">
-${o.details || `Email: ${o.email}\nPassword: ${o.password}`}
-            </div>
-          </div>
 
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
@@ -217,7 +212,11 @@ ${o.details || `Email: ${o.email}\nPassword: ${o.password}`}
           </div>
 
           <div style="margin-top:10px;font-size:11px;color:gray;">
-            ${new Date(o.createdAt).toLocaleString()}
+            ${
+  o.createdAt && o.createdAt.toDate
+    ? o.createdAt.toDate().toLocaleString()
+    : new Date(o.createdAt || Date.now()).toLocaleString()
+}
           </div>
         </div>`;
       }
