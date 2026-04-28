@@ -498,7 +498,7 @@ async function buy(id){
         productId: id,
         name: productData.name,
         price: productData.price,
-        loginDetails: String(account.details || "").trim(),
+        loginDetails: (account.details || "").split("||").join("\n"),
         logo: productData.logo,
         createdAt: new Date()
       });

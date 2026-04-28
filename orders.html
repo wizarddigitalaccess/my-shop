@@ -196,37 +196,35 @@ function loadOrdersLive(uid){
       div.className="card";
 
       /* NORMAL */
-      if(o.type==="normal"){
-        div.innerHTML=`
-        <img src="${o.logo || ''}" class="logo">
+  if(o.type==="normal"){
+  div.innerHTML=`
+  <img src="${o.logo || ''}" class="logo">
 
-        <div class="content">
-          <b>${o.name}</b>
-          <div class="price">₦${Number(p.price || 0).toLocaleString()}</div>
+  <div class="content">
+    <b>${o.name}</b>
+    <div class="price">₦${Number(o.price).toLocaleString()}</div>
 
-          <div class="field">
+    <div class="field">
+      Details:
+      <div class="blurred" style="margin-top:5px;white-space:pre-line;">
+${o.loginDetails || "No details available"}
+      </div>
+    </div>
 
-  <div class="field">
-  Details:
-  <div class="blurred" style="margin-top:5px;white-space:pre-line;">
-    ${o.loginDetails || "No details available"}
-  </div>
-</div>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
+      <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
+    </div>
 
-<div style="display:flex;gap:6px;margin-top:6px;">
-  <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
-  <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
-</div>
-
-          <div style="margin-top:10px;font-size:11px;color:gray;">
-            ${
-  o.createdAt && o.createdAt.toDate
-    ? o.createdAt.toDate().toLocaleString()
-    : new Date(o.createdAt || Date.now()).toLocaleString()
-}
-          </div>
-        </div>`;
+    <div style="margin-top:10px;font-size:11px;color:gray;">
+      ${
+        o.createdAt && o.createdAt.toDate
+          ? o.createdAt.toDate().toLocaleString()
+          : new Date(o.createdAt || Date.now()).toLocaleString()
       }
+    </div>
+  </div>`;
+}
 
       /* GIFT */
       else{
@@ -328,30 +326,16 @@ window.toggleData = (btn)=>{
 };
 
 window.copyData = (btn)=>{
-  const contentBox = btn.closest(".content");
+  const content = btn.closest(".content").querySelector(".field div");
 
-  // Try new system firstlet content = contentBox.querySelector(".detailsBox");
-  let content = contentBox.querySelector(".detailsBox");
-
-  let text = "";
-
-  if(content){
-    text = content.innerText;
-  } else {
-    // fallback for old orders
-    const fallback = contentBox.innerText;
-    text = fallback;
-  }
-
-  if(!text){
+  if(!content){
     alert("No data found");
     return;
   }
 
-  navigator.clipboard.writeText(text);
+  navigator.clipboard.writeText(content.innerText);
   alert("Copied ✅");
 };
-
 </script>
 
 </body>
