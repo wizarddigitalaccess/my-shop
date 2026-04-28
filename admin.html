@@ -149,10 +149,10 @@ button {
   <div id="categories"></div>
 
   <h3>Main Products</h3>
-  <input id="pPreview" placeholder="Preview Link (optional)">
   <input id="pName" placeholder="Product Name (e.g Facebook Account)">
   <input id="pCategory" placeholder="Category (must match exactly)">
   <input id="pPrice" placeholder="Price (e.g 5000)">
+  <input id="pPreview" placeholder="Preview link (optional)">
   <textarea id="pAccounts" placeholder="Enter accounts (one per line)
 email:pass
 email:pass"></textarea>
@@ -264,6 +264,22 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+// ✅ FIX: bind DOM elements (prevents "not defined" errors)
+const users = document.getElementById("users");
+const products = document.getElementById("products");
+const categories = document.getElementById("categories");
+const gCategories = document.getElementById("gCategories");
+const gProducts = document.getElementById("gProducts");
+const tracking = document.getElementById("tracking");
+const allOrders = document.getElementById("allOrders");
+const payments = document.getElementById("payments");
+
+const cardUsers = document.getElementById("cardUsers");
+const cardSales = document.getElementById("cardSales");
+const cardDeposits = document.getElementById("cardDeposits");
+const cardOrders = document.getElementById("cardOrders");
+
+const logoutBtn = document.getElementById("logoutBtn");
 
 function getAutoLogo(name){
   const logoMap = {
@@ -503,42 +519,50 @@ window.addProduct = async () => {
     }
 
     // 🔥 PARSE ACCOUNTS SAFELY
-    const accounts = raw
-      .split("\n")
-      .map(line => line.trim())
-      .filter(line => line.includes(":"))
-      .map(line => {
-        const parts = line.split(":");
+if(!raw){
+  alert("Add at least 1 account");
+  return;
+}
 
-        return {
-          email: parts[0]?.trim() || "",
-          password: parts[1]?.trim() || ""
-        };
-      })
-      .filter(acc => acc.email && acc.password);
+const accounts = raw
+  .split("\n")
+  .map(line => line.trim())
+  .filter(line => line.includes(":") && line.split(":")[1])
+  .map(line => {
+    const [email, password] = line.split(":");
 
-    if(accounts.length === 0){
-      alert("Invalid account format. Use email:password");
-      return;
-    }
+    return {
+      email: email.trim(),
+      password: password.trim()
+    };
+  })
+  .filter(acc => acc.email && acc.password);
+
+console.log("ACCOUNTS:", accounts);
+
+if(accounts.length === 0){
+  alert("Invalid account format. Use email:password");
+  return;
+}
 
     const logo = getAutoLogo(pName.value);
 
     await addDoc(collection(db,"products"),{
-      name: pName.value,
-      category: pCategory.value,
-      price: Number(pPrice.value),
-      logo: logo,
-      accounts: accounts,
-      stock: accounts.length,
-      createdAt: Date.now()
-    });
+  name: pName.value,
+  category: pCategory.value,
+  price: Number(pPrice.value),
+  logo: logo,
+  accounts: accounts,
+  stock: accounts.length,
+  previewLink: document.getElementById("pPreview")?.value || ""
+});
 
     // RESET FORM
     pName.value="";
     pCategory.value="";
     pPrice.value="";
     accountsInput.value="";
+    document.getElementById("pPreview").value="";
 
     alert("✅ Product added successfully");
 
@@ -569,9 +593,13 @@ async function loadProducts(){
   </div>
 
     <div style="font-size:12px;color:gray;">
-Stock: ${p.stock || 0} <br>
-Preview: ${p.preview ? "✔ Available" : "❌ None"}
+  Stock: ${p.stock || 0}
 </div>
+
+<div style="font-size:12px;color:gray;">
+  Preview: ${p.previewLink && p.previewLink !== "" ? "✔ Available" : "❌ None"}
+</div>
+
     <div class="actions">
       <button class="btn-edit" onclick="editProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
       <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
