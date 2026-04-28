@@ -13,6 +13,11 @@ body {
   color:white;
 }
 
+.blurred{
+  filter: blur(6px);
+  user-select: none;
+}
+
 /* LOADER */
 .loader {
   position:fixed;
@@ -214,8 +219,20 @@ function loadOrdersLive(uid){
           <b>${o.name}</b>
           <div class="price">₦${o.price}</div>
 
-          <div class="field">Email: ${o.email}</div>
-          <div class="field">Password: ${o.password}</div>
+          <div class="field">
+  Email: 
+  <span id="email-${Math.random()}" class="blurred">${o.email}</span>
+</div>
+
+<div class="field">
+  Password: 
+  <span id="pass-${Math.random()}" class="blurred">${o.password}</span>
+</div>
+
+<div style="display:flex;gap:6px;margin-top:6px;">
+  <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
+  <button onclick="copyData(this)" style="flex:1;background:#1877f2;">Copy</button>
+</div>
 
           <div class="status delivered">Delivered ✅</div>
         </div>`;
@@ -272,6 +289,24 @@ function loadOrdersLive(uid){
     }
   }
 }
+
+window.toggleData = (btn)=>{
+  const container = btn.parentElement.previousElementSibling;
+  const spans = btn.parentElement.parentElement.querySelectorAll(".blurred");
+
+  spans.forEach(el=>{
+    el.classList.toggle("blurred");
+  });
+};
+
+window.copyData = (btn)=>{
+  const parent = btn.parentElement.parentElement;
+  const text = parent.innerText;
+
+  navigator.clipboard.writeText(text);
+
+  alert("Copied!");
+};
 </script>
 
 </body>
