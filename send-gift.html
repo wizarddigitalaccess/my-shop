@@ -142,86 +142,92 @@ if(gift.requiresSize){
 
 /* 🔥 UPDATED FUNCTION ONLY */
 window.placeOrder = async ()=>{
-  const rName = document.getElementById("rName");
-const rPhone = document.getElementById("rPhone");
-const rHouse = document.getElementById("rHouse");
-const rStreet = document.getElementById("rStreet");
-const rCity = document.getElementById("rCity");
-const rState = document.getElementById("rState");
-const rZip = document.getElementById("rZip");
-const rCountry = document.getElementById("rCountry");
-const rSize = document.getElementById("rSize");
+  try{
 
-const sName = document.getElementById("sName");
-const sLocation = document.getElementById("sLocation");
+    const rName = document.getElementById("rName");
+    const rPhone = document.getElementById("rPhone");
+    const rHouse = document.getElementById("rHouse");
+    const rStreet = document.getElementById("rStreet");
+    const rCity = document.getElementById("rCity");
+    const rState = document.getElementById("rState");
+    const rZip = document.getElementById("rZip");
+    const rCountry = document.getElementById("rCountry");
+    const rSize = document.getElementById("rSize");
 
-  const user = auth.currentUser;
-  if(!user) return alert("Login required");
+    const sName = document.getElementById("sName");
+    const sLocation = document.getElementById("sLocation");
 
-  const userRef = doc(db,"users",user.uid);
-  const userSnap = await getDoc(userRef);
+    const user = auth.currentUser;
+    if(!user) return alert("Login required");
 
-  if(!userSnap.exists()){
-    return alert("User not found");
+    const userRef = doc(db,"users",user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if(!userSnap.exists()){
+      return alert("User not found");
+    }
+
+    const userData = userSnap.data();
+    const wallet = userData.wallet || 0;
+
+    const noteValue = document.getElementById("note").value.trim();
+    const extraFee = noteValue ? 10000 : 0;
+    const totalPrice = (gift.price || 0) + extraFee;
+
+    if(wallet < totalPrice){
+      return alert("Insufficient balance ❌");
+    }
+
+    const data = {
+      userId: user.uid,
+      type: gift.name,
+      price: totalPrice,
+      note: noteValue || "",
+
+      receiver:{
+        name: rName.value,
+        phone: rPhone.value,
+        house: rHouse.value,
+        street: rStreet.value,
+        city: rCity.value,
+        state: rState.value,
+        zip: rZip.value,
+        country: rCountry.value,
+        size: gift.requiresSize ? rSize.value : null
+      },
+
+      senders:{
+        name: sName.value,
+        location: sLocation.value || ""
+      },
+
+      status: "placed",
+      viewed: false,
+      createdAt: serverTimestamp()
+    };
+
+    if(!data.receiver.name || !data.receiver.street || !data.receiver.city || !data.receiver.country){
+      return alert("Fill all required fields");
+    }
+
+    await updateDoc(userRef,{
+      wallet: wallet - totalPrice
+    });
+
+    await addDoc(collection(db,"giftOrders"), data);
+
+    alert("Gift sent successfully 🎁");
+    location.href = "orders.html";
+
+  }catch(e){
+    console.error(e);
+
+    if((e+"").includes("permission-denied")){
+      alert("Service temporarily unavailable");
+    }else{
+      alert("Something went wrong");
+    }
   }
-
-  const userData = userSnap.data();
-  const wallet = userData.wallet || 0;
-
-  /* ❌ CHECK BALANCE */
-  const noteValue = document.getElementById("note").value.trim();
-const extraFee = noteValue ? 10000 : 0;
-const totalPrice = (gift.price || 0) + extraFee;
-
-if(wallet < totalPrice){
-  return alert("Insufficient balance ❌");
-}
-
-  const data = {
-  userId: user.uid,
-  type: gift.name,
-  price: totalPrice,
-
-  note: noteValue || "", // ✅ ONLY ONCE
-
-  receiver:{
-    name: rName.value,
-    phone: rPhone.value,
-    house: rHouse.value,
-    street: rStreet.value,
-    city: rCity.value,
-    state: rState.value,
-    zip: rZip.value,
-    country: rCountry.value,
-    size: gift.requiresSize ? rSize.value : null
-  },
-
-  senders:{
-    name: sName.value,
-    location: sLocation.value || ""
-  },
-
-  status: "placed",
-  viewed: false, // ✅ THIS IS PERFECT
-  createdAt: serverTimestamp()
-};
-
-  /* VALIDATION */
-  if(!data.receiver.name || !data.receiver.street || !data.receiver.city || !data.receiver.country){
-    return alert("Fill all required fields");
-  }
-
-  /* 💸 DEDUCT WALLET */
-  await updateDoc(userRef,{
-    wallet: wallet - totalPrice
-  });
-
-  /* 📦 SAVE ORDER */
-  await addDoc(collection(db,"giftOrders"), data);
-
-  alert("Gift sent successfully 🎁");
-
-  location.href = "orders.html";
 };
 </script>
 
