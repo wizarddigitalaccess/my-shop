@@ -141,7 +141,8 @@ if(gift.requiresSize){
 }
 
 /* 🔥 UPDATED FUNCTION ONLY */
-window.placeOrder = async ()=>{
+function placeOrder(){
+  (async ()=>{
   try{
 
     const rName = document.getElementById("rName");
@@ -228,7 +229,8 @@ window.placeOrder = async ()=>{
       alert("Something went wrong");
     }
   }
-};
+  })();
+}
 </script>
 
 </body>
