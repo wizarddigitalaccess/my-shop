@@ -111,6 +111,35 @@ button {
 </style>
 </head>
 
+<div id="orderModal" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  z-index:9999;
+">
+
+  <div style="
+    background:#1c1c2e;
+    margin:40px auto;
+    padding:20px;
+    width:90%;
+    max-width:500px;
+    border-radius:12px;
+    max-height:80vh;
+    overflow-y:auto;
+  ">
+
+    <div style="display:flex;justify-content:space-between;">
+      <b>Order Details</b>
+      <span onclick="closeModal()" style="cursor:pointer;">✕</span>
+    </div>
+
+    <div id="modalContent" style="margin-top:15px;"></div>
+
+  </div>
+</div>
+
 <body>
 <audio id="alertSound" preload="auto">
   <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
@@ -869,15 +898,24 @@ function loadAllOrders(){
       return B - A;
     });
 
+    // ✅ VERY IMPORTANT (clear before render)
     allOrders.innerHTML = "";
 
-    all.forEach(o=>{
-      allOrders.innerHTML += `
-        <div class="item">
-          ${o.type === "normal" ? "🛒 Product" : "🎁 Gift"} 
-          - ₦${o.price || 0}
-        </div>
+    // ✅ SAFE CLICK HANDLING
+    all.forEach((o, i)=>{
+
+      const div = document.createElement("div");
+      div.className = "item";
+
+      div.innerHTML = `
+        <b>${o.type === "normal" ? "🛒 Product" : "🎁 Gift"}</b><br>
+        ₦${o.price || 0}<br>
+        <small>${o.name || o.productName || "Item"}</small>
       `;
+
+      div.onclick = ()=> openOrder(o); // ✅ SAFE
+
+      allOrders.appendChild(div);
     });
 
   });
@@ -1140,6 +1178,76 @@ function loadDashboardLive(){
   unsubscribers.push(unsubUsers, unsubOrders, unsubPayments);
 }
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
+
+window.openOrder = function(o){
+
+  let html = `
+    <div><b>Type:</b> ${o.type}</div>
+    <div><b>Price:</b> ₦${o.price}</div>
+    <div><b>User ID:</b> ${o.userId || "-"}</div>
+    <div><b>Email:</b> ${o.userEmail || "-"}</div>
+  `;
+
+  // 🛒 NORMAL PRODUCT
+  if(o.type === "normal"){
+    html += `
+      <hr>
+      <div><b>Product:</b> ${o.name}</div>
+
+      <div style="margin-top:10px;">
+        <b>Login Details:</b>
+        <pre style="background:#111;padding:10px;border-radius:8px;white-space:pre-wrap;">
+${o.loginDetails || "No data"}
+        </pre>
+      </div>
+    `;
+  }
+
+  // 🎁 GIFT
+  if(o.type === "gift"){
+    const r = o.receiver || {};
+    const s = o.senders || {};
+
+    html += `
+      <hr>
+      <div><b>Gift:</b> ${o.productName}</div>
+
+      <div><b>Receiver:</b></div>
+      <div>Name: ${r.name || "-"}</div>
+      <div>Phone: ${r.phone || "-"}</div>
+      <div>Address: ${r.street || ""}, ${r.city || ""}, ${r.country || ""}</div>
+
+      ${r.size ? `<div>Size: ${r.size}</div>` : ""}
+
+      <hr>
+
+      <div><b>Sender:</b></div>
+      <div>Name: ${s.name || "-"}</div>
+      <div>Location: ${s.location || "-"}</div>
+
+      ${o.note ? `<hr><div><b>Note:</b> ${o.note}</div>` : ""}
+    `;
+  }
+
+  // 📅 DATE
+  html += `
+    <hr>
+    <div style="color:gray;font-size:12px;">
+      ${
+        o.createdAt && o.createdAt.toDate
+          ? o.createdAt.toDate().toLocaleString()
+          : "No date"
+      }
+    </div>
+  `;
+
+  document.getElementById("modalContent").innerHTML = html;
+  document.getElementById("orderModal").style.display = "block";
+};
+
+window.closeModal = function(){
+  document.getElementById("orderModal").style.display = "none";
+};
 </script>
 
 </body>
