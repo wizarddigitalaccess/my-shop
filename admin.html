@@ -140,6 +140,35 @@ button {
   </div>
 </div>
 
+<div id="userModal" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  z-index:9999;
+">
+
+  <div style="
+    background:#1c1c2e;
+    margin:40px auto;
+    padding:20px;
+    width:90%;
+    max-width:500px;
+    border-radius:12px;
+    max-height:80vh;
+    overflow-y:auto;
+  ">
+
+    <div style="display:flex;justify-content:space-between;">
+      <b>User Details</b>
+      <span onclick="closeUserModal()" style="cursor:pointer;">✕</span>
+    </div>
+
+    <div id="userContent" style="margin-top:15px;"></div>
+
+  </div>
+</div>
+
 <body>
 <audio id="alertSound" preload="auto">
   <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
@@ -264,6 +293,7 @@ email:pass"></textarea>
 </div>
 
 <script type="module">
+import { query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { 
@@ -1186,6 +1216,10 @@ window.openOrder = function(o){
     <div><b>Price:</b> ₦${o.price}</div>
     <div><b>User ID:</b> ${o.userId || "-"}</div>
     <div><b>Email:</b> ${o.userEmail || "-"}</div>
+    <button onclick="viewUser('${o.userId}')" 
+style="margin-top:10px;padding:8px;background:#1877f2;border:none;border-radius:8px;color:white;cursor:pointer;">
+  View User 👤
+</button>
   `;
 
   // 🛒 NORMAL PRODUCT
@@ -1247,6 +1281,64 @@ ${o.loginDetails || "No data"}
 
 window.closeModal = function(){
   document.getElementById("orderModal").style.display = "none";
+};
+
+window.viewUser = async function(uid){
+
+  try{
+
+    const userRef = doc(db,"users",uid);
+    const userSnap = await getDoc(userRef);
+
+    if(!userSnap.exists()){
+      alert("User not found");
+      return;
+    }
+
+    const u = userSnap.data();
+
+    // 🔥 LOAD USER ORDERS
+    const normalSnap = await getDocs(query(collection(db,"orders"), where("userId","==",uid)));
+    const giftSnap = await getDocs(query(collection(db,"giftOrders"), where("userId","==",uid)));
+
+    let ordersHTML = "";
+
+    normalSnap.forEach(d=>{
+      const o = d.data();
+      ordersHTML += `<div>🛒 ${o.name} - ₦${o.price}</div>`;
+    });
+
+    giftSnap.forEach(d=>{
+      const g = d.data();
+      ordersHTML += `<div>🎁 ${g.productName} - ₦${g.price}</div>`;
+    });
+
+    if(!ordersHTML){
+      ordersHTML = "<div style='color:gray;'>No orders</div>";
+    }
+
+    // 🎯 DISPLAY
+    document.getElementById("userContent").innerHTML = `
+      <div><b>User ID:</b> ${uid}</div>
+      <div><b>Email:</b> ${u.email || "-"}</div>
+      <div><b>Wallet:</b> ₦${u.wallet || 0}</div>
+
+      <hr>
+
+      <b>Orders:</b>
+      ${ordersHTML}
+    `;
+
+    document.getElementById("userModal").style.display = "block";
+
+  }catch(e){
+    console.error(e);
+    alert("Failed to load user");
+  }
+};
+
+window.closeUserModal = function(){
+  document.getElementById("userModal").style.display = "none";
 };
 </script>
 
