@@ -504,7 +504,7 @@ transaction.set(orderRef,{
   price: productData.price || 0,
   logo: productData.logo || "",
 
-  loginDetails: account?.details || "",
+  loginDetails: (account?.details || "").split("||").join("\n"),
 
   status: "delivered",
 

@@ -426,11 +426,29 @@ async function loadUsers(){
       <div class="actions">
         <button class="btn-fund" onclick="fund('${d.id}')">+ Fund</button>
         <button class="btn-deduct" onclick="deduct('${d.id}')">- Deduct</button>
-        <button class="btn-del" onclick="delUser('${d.id}')">Delete</button>
+        <button class="btn-edit" onclick="viewUser('${d.id}')">View Details</button>
       </div>
     </div>`;
   });
 }
+
+window.viewUser = async(id)=>{
+
+  const ref = doc(db,"users",id);
+  const snap = await getDoc(ref);
+
+  if(!snap.exists()) return;
+
+  const u = snap.data();
+
+  alert(`
+Email: ${u.email}
+Wallet: ₦${u.wallet || 0}
+User ID: ${id}
+Role: ${u.role || "user"}
+Created: ${u.createdAt?.toDate ? u.createdAt.toDate() : "-"}
+  `);
+};
 
 window.fund=async(id)=>{
  let amt=prompt("Amount");
@@ -589,32 +607,40 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-      onclick='editProd("${d.id}", ${JSON.stringify(p)})'
+      onclick="editProd('${d.id}')"
       <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
     </div>
   </div>`;
  });
 }
 
-window.editProd = async(id, pData)=>{
+window.editProd = async(id)=>{
 
-  const name = prompt("Name", pData.name);
+  const ref = doc(db,"products",id);
+  const snap = await getDoc(ref);
+
+  if(!snap.exists()) return;
+
+  const p = snap.data();
+
+  const name = prompt("Name", p.name);
   if(name === null) return;
 
-  const category = prompt("Category", pData.category);
+  const category = prompt("Category", p.category);
   if(category === null) return;
 
-  const price = prompt("Price", pData.price);
+  const price = prompt("Price", p.price);
   if(price === null) return;
 
-  const preview = prompt("Preview link", pData.previewLink || "");
+  const preview = prompt("Preview link", p.previewLink || "");
 
   const accountsRaw = prompt(
     "Accounts (one per line)",
-    (pData.accounts || []).map(a => a.details).join("\n")
+    (p.accounts || []).map(a => a.details).join("\n")
   );
 
   let accounts = [];
+
   if(accountsRaw){
     accounts = accountsRaw
       .split("\n")
@@ -623,7 +649,7 @@ window.editProd = async(id, pData)=>{
       .map(a => ({ details: a }));
   }
 
-  await updateDoc(doc(db,"products",id),{
+  await updateDoc(ref,{
     name,
     category,
     price: Number(price),
@@ -632,7 +658,7 @@ window.editProd = async(id, pData)=>{
     stock: accounts.length
   });
 
-  alert("✅ Product updated");
+  alert("✅ Updated");
   loadProducts();
 };
 
@@ -816,105 +842,47 @@ window.delGProd=async(id)=>{
 
 function loadAllOrders(){
 
-  const unsub1 = onSnapshot(collection(db,"orders"), async snap1 => {
-    const productOrders = snap1.docs.map(d => ({id:d.id, ...d.data()}));
+  const unsub = onSnapshot(collection(db,"orders"), async normalSnap=>{
 
-    const unsub2 = onSnapshot(collection(db,"giftOrders"), async snap2 => {
-      const giftOrders = snap2.docs.map(d => ({id:d.id, ...d.data()}));
+    const giftSnap = await getDocs(collection(db,"giftOrders"));
 
-      const all = [...productOrders, ...giftOrders];
+    let all = [];
 
-      // SORT BY TIME
-      all.sort((a,b)=>{
-        const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-        const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-        return B - A;
-      });
-
-      let totalSales = 0;
-      let totalUsers = new Set();
-
-      allOrders.innerHTML = "";
-
-      const filter = document.getElementById("orderFilter")?.value || "all";
-
-      for(const o of all){
-
-        if(filter !== "all" && o.status !== filter) continue;
-
-        totalSales += o.price || 0;
-        if(o.userId) totalUsers.add(o.userId);
-
-        let userEmail = o.userEmail || "Unknown";
-
-        // fallback if missing
-        if(!o.userEmail && o.userId){
-          try{
-            const u = await getDoc(doc(db,"users",o.userId));
-            if(u.exists()) userEmail = u.data().email;
-          }catch(e){}
-        }
-
-        // 🧾 PRODUCT ORDER
-        if(o.type === "product"){
-          allOrders.innerHTML += `
-          <div class="item">
-            <div class="topRow">
-              ${o.name || "Product"} - ₦${o.price || 0}
-            </div>
-
-            <div>👤 ${userEmail}</div>
-            <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
-
-            <div class="statusBox delivered">Delivered</div>
-
-            <div style="margin-top:6px;padding:6px;background:#111;border-radius:6px;font-size:12px;">
-              🔐 ${o.loginDetails || ""}
-            </div>
-          </div>`;
-        }
-
-        // 🎁 GIFT ORDER
-        else {
-          allOrders.innerHTML += `
-          <div class="item">
-            <div class="topRow">
-              ${o.productName || "Gift"} - ₦${o.price || 0}
-            </div>
-
-            <div>👤 ${userEmail}</div>
-            <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
-
-            <div class="statusBox ${o.status || 'placed'}">
-              ${o.status || 'placed'}
-            </div>
-
-            <div>🧾 Sender: ${o.senders?.name || "-"}</div>
-            ${o.senders?.location ? `<div>📍 From: ${o.senders.location}</div>` : ""}
-
-            ${o.note ? `
-              <div style="margin-top:6px;padding:6px;background:#111;border-radius:6px;font-size:12px;">
-                📝 ${o.note}
-              </div>
-            ` : ""}
-
-            ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
-          </div>`;
-        }
-      }
-
-      allOrders.innerHTML = `
-        <div class="item">💰 Total Sales: ₦${totalSales}</div>
-        <div class="item">📦 Total Orders: ${all.length}</div>
-        <div class="item">👥 Total Users: ${totalUsers.size}</div>
-      ` + allOrders.innerHTML;
-
+    // 🛒 PRODUCT ORDERS
+    normalSnap.forEach(d=>{
+      const o = d.data();
+      o.type = "normal";
+      all.push(o);
     });
 
-    unsubscribers.push(unsub2);
+    // 🎁 GIFT ORDERS
+    giftSnap.forEach(d=>{
+      const g = d.data();
+      g.type = "gift";
+      all.push(g);
+    });
+
+    // SORT
+    all.sort((a,b)=>{
+      const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return B - A;
+    });
+
+    allOrders.innerHTML = "";
+
+    all.forEach(o=>{
+      allOrders.innerHTML += `
+        <div class="item">
+          ${o.type === "normal" ? "🛒 Product" : "🎁 Gift"} 
+          - ₦${o.price || 0}
+        </div>
+      `;
+    });
+
   });
 
-  unsubscribers.push(unsub1);
+  unsubscribers.push(unsub);
 }
 
 /* LIVE TRACKING */
