@@ -219,14 +219,13 @@ productListener = onSnapshot(collection(db,"giftProducts"), (snap)=>{
 
         div.onclick = ()=>{
           const productData = {
-            id: docSnap.id,
-            name: p.name,
-            price: p.price,
-            image: p.image || "",
-            category: p.category,
-            requiresSize: p.requiresSize || false
-          };
-
+  id: docSnap.id,
+  name: p.name || "Gift",
+  price: Number(p.price || 0),
+  image: p.image || "",
+  category: p.category || "",
+  requiresSize: p.requiresSize === true
+};
           localStorage.setItem("selectedGift", JSON.stringify(productData));
           location.href = "send-gift.html";
         };

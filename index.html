@@ -267,7 +267,7 @@ body {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc
+  getFirestore, collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -491,19 +491,27 @@ async function buy(id){
       });
 
       // 🧾 CREATE ORDER (SAFE DELIVERY)
-      const orderRef = doc(collection(db,"orders"));
+const orderRef = doc(collection(db,"orders"));
 
-      transaction.set(orderRef,{
-        userId: user.uid,
-        productId: id,
-        name: productData.name,
-        price: productData.price,
-        loginDetails: (account.details || "").split("||").join("\n"),
-        logo: productData.logo,
-        createdAt: new Date()
-      });
+transaction.set(orderRef,{
+  userId: user.uid,
+  userEmail: user.email || "",
+  type: "normal",
 
-    });
+  productId: id,
+  name: productData.name || "",
+  category: productData.category || "",
+  price: productData.price || 0,
+  logo: productData.logo || "",
+
+  loginDetails: account?.details || "",
+
+  status: "delivered",
+
+  createdAt: serverTimestamp()
+});
+
+});
 
     alert("✅ Purchase successful");
 location.href="orders.html";

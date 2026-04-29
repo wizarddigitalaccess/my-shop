@@ -196,7 +196,7 @@ function loadOrdersLive(uid){
       div.className="card";
 
       /* NORMAL */
-  if(o.type==="normal"){
+  if(o.type==="product"){
   div.innerHTML=`
   <img src="${o.logo || ''}" class="logo">
 
@@ -205,11 +205,11 @@ function loadOrdersLive(uid){
     <div class="price">₦${Number(o.price).toLocaleString()}</div>
 
     <div class="field">
-      Details:
-      <div class="blurred" style="margin-top:5px;white-space:pre-line;">
+  Details:
+  <div class="detailsBox blurred"
 ${o.loginDetails || "No details available"}
-      </div>
-    </div>
+  </div>
+</div>
 
     <div style="display:flex;gap:6px;margin-top:6px;">
       <button onclick="toggleData(this)" style="flex:1;background:#555;">Show</button>
@@ -320,13 +320,20 @@ ${o.loginDetails || "No details available"}
 
 window.toggleData = (btn)=>{
   const box = btn.closest(".content").querySelector(".detailsBox");
-  if(box){
-    box.classList.toggle("blurred");
+
+  if(!box) return;
+
+  if(box.classList.contains("blurred")){
+    box.classList.remove("blurred");
+    btn.innerText = "Hide";
+  }else{
+    box.classList.add("blurred");
+    btn.innerText = "Show";
   }
 };
 
 window.copyData = (btn)=>{
-  const content = btn.closest(".content").querySelector(".field div");
+  const content = btn.closest(".content").querySelector(".detailsBox");
 
   if(!content){
     alert("No data found");

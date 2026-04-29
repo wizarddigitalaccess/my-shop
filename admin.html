@@ -589,19 +589,51 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-      <button class="btn-edit" onclick="editProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
+      onclick='editProd("${d.id}", ${JSON.stringify(p)})'
       <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
     </div>
   </div>`;
  });
 }
 
-window.editProd=async(id,n,c,p)=>{
- let name=prompt("Name",n);
- let cat=prompt("Category",c);
- let price=prompt("Price",p);
- await updateDoc(doc(db,"products",id),{name,category:cat,price:Number(price)});
- loadProducts();
+window.editProd = async(id, pData)=>{
+
+  const name = prompt("Name", pData.name);
+  if(name === null) return;
+
+  const category = prompt("Category", pData.category);
+  if(category === null) return;
+
+  const price = prompt("Price", pData.price);
+  if(price === null) return;
+
+  const preview = prompt("Preview link", pData.previewLink || "");
+
+  const accountsRaw = prompt(
+    "Accounts (one per line)",
+    (pData.accounts || []).map(a => a.details).join("\n")
+  );
+
+  let accounts = [];
+  if(accountsRaw){
+    accounts = accountsRaw
+      .split("\n")
+      .map(a => a.trim())
+      .filter(a => a)
+      .map(a => ({ details: a }));
+  }
+
+  await updateDoc(doc(db,"products",id),{
+    name,
+    category,
+    price: Number(price),
+    previewLink: preview || "",
+    accounts,
+    stock: accounts.length
+  });
+
+  alert("✅ Product updated");
+  loadProducts();
 };
 
 window.delProd=async(id)=>{
@@ -784,72 +816,105 @@ window.delGProd=async(id)=>{
 
 function loadAllOrders(){
 
-  const unsub = onSnapshot(collection(db,"giftOrders"), async snap=>{
+  const unsub1 = onSnapshot(collection(db,"orders"), async snap1 => {
+    const productOrders = snap1.docs.map(d => ({id:d.id, ...d.data()}));
 
-    const list = [...snap.docs].sort((a,b)=>
-      (b.data().createdAt || 0) - (a.data().createdAt || 0)
-    );
+    const unsub2 = onSnapshot(collection(db,"giftOrders"), async snap2 => {
+      const giftOrders = snap2.docs.map(d => ({id:d.id, ...d.data()}));
 
-    let totalSales = 0;
-    let totalOrders = list.length;
-    let totalUsers = new Set();
+      const all = [...productOrders, ...giftOrders];
 
-    allOrders.innerHTML = "";
+      // SORT BY TIME
+      all.sort((a,b)=>{
+        const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return B - A;
+      });
 
-    for(const d of list){
-      const o = d.data();
+      let totalSales = 0;
+      let totalUsers = new Set();
+
+      allOrders.innerHTML = "";
 
       const filter = document.getElementById("orderFilter")?.value || "all";
-      if(filter !== "all" && o.status !== filter) continue;
 
-      totalSales += o.price || 0;
-      totalUsers.add(o.userId);
+      for(const o of all){
 
-      let userEmail = "Unknown";
+        if(filter !== "all" && o.status !== filter) continue;
 
-      try{
-        const u = await getDoc(doc(db,"users",o.userId));
-        if(u.exists()) userEmail = u.data().email;
-      }catch(e){}
+        totalSales += o.price || 0;
+        if(o.userId) totalUsers.add(o.userId);
 
-      allOrders.innerHTML += `
-      <div class="item">
-        <div class="topRow">
-          ${o.productName || "Gift"} - ₦${o.price || 0}
-        </div>
+        let userEmail = o.userEmail || "Unknown";
 
-        <div>👤 ${userEmail}</div>
-        <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
+        // fallback if missing
+        if(!o.userEmail && o.userId){
+          try{
+            const u = await getDoc(doc(db,"users",o.userId));
+            if(u.exists()) userEmail = u.data().email;
+          }catch(e){}
+        }
 
-        <div class="statusBox ${o.status || 'placed'}">
-          ${o.status || 'placed'} 
-          ${!o.status || o.status === "placed" ? "🆕 NEW" : ""}
-        </div>
+        // 🧾 PRODUCT ORDER
+        if(o.type === "product"){
+          allOrders.innerHTML += `
+          <div class="item">
+            <div class="topRow">
+              ${o.name || "Product"} - ₦${o.price || 0}
+            </div>
 
-        <div>🧾 Sender: ${o.senders?.name || "-"}</div>
+            <div>👤 ${userEmail}</div>
+            <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
 
-        ${o.senders?.location ? `<div>📍 From: ${o.senders.location}</div>` : ""}
+            <div class="statusBox delivered">Delivered</div>
 
-        ${o.note ? `
-          <div style="margin-top:6px;padding:6px;background:#111;border-radius:6px;font-size:12px;">
-            📝 ${o.note}
-          </div>
-        ` : ""}
+            <div style="margin-top:6px;padding:6px;background:#111;border-radius:6px;font-size:12px;">
+              🔐 ${o.loginDetails || ""}
+            </div>
+          </div>`;
+        }
 
-        ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
-      </div>`;
-    }
+        // 🎁 GIFT ORDER
+        else {
+          allOrders.innerHTML += `
+          <div class="item">
+            <div class="topRow">
+              ${o.productName || "Gift"} - ₦${o.price || 0}
+            </div>
 
-    allOrders.innerHTML = `
-      <div class="item">💰 Total Sales: ₦${totalSales}</div>
-      <div class="item">📦 Total Orders: ${totalOrders}</div>
-      <div class="item">👥 Total Users: ${totalUsers.size}</div>
-    ` + allOrders.innerHTML;
+            <div>👤 ${userEmail}</div>
+            <div>📅 ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</div>
 
+            <div class="statusBox ${o.status || 'placed'}">
+              ${o.status || 'placed'}
+            </div>
+
+            <div>🧾 Sender: ${o.senders?.name || "-"}</div>
+            ${o.senders?.location ? `<div>📍 From: ${o.senders.location}</div>` : ""}
+
+            ${o.note ? `
+              <div style="margin-top:6px;padding:6px;background:#111;border-radius:6px;font-size:12px;">
+                📝 ${o.note}
+              </div>
+            ` : ""}
+
+            ${o.image ? `<img src="${o.image}" style="width:60px;border-radius:8px;">` : ""}
+          </div>`;
+        }
+      }
+
+      allOrders.innerHTML = `
+        <div class="item">💰 Total Sales: ₦${totalSales}</div>
+        <div class="item">📦 Total Orders: ${all.length}</div>
+        <div class="item">👥 Total Users: ${totalUsers.size}</div>
+      ` + allOrders.innerHTML;
+
+    });
+
+    unsubscribers.push(unsub2);
   });
 
-  // ✅ VERY IMPORTANT (prevents duplicate listeners)
-  unsubscribers.push(unsub);
+  unsubscribers.push(unsub1);
 }
 
 /* LIVE TRACKING */
