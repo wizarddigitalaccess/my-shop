@@ -211,9 +211,11 @@ button {
   <input id="pCategory" placeholder="Category (must match exactly)">
   <input id="pPrice" placeholder="Price (e.g 5000)">
   <input id="pPreview" placeholder="Preview link (optional)">
-  <textarea id="pAccount" placeholder="Paste anything here..." style="
+  <textarea id="pAccount" placeholder="Paste login details..."
+style="
   width:100%;
   min-height:120px;
+  margin-top:10px;   /* ✅ pushes it down */
   padding:10px;
   border:none;
   border-radius:8px;
@@ -1212,6 +1214,11 @@ function loadDashboardLive(){
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
 
 window.openOrder = function(o){
+  try{
+    if(typeof o === "string"){
+      o = JSON.parse(o);
+    }
+  }catch(e){}
 
   let html = `
     <div><b>Type:</b> ${o.type}</div>
@@ -1323,72 +1330,69 @@ window.viewUser = async function(uid){
       const o = d.data();
 
       ordersHTML += `
-      <div style="
-        display:flex;
-        gap:10px;
-        align-items:center;
-        background:#111;
-        padding:10px;
-        border-radius:10px;
-        margin-bottom:8px;
-      ">
+<div onclick='openOrder(${JSON.stringify(o)})'
+style="
+  display:flex;
+  gap:10px;
+  align-items:center;
+  background:#111;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:8px;
+  cursor:pointer;
+">
 
-        <img src="${o.logo || 'https://via.placeholder.com/40'}"
-             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+  <img src="${o.logo || 'https://via.placeholder.com/40'}"
+       style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
 
-        <div style="flex:1;">
-          <div style="font-weight:bold;">${o.name}</div>
-          <div style="font-size:12px;color:gray;">
-            ${o.category || "No category"}
-          </div>
-          <div style="font-size:12px;color:#aaa;">
-            ${
-              o.createdAt?.toDate
-              ? o.createdAt.toDate().toLocaleString()
-              : ""
-            }
-          </div>
-        </div>
+  <div style="flex:1;">
+    <div style="font-weight:bold;">${o.name}</div>
+    <div style="font-size:12px;color:gray;">
+      ${o.category || "No category"}
+    </div>
+  </div>
 
-        <div style="font-weight:bold;">
-          ₦${o.price}
-        </div>
+  <div style="font-weight:bold;">
+    ₦${o.price}
+  </div>
 
-      </div>
-      `;
-    });
+</div>
+`;
+});
 
     // 🎁 GIFT ORDERS
     giftSnap.forEach(d=>{
       const g = d.data();
 
       ordersHTML += `
-      <div style="
-        display:flex;
-        gap:10px;
-        align-items:center;
-        background:#111;
-        padding:10px;
-        border-radius:10px;
-        margin-bottom:8px;
-      ">
+<div onclick='openOrder(${JSON.stringify(g)})'
+style="
+  display:flex;
+  gap:10px;
+  align-items:center;
+  background:#111;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:8px;
+  cursor:pointer;
+">
 
-        <img src="${g.productImage || 'https://via.placeholder.com/40'}"
-             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+  <img src="${g.productImage || 'https://via.placeholder.com/40'}"
+       style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
 
-        <div style="flex:1;">
-          <div style="font-weight:bold;">${g.productName}</div>
-          <div style="font-size:12px;color:gray;">
-            Gift Order
-          </div>
-        </div>
+  <div style="flex:1;">
+    <div style="font-weight:bold;">${g.productName}</div>
+    <div style="font-size:12px;color:gray;">
+      Gift Order
+    </div>
+  </div>
 
-        <div style="font-weight:bold;">
-          ₦${g.price}
-        </div>
+  <div style="font-weight:bold;">
+    ₦${g.price}
+  </div>
 
-      </div>
-      `;
+</div>
+`;
     });
 
     // 💰 TRANSACTIONS
