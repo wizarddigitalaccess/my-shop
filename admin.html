@@ -917,67 +917,106 @@ function loadAllOrders(){
 
     const giftSnap = await getDocs(collection(db,"giftOrders"));
 
-    let all = [];
+    allOrders.innerHTML = ""; // ✅ CLEAR FIRST
 
-    // 🛒 PRODUCT ORDERS
+    // 🛒 NORMAL ORDERS
     normalSnap.forEach(d=>{
       const o = d.data();
-      o.type = "normal";
-      all.push(o);
+
+      const div = document.createElement("div");
+
+      div.innerHTML = `
+      <div style="
+        display:flex;
+        gap:10px;
+        align-items:center;
+        background:#111;
+        padding:10px;
+        border-radius:10px;
+        margin-bottom:8px;
+      ">
+
+        <img src="${o.logo || 'https://via.placeholder.com/40'}"
+             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+
+        <div style="flex:1;">
+          <div style="font-weight:bold;">${o.name}</div>
+          <div style="font-size:12px;color:gray;">
+            ${o.category || "No category"}
+          </div>
+
+          <div style="font-size:11px;color:gray;margin-top:4px;">
+            ${
+              o.createdAt?.toDate
+                ? o.createdAt.toDate().toLocaleString()
+                : "No date"
+            }
+          </div>
+        </div>
+
+        <div style="font-weight:bold;">
+          ₦${o.price}
+        </div>
+
+        <button 
+          class="btn-view"
+          onclick="viewOrderDetailsById('${d.id}','normal')"
+        >
+          View
+        </button>
+
+      </div>
+      `;
+
+      allOrders.appendChild(div);
     });
 
     // 🎁 GIFT ORDERS
     giftSnap.forEach(d=>{
       const g = d.data();
-      g.type = "gift";
-      all.push(g);
-    });
-
-    // SORT
-    all.sort((a,b)=>{
-      const A = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-      const B = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-      return B - A;
-    });
-
-    // ✅ VERY IMPORTANT (clear before render)
-    allOrders.innerHTML = "";
-
-    // ✅ SAFE CLICK HANDLING
-    all.forEach((o, i)=>{
 
       const div = document.createElement("div");
-      div.className = "item";
-div.onclick = () => viewOrderDetails({
-  ...o,
-  type: o.type,
-  createdAt: o.createdAt?.seconds
-    ? o.createdAt.seconds * 1000
-    : (o.createdAt?.toMillis ? o.createdAt.toMillis() : null)
-});
 
       div.innerHTML = `
-  <div style="display:flex;align-items:center;gap:10px;">
-    <img src="${o.logo || o.productImage || 'https://via.placeholder.com/40'}"
-      style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
+      <div style="
+        display:flex;
+        gap:10px;
+        align-items:center;
+        background:#111;
+        padding:10px;
+        border-radius:10px;
+        margin-bottom:8px;
+      ">
 
-    <div style="flex:1;">
-      <b>${o.name || o.productName || "Item"}</b><br>
+        <img src="${g.productImage || 'https://via.placeholder.com/40'}"
+             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
 
-      <small style="color:gray;">
-        ${o.category || "No category"}
-      </small><br>
+        <div style="flex:1;">
+          <div style="font-weight:bold;">${g.productName}</div>
+          <div style="font-size:12px;color:gray;">Gift Order</div>
 
-      <span style="color:#1877f2;font-weight:bold;">
-        ₦${Number(o.price || 0).toLocaleString()}
-      </span>
-    </div>
+          <div style="font-size:11px;color:gray;margin-top:4px;">
+            ${
+              g.createdAt?.toDate
+                ? g.createdAt.toDate().toLocaleString()
+                : "No date"
+            }
+          </div>
+        </div>
 
-    <div style="font-size:12px;">
-      ${o.type === "normal" ? "🛒" : "🎁"}
-    </div>
-  </div>
-`;
+        <div style="font-weight:bold;">
+          ₦${g.price}
+        </div>
+
+        <button 
+          class="btn-view"
+          onclick="viewOrderDetailsById('${d.id}','gift')"
+        >
+          View
+        </button>
+
+      </div>
+      `;
 
       allOrders.appendChild(div);
     });
@@ -1432,76 +1471,99 @@ window.viewUser = async function(uid){
 
     // 🛒 NORMAL ORDERS
     normalSnap.forEach(d=>{
-      const o = d.data();
+  const o = d.data();
 
-      ordersHTML += `
-onclick='viewOrderDetails(${JSON.stringify({
-  ...o,
-  createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
-})})'
-style="
-  display:flex;
-  gap:10px;
-  align-items:center;
-  background:#111;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:8px;
-  cursor:pointer;
-">
+  ordersHTML += `
+  <div class="user-order-item"
+    style="
+      display:flex;
+      gap:10px;
+      align-items:center;
+      background:#111;
+      padding:10px;
+      border-radius:10px;
+      margin-bottom:8px;
+    ">
 
-  <img src="${o.logo || 'https://via.placeholder.com/40'}"
-       style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+    <img src="${o.logo || 'https://via.placeholder.com/40'}"
+         style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
 
-  <div style="flex:1;">
-    <div style="font-weight:bold;">${o.name}</div>
-    <div style="font-size:12px;color:gray;">
-      ${o.category || "No category"}
+    <div style="flex:1;">
+      <div style="font-weight:bold;">${o.name}</div>
+      <div style="font-size:12px;color:gray;">
+        ${o.category || "No category"}
+      </div>
+
+      <div style="font-size:11px;color:gray;margin-top:4px;">
+        ${
+          o.createdAt?.toDate
+            ? o.createdAt.toDate().toLocaleString()
+            : "No date"
+        }
+      </div>
     </div>
-  </div>
 
-  <div style="font-weight:bold;">
-    ₦${o.price}
-  </div>
+    <div style="font-weight:bold;">
+      ₦${o.price}
+    </div>
 
-</div>
-`;
+    <button 
+      class="btn-view"
+      onclick="viewOrderDetailsById('${d.id}','normal')"
+    >
+      View
+    </button>
+
+  </div>
+  `;
 });
 
     // 🎁 GIFT ORDERS
     giftSnap.forEach(d=>{
-      const g = d.data();
+  const g = d.data();
 
-      ordersHTML += `
-<div onclick='openOrder(${JSON.stringify(g)})'
-style="
-  display:flex;
-  gap:10px;
-  align-items:center;
-  background:#111;
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:8px;
-  cursor:pointer;
-">
+  ordersHTML += `
+  <div class="user-order-item"
+    style="
+      display:flex;
+      gap:10px;
+      align-items:center;
+      background:#111;
+      padding:10px;
+      border-radius:10px;
+      margin-bottom:8px;
+    ">
 
-  <img src="${g.productImage || 'https://via.placeholder.com/40'}"
-       style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+    <img src="${g.productImage || 'https://via.placeholder.com/40'}"
+         style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
 
-  <div style="flex:1;">
-    <div style="font-weight:bold;">${g.productName}</div>
-    <div style="font-size:12px;color:gray;">
-      Gift Order
+    <div style="flex:1;">
+      <div style="font-weight:bold;">${g.productName}</div>
+      <div style="font-size:12px;color:gray;">Gift Order</div>
+
+      <div style="font-size:11px;color:gray;margin-top:4px;">
+        ${
+          g.createdAt?.toDate
+            ? g.createdAt.toDate().toLocaleString()
+            : "No date"
+        }
+      </div>
     </div>
-  </div>
 
-  <div style="font-weight:bold;">
-    ₦${g.price}
-  </div>
+    <div style="font-weight:bold;">
+      ₦${g.price}
+    </div>
 
-</div>
-`;
-    });
+    <button 
+      class="btn-view"
+      onclick="viewOrderDetailsById('${d.id}','gift')"
+    >
+      View
+    </button>
+
+  </div>
+  `;
+});
 
     // 💰 TRANSACTIONS
     const txSnap = await getDocs(
@@ -1683,6 +1745,40 @@ function viewProductDetails(product){
     console.error("Product view error:", e);
   }
 }
+
+window.viewOrderDetailsById = async function(id, type){
+  try{
+
+    let ref;
+
+    if(type === "normal"){
+      ref = doc(db,"orders",id);
+    }else{
+      ref = doc(db,"giftOrders",id);
+    }
+
+    const snap = await getDoc(ref);
+
+    if(!snap.exists()){
+      alert("Order not found");
+      return;
+    }
+
+    const data = snap.data();
+
+    viewOrderDetails({
+      ...data,
+      type,
+      createdAt: data.createdAt?.seconds
+        ? data.createdAt.seconds * 1000
+        : null
+    });
+
+  }catch(e){
+    console.error(e);
+    alert("Failed to load order");
+  }
+};
 </script>
 
 </body>
