@@ -196,7 +196,7 @@ function loadOrdersLive(uid){
       div.className="card";
 
       /* NORMAL */
-  if(o.type==="product"){
+  if(o.type==="normal"){
   div.innerHTML=`
   <img src="${o.logo || ''}" class="logo">
 
@@ -206,9 +206,9 @@ function loadOrdersLive(uid){
 
     <div class="field">
   Details:
-  <div class="detailsBox blurred"
-${o.loginDetails || "No details available"}
-  </div>
+  <div class="detailsBox blurred">
+  ${o.loginDetails || "No details available"}
+</div>
 </div>
 
     <div style="display:flex;gap:6px;margin-top:6px;">
