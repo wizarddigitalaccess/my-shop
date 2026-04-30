@@ -211,9 +211,17 @@ button {
   <input id="pCategory" placeholder="Category (must match exactly)">
   <input id="pPrice" placeholder="Price (e.g 5000)">
   <input id="pPreview" placeholder="Preview link (optional)">
-  <textarea id="pAccounts" placeholder="Enter accounts (one per line)
-email:pass
-email:pass"></textarea>
+  <textarea id="pAccount" placeholder="Paste anything here..." style="
+  width:100%;
+  min-height:120px;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#111;
+  color:white;
+  resize:vertical;
+  font-family:monospace;
+"></textarea>
   <button onclick="addProduct()">Add</button>
   <div id="products"></div>
 </div>
@@ -268,14 +276,13 @@ email:pass"></textarea>
   <h3>All Orders</h3>
 
   <select id="orderFilter" onchange="loadAllOrders()" style="margin-bottom:10px;">
-    const search = document.getElementById("orderSearch")?.value?.toLowerCase() || "";
-    <option value="all">All</option>
-    <option value="placed">Placed</option>
-    <option value="processing">Processing</option>
-    <option value="delivery">Delivery</option>
-    <option value="delivered">Delivered</option>
-    <option value="cancelled">Cancelled</option>
-  </select>
+  <option value="all">All</option>
+  <option value="placed">Placed</option>
+  <option value="processing">Processing</option>
+  <option value="delivery">Delivery</option>
+  <option value="delivered">Delivered</option>
+  <option value="cancelled">Cancelled</option>
+</select>
   <div id="allOrders"></div>
 </div>
 
@@ -466,31 +473,35 @@ function init(){
 
 /* USERS */
 async function loadUsers(){
-  users.innerHTML="";
-  const snap=await getDocs(collection(db,"users"));
+  users.innerHTML = "";
 
+  const snap = await getDocs(collection(db,"users"));
   const search = (document.getElementById("userSearch")?.value || "").toLowerCase();
 
   snap.forEach(d=>{
-    const u=d.data();
+    const u = d.data();
 
     if(search && !u.email?.toLowerCase().includes(search)) return;
 
-    users.innerHTML+=`
-    <div class="item">
+    const div = document.createElement("div");
+    div.className = "item";
+
+    div.innerHTML = `
       <div class="topRow">
         ${u.email}
-        ₦${u.wallet||0}
+        ₦${u.wallet || 0}
       </div>
 
       <div class="actions">
         <button class="btn-fund" onclick="fund('${d.id}')">+ Fund</button>
         <button class="btn-deduct" onclick="deduct('${d.id}')">- Deduct</button>
-        <button class="btn-edit" onclick="viewUser('${d.id}')">View Details</button>
-        <button onclick="banUser('${uid}')" style="background:#e74c3c;">🚫 Ban</button>
-        <button onclick="unbanUser('${uid}')" style="background:#2ecc71;">✅ Unban</button>
+        <button class="btn-edit" onclick="viewUser('${d.id}')">View</button>
+        <button onclick="banUser('${d.id}')" style="background:#e74c3c;">🚫 Ban</button>
+        <button onclick="unbanUser('${d.id}')" style="background:#2ecc71;">✅ Unban</button>
       </div>
-    </div>`;
+    `;
+
+    users.appendChild(div);
   });
 }
 
@@ -566,27 +577,16 @@ window.addProduct = async () => {
       return;
     }
 
-    const accountsInput = document.getElementById("pAccounts");
+    const acc = document.getElementById("pAccount").value.trim();
 
-    if(!accountsInput){
-      alert("Accounts input missing (pAccounts)");
-      return;
-    }
+if(!acc){
+  alert("Enter account details");
+  return;
+}
 
-    const raw = accountsInput.value.trim();
-
-    if(!raw){
-      alert("Add at least 1 account");
-      return;
-    }
-
-    const accounts = raw
-  .split("\n") // each line = one account
-  .map(acc => acc.trim())
-  .filter(acc => acc.length > 0)
-  .map(acc => ({
-    details: acc
-  }));
+const accounts = [{
+  details: acc
+}];
 
     if(accounts.length === 0){
       alert("Please enter at least one account");
@@ -611,7 +611,7 @@ window.addProduct = async () => {
     pName.value="";
     pCategory.value="";
     pPrice.value="";
-    accountsInput.value="";
+    document.getElementById("pAccount").value="";
     document.getElementById("pPreview").value="";
 
     alert("✅ Product added successfully");
@@ -1306,7 +1306,10 @@ window.viewUser = async function(uid){
 
     const u = userSnap.data();
 
-    // 🔥 LOAD USER ORDERS
+    let ordersHTML = "";
+    let txHTML = "";
+
+    // 🔥 LOAD ORDERS
     const normalSnap = await getDocs(
       query(collection(db,"orders"), where("userId","==",uid))
     );
@@ -1315,22 +1318,43 @@ window.viewUser = async function(uid){
       query(collection(db,"giftOrders"), where("userId","==",uid))
     );
 
-    // 🔥 LOAD TRANSACTIONS
-    const txSnap = await getDocs(
-      query(collection(db,"transactions"), where("uid","==",uid))
-    );
-
-    let ordersHTML = "";
-    let txHTML = "";
-
     // 🛒 NORMAL ORDERS
     normalSnap.forEach(d=>{
       const o = d.data();
 
       ordersHTML += `
-        <div style="padding:6px;background:#111;margin-top:5px;border-radius:6px;">
-          🛒 ${o.name || "Product"} - ₦${o.price || 0}
+      <div style="
+        display:flex;
+        gap:10px;
+        align-items:center;
+        background:#111;
+        padding:10px;
+        border-radius:10px;
+        margin-bottom:8px;
+      ">
+
+        <img src="${o.logo || 'https://via.placeholder.com/40'}"
+             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+
+        <div style="flex:1;">
+          <div style="font-weight:bold;">${o.name}</div>
+          <div style="font-size:12px;color:gray;">
+            ${o.category || "No category"}
+          </div>
+          <div style="font-size:12px;color:#aaa;">
+            ${
+              o.createdAt?.toDate
+              ? o.createdAt.toDate().toLocaleString()
+              : ""
+            }
+          </div>
         </div>
+
+        <div style="font-weight:bold;">
+          ₦${o.price}
+        </div>
+
+      </div>
       `;
     });
 
@@ -1339,32 +1363,57 @@ window.viewUser = async function(uid){
       const g = d.data();
 
       ordersHTML += `
-        <div style="padding:6px;background:#111;margin-top:5px;border-radius:6px;">
-          🎁 ${g.productName || "Gift"} - ₦${g.price || 0}
+      <div style="
+        display:flex;
+        gap:10px;
+        align-items:center;
+        background:#111;
+        padding:10px;
+        border-radius:10px;
+        margin-bottom:8px;
+      ">
+
+        <img src="${g.productImage || 'https://via.placeholder.com/40'}"
+             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+
+        <div style="flex:1;">
+          <div style="font-weight:bold;">${g.productName}</div>
+          <div style="font-size:12px;color:gray;">
+            Gift Order
+          </div>
         </div>
+
+        <div style="font-weight:bold;">
+          ₦${g.price}
+        </div>
+
+      </div>
       `;
     });
 
     // 💰 TRANSACTIONS
+    const txSnap = await getDocs(
+      query(collection(db,"transactions"), where("uid","==",uid))
+    );
+
     txSnap.forEach(d=>{
       const t = d.data();
 
       txHTML += `
-        <div style="padding:6px;background:#111;margin-top:5px;border-radius:6px;">
-          💰 ₦${t.amount || 0} 
-          <span style="
-            color:${
-              t.status==="approved" ? "#2ecc71" :
-              t.status==="rejected" ? "#e74c3c" :
-              "#f39c12"
-            }">
-            (${t.status || "pending"})
-          </span>
-        </div>
+      <div style="padding:8px;background:#111;margin-top:5px;border-radius:8px;">
+        💰 ₦${t.amount}
+        <span style="
+          color:${
+            t.status==="approved" ? "#2ecc71" :
+            t.status==="rejected" ? "#e74c3c" :
+            "#f39c12"
+          }">
+          (${t.status || "pending"})
+        </span>
+      </div>
       `;
     });
 
-    // EMPTY STATES
     if(!ordersHTML){
       ordersHTML = "<div style='color:gray;'>No orders</div>";
     }
