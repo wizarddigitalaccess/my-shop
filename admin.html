@@ -116,20 +116,15 @@ button {
 <div id="orderDetailsModal" style="
   display:none;
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:rgba(0,0,0,0.8);
   justify-content:center;
   align-items:center;
   z-index:9999;
-"></div>
 ">
-
   <div style="
     background:#1c1c2e;
-    margin:40px auto;
+    margin:auto;
     padding:20px;
     width:90%;
     max-width:500px;
@@ -137,14 +132,12 @@ button {
     max-height:80vh;
     overflow-y:auto;
   ">
-
     <div style="display:flex;justify-content:space-between;">
       <b>Order Details</b>
-      <span onclick="closeModal()" style="cursor:pointer;">✕</span>
+      <span onclick="closeOrderModal()" style="cursor:pointer;">✕</span>
     </div>
 
     <div id="modalContent" style="margin-top:15px;"></div>
-
   </div>
 </div>
 
@@ -460,6 +453,7 @@ if(!isAdminEmail || !isAdminRole){
 /* NAV */
 document.querySelectorAll(".nav button").forEach(btn=>{
  btn.onclick=()=>{
+  closeOrderModal();
   document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 
@@ -673,7 +667,7 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-  <button onclick='viewProductDetails(${JSON.stringify(product)})'>View</button>
+  onclick='viewProductDetails(${JSON.stringify(p)})'>View</button>
   <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
   <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
 </div>
@@ -948,7 +942,7 @@ div.onclick = () => viewOrderDetails({
   name: o.name || o.productName,
   price: o.price,
   userEmail: o.userEmail || o.email,
-  loginDetails: o.loginDetails,
+  loginDetails: o.loginDetails || (o.accounts && o.accounts[0]?.details) || "No details",
   createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
 });
 
@@ -975,7 +969,13 @@ div.onclick = () => viewOrderDetails({
   </div>
 `;
 
-      div.onclick = ()=> openOrder(o); // ✅ SAFE
+      div.onclick = () => viewOrderDetails({
+  name: o.name || o.productName,
+  price: o.price,
+  userEmail: o.userEmail || o.email,
+  loginDetails: o.loginDetails,
+  createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
+});
 
       allOrders.appendChild(div);
     });
@@ -1393,7 +1393,7 @@ ${o.loginDetails || "No data"}
   `;
 
   document.getElementById("modalContent").innerHTML = html;
-  document.getElementById("orderModal").style.display = "block";
+document.getElementById("orderDetailsModal").style.display = "flex";
 };
 
 window.closeModal = function(){
