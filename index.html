@@ -293,6 +293,12 @@ const searchInput = document.getElementById("search");
 const productsDiv = document.getElementById("products");
 const categoriesDiv = document.getElementById("categories");
 
+const userSnap = await getDoc(doc(db,"users",user.uid));
+if(userSnap.data().banned){
+  alert("Account suspended");
+  return location.href="auth.html";
+}
+
 /* AUTH */
 onAuthStateChanged(auth, async (u)=>{
   if(!u) return location.replace("auth.html");

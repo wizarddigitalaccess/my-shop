@@ -264,9 +264,11 @@ email:pass"></textarea>
 </div>
 
 <div id="ordersPage" class="card page hidden">
+  <input id="orderSearch" placeholder="Search orders..." style="margin-bottom:10px;">
   <h3>All Orders</h3>
 
   <select id="orderFilter" onchange="loadAllOrders()" style="margin-bottom:10px;">
+    const search = document.getElementById("orderSearch")?.value?.toLowerCase() || "";
     <option value="all">All</option>
     <option value="placed">Placed</option>
     <option value="processing">Processing</option>
@@ -485,6 +487,8 @@ async function loadUsers(){
         <button class="btn-fund" onclick="fund('${d.id}')">+ Fund</button>
         <button class="btn-deduct" onclick="deduct('${d.id}')">- Deduct</button>
         <button class="btn-edit" onclick="viewUser('${d.id}')">View Details</button>
+        <button onclick="banUser('${uid}')" style="background:#e74c3c;">🚫 Ban</button>
+        <button onclick="unbanUser('${uid}')" style="background:#2ecc71;">✅ Unban</button>
       </div>
     </div>`;
   });
@@ -649,7 +653,7 @@ async function loadProducts(){
     <div class="actions">
   <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
   <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
-  </div>
+</div>
   </div>`;
  });
 }
@@ -672,10 +676,10 @@ window.editProd = async(id)=>{
   const price = prompt("Price", p.price);
   if(price === null) return;
 
-  const preview = prompt("Preview Link", p.previewLink || "");
+  const preview = prompt("Preview link", p.previewLink || "");
 
   const accountsRaw = prompt(
-    "Accounts (one per line)\nFormat: email:pass",
+    "Login Details (one per line)",
     (p.accounts || []).map(a => a.details).join("\n")
   );
 
@@ -690,16 +694,15 @@ window.editProd = async(id)=>{
   }
 
   await updateDoc(ref,{
-    name: name.trim(),
-    category: category.trim(),
+    name,
+    category,
     price: Number(price),
     previewLink: preview || "",
-    accounts: accounts,
+    accounts,
     stock: accounts.length
   });
 
   alert("✅ Product fully updated");
-
   loadProducts();
 };
 
@@ -1398,6 +1401,20 @@ window.viewUser = async function(uid){
 
 window.closeUserModal = function(){
   document.getElementById("userModal").style.display = "none";
+};
+
+window.banUser = async(uid)=>{
+  await updateDoc(doc(db,"users",uid),{
+    banned: true
+  });
+  alert("User banned");
+};
+
+window.unbanUser = async(uid)=>{
+  await updateDoc(doc(db,"users",uid),{
+    banned: false
+  });
+  alert("User unbanned");
 };
 </script>
 
