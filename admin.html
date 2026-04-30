@@ -462,6 +462,12 @@ document.querySelectorAll(".nav button").forEach(btn=>{
  };
 });
 
+document.getElementById("orderDetailsModal").onclick = function(e){
+  if(e.target.id === "orderDetailsModal"){
+    closeOrderModal();
+  }
+};
+
 /* INIT */
 let unsubscribers = [];
 
@@ -667,7 +673,7 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-  onclick='viewProductDetails(${JSON.stringify(p)})'>View</button>
+  <button onclick="viewProductDetails(${encodeURIComponent(JSON.stringify(p))})">View</button>
   <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
   <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
 </div>
@@ -1431,7 +1437,13 @@ window.viewUser = async function(uid){
       const o = d.data();
 
       ordersHTML += `
-<div onclick='openOrder(${JSON.stringify(o)})'
+onclick='viewOrderDetails(${JSON.stringify({
+  name: o.name || o.productName,
+  price: o.price,
+  userEmail: o.userEmail || "",
+  loginDetails: o.loginDetails || (o.accounts && o.accounts[0]?.details),
+  createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
+})})'
 style="
   display:flex;
   gap:10px;
@@ -1611,7 +1623,8 @@ function closeOrderModal(){
   document.getElementById("orderDetailsModal").style.display = "none";
 }
 
-function viewProductDetails(product){
+function viewProductDetails(encoded){
+  const product = JSON.parse(decodeURIComponent(encoded));
   const modal = document.getElementById("orderDetailsModal");
 
   const details = product.accounts
