@@ -949,12 +949,11 @@ function loadAllOrders(){
       const div = document.createElement("div");
       div.className = "item";
 div.onclick = () => viewOrderDetails({
-  type: o.type, // ✅ ADD THIS
-  name: o.name || o.productName,
-  price: o.price,
-  userEmail: o.userEmail || o.email,
-  loginDetails: o.loginDetails || (o.accounts && o.accounts[0]?.details) || "No details",
-  createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
+  ...o,
+  type: o.type,
+  createdAt: o.createdAt?.seconds
+    ? o.createdAt.seconds * 1000
+    : (o.createdAt?.toMillis ? o.createdAt.toMillis() : null)
 });
 
       div.innerHTML = `
@@ -1436,17 +1435,10 @@ window.viewUser = async function(uid){
       const o = d.data();
 
       ordersHTML += `
-<div onclick='viewOrderDetails(${JSON.stringify({
-  name: o.name || o.productName,
-  price: o.price,
-  userEmail: o.userEmail || "",
-  loginDetails: o.loginDetails || (o.accounts && o.accounts[0]?.details),
-  previewLink: o.previewLink,
-  receiver: o.receiver,
-  senders: o.senders,
-  note: o.note,
+onclick='viewOrderDetails(${JSON.stringify({
+  ...o,
   createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
-})})
+})})'
 style="
   display:flex;
   gap:10px;
@@ -1596,17 +1588,22 @@ function viewOrderDetails(order) {
       <h2>Order Details</h2>
       <p><b>Product:</b> ${order.name || order.productName || "N/A"}</p>
       <p><b>Price:</b> ₦${order.price || 0}</p>
-      <p><b>User:</b> ${order.userEmail || "N/A"}</p>
+      <p><b>User:</b> ${order.userEmail || order.email || "N/A"}</p>
       <p><b>Date:</b> ${date}</p>
       <hr>
     `;
 
-    // 🛒 MAIN PRODUCT
-    if(order.loginDetails){
+    // 🛒 NORMAL PRODUCT
+    if(order.type === "normal"){
+      const details =
+        order.loginDetails ||
+        (order.accounts && order.accounts[0]?.details) ||
+        "No details available";
+
       html += `
         <h3>Login Details</h3>
-        <pre style="white-space:pre-wrap">
-${order.loginDetails}
+        <pre style="white-space:pre-wrap;background:#111;padding:10px;border-radius:8px;">
+${details}
         </pre>
 
         ${
@@ -1618,7 +1615,7 @@ ${order.loginDetails}
     }
 
     // 🎁 GIFT ORDER
-    if(order.receiver || order.senders){
+    if(order.type === "gift"){
       const r = order.receiver || {};
       const s = order.senders || {};
 
@@ -1626,7 +1623,7 @@ ${order.loginDetails}
         <h3>Receiver Details</h3>
         <p>Name: ${r.name || "-"}</p>
         <p>Phone: ${r.phone || "-"}</p>
-        <p>Address: ${r.street || ""}, ${r.city || ""}, ${r.country || ""}</p>
+        <p>Address: ${r.house || ""} ${r.street || ""}, ${r.city || ""}, ${r.state || ""}, ${r.country || ""}</p>
         ${r.size ? `<p>Size: ${r.size}</p>` : ""}
 
         <hr>
