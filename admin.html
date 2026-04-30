@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body { margin:0; font-family:Arial; background:#0f0f1a; color:white; display:none; }
 
@@ -188,8 +190,18 @@ button {
     <div class="card" id="cardOrders">Orders: 0</div>
   </div>
 
-  <h3>Tracking (Live)</h3>
-  <div id="tracking"></div>
+  <h3>📊 Dashboard Analytics</h3>
+
+<canvas id="salesChart" height="120"></canvas>
+
+<br>
+
+<canvas id="ordersChart" height="120"></canvas>
+
+<hr>
+
+<h3>Tracking (Live)</h3>
+<div id="tracking"></div>
 
 </div> <!-- ✅ VERY IMPORTANT -->
 
@@ -462,6 +474,8 @@ function init(){
   clearListeners(); // ✅ prevent duplicate listeners
 
   loadDashboardLive(); // 🔥 upgraded (real-time)
+  loadCharts();
+  
   loadUsers();
   loadCategories();
   loadProducts();
@@ -1212,6 +1226,79 @@ function loadDashboardLive(){
   unsubscribers.push(unsubUsers, unsubOrders, unsubPayments);
 }
 logoutBtn.onclick=()=>signOut(auth).then(()=>location.href="auth.html");
+
+let salesChart, ordersChart;
+
+function loadCharts(){
+
+  const unsub = onSnapshot(collection(db,"orders"), snap=>{
+
+    let dailySales = {};
+    let dailyOrders = {};
+
+    snap.forEach(doc=>{
+      const o = doc.data();
+
+      if(!o.createdAt) return;
+
+      const date = o.createdAt.toDate().toLocaleDateString();
+
+      dailySales[date] = (dailySales[date] || 0) + (o.price || 0);
+      dailyOrders[date] = (dailyOrders[date] || 0) + 1;
+    });
+
+    const labels = Object.keys(dailySales);
+    const salesData = Object.values(dailySales);
+    const ordersData = Object.values(dailyOrders);
+
+    if(salesChart) salesChart.destroy();
+    if(ordersChart) ordersChart.destroy();
+
+    const ctx1 = document.getElementById("salesChart");
+
+    salesChart = new Chart(ctx1, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Daily Revenue (₦)",
+          data: salesData,
+          tension: 0.4
+        }]
+      },
+      options: {
+        plugins:{ legend:{ labels:{ color:"white" } } },
+        scales:{
+          x:{ ticks:{ color:"white" } },
+          y:{ ticks:{ color:"white" } }
+        }
+      }
+    });
+
+    const ctx2 = document.getElementById("ordersChart");
+
+    ordersChart = new Chart(ctx2, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Orders Count",
+          data: ordersData
+        }]
+      },
+      options: {
+        plugins:{ legend:{ labels:{ color:"white" } } },
+        scales:{
+          x:{ ticks:{ color:"white" } },
+          y:{ ticks:{ color:"white" } }
+        }
+      }
+    });
+
+  });
+
+  unsubscribers.push(unsub);
+}
 
 window.openOrder = function(o){
   try{
