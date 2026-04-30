@@ -980,14 +980,6 @@ div.onclick = () => viewOrderDetails({
   </div>
 `;
 
-      div.onclick = () => viewOrderDetails({
-  name: o.name || o.productName,
-  price: o.price,
-  userEmail: o.userEmail || o.email,
-  loginDetails: o.loginDetails,
-  createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
-});
-
       allOrders.appendChild(div);
     });
 
@@ -1404,7 +1396,9 @@ ${o.loginDetails || "No data"}
   `;
 
   document.getElementById("modalContent").innerHTML = html;
-document.getElementById("orderDetailsModal").style.display = "flex";
+const modal = document.getElementById("orderDetailsModal");
+modal.style.display = "flex";
+modal.style.pointerEvents = "auto";
 };
 
 window.closeModal = function(){
@@ -1589,26 +1583,42 @@ window.unbanUser = async(uid)=>{
 };
 
 function viewOrderDetails(order) {
-  const date = order.createdAt
-    ? new Date(order.createdAt).toLocaleString()
-    : "No date";
+  try {
+    const date = order.createdAt
+      ? new Date(order.createdAt).toLocaleString()
+      : "No date";
 
-  const html = `
-    <h2>Order Details</h2>
+    const html = `
+      <h2>Order Details</h2>
 
-    <p><b>Product:</b> ${order.name || "N/A"}</p>
-    <p><b>Price:</b> ₦${order.price || 0}</p>
-    <p><b>User:</b> ${order.userEmail || "N/A"}</p>
-    <p><b>Date:</b> ${date}</p>
+      <p><b>Product:</b> ${order.name || "N/A"}</p>
+      <p><b>Price:</b> ₦${order.price || 0}</p>
+      <p><b>User:</b> ${order.userEmail || "N/A"}</p>
+      <p><b>Date:</b> ${date}</p>
 
-    <hr>
+      <hr>
 
-    <h3>Login Details</h3>
-    <pre style="white-space:pre-wrap">${order.loginDetails || "No details"}</pre>
-  `;
+      <h3>Login Details</h3>
+      <pre style="white-space:pre-wrap">
+${order.loginDetails || "No details"}
+      </pre>
+    `;
 
-  document.getElementById("modalContent").innerHTML = html;
-  document.getElementById("orderDetailsModal").style.display = "flex";
+    const modal = document.getElementById("orderDetailsModal");
+    document.getElementById("modalContent").innerHTML = html;
+
+    modal.style.display = "flex";
+    modal.style.pointerEvents = "auto";
+
+  } catch (e) {
+    console.error("Order view error:", e);
+  }
+}
+
+function closeOrderModal(){
+  const modal = document.getElementById("orderDetailsModal");
+  modal.style.display = "none";
+  modal.style.pointerEvents = "none";
 }
 
 function viewProductDetails(encoded){
