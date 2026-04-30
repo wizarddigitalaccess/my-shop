@@ -663,7 +663,7 @@ window.editProd = async(id)=>{
 
   const p = snap.data();
 
-  const name = prompt("Name", p.name);
+  const name = prompt("Product Name", p.name);
   if(name === null) return;
 
   const category = prompt("Category", p.category);
@@ -672,10 +672,10 @@ window.editProd = async(id)=>{
   const price = prompt("Price", p.price);
   if(price === null) return;
 
-  const preview = prompt("Preview link", p.previewLink || "");
+  const preview = prompt("Preview Link", p.previewLink || "");
 
   const accountsRaw = prompt(
-    "Accounts (one per line)",
+    "Accounts (one per line)\nFormat: email:pass",
     (p.accounts || []).map(a => a.details).join("\n")
   );
 
@@ -690,15 +690,16 @@ window.editProd = async(id)=>{
   }
 
   await updateDoc(ref,{
-    name,
-    category,
+    name: name.trim(),
+    category: category.trim(),
     price: Number(price),
     previewLink: preview || "",
-    accounts,
+    accounts: accounts,
     stock: accounts.length
   });
 
-  alert("✅ Updated");
+  alert("✅ Product fully updated");
+
   loadProducts();
 };
 
@@ -919,10 +920,27 @@ function loadAllOrders(){
       div.className = "item";
 
       div.innerHTML = `
-        <b>${o.type === "normal" ? "🛒 Product" : "🎁 Gift"}</b><br>
-        ₦${o.price || 0}<br>
-        <small>${o.name || o.productName || "Item"}</small>
-      `;
+  <div style="display:flex;align-items:center;gap:10px;">
+    <img src="${o.logo || o.productImage || 'https://via.placeholder.com/40'}"
+      style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
+
+    <div style="flex:1;">
+      <b>${o.name || o.productName || "Item"}</b><br>
+
+      <small style="color:gray;">
+        ${o.category || "No category"}
+      </small><br>
+
+      <span style="color:#1877f2;font-weight:bold;">
+        ₦${Number(o.price || 0).toLocaleString()}
+      </span>
+    </div>
+
+    <div style="font-size:12px;">
+      ${o.type === "normal" ? "🛒" : "🎁"}
+    </div>
+  </div>
+`;
 
       div.onclick = ()=> openOrder(o); // ✅ SAFE
 
@@ -1207,7 +1225,14 @@ style="margin-top:10px;padding:8px;background:#1877f2;border:none;border-radius:
   if(o.type === "normal"){
     html += `
       <hr>
-      <div><b>Product:</b> ${o.name}</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+  <img src="${o.logo || 'https://via.placeholder.com/50'}"
+    style="width:50px;height:50px;border-radius:8px;">
+  <div>
+    <b>${o.name}</b><br>
+    <small>${o.category || ""}</small>
+  </div>
+</div>
 
       <div style="margin-top:10px;">
         <b>Login Details:</b>
@@ -1279,23 +1304,70 @@ window.viewUser = async function(uid){
     const u = userSnap.data();
 
     // 🔥 LOAD USER ORDERS
-    const normalSnap = await getDocs(query(collection(db,"orders"), where("userId","==",uid)));
-    const giftSnap = await getDocs(query(collection(db,"giftOrders"), where("userId","==",uid)));
+    const normalSnap = await getDocs(
+      query(collection(db,"orders"), where("userId","==",uid))
+    );
+
+    const giftSnap = await getDocs(
+      query(collection(db,"giftOrders"), where("userId","==",uid))
+    );
+
+    // 🔥 LOAD TRANSACTIONS
+    const txSnap = await getDocs(
+      query(collection(db,"transactions"), where("uid","==",uid))
+    );
 
     let ordersHTML = "";
+    let txHTML = "";
 
+    // 🛒 NORMAL ORDERS
     normalSnap.forEach(d=>{
       const o = d.data();
-      ordersHTML += `<div>🛒 ${o.name} - ₦${o.price}</div>`;
+
+      ordersHTML += `
+        <div style="padding:6px;background:#111;margin-top:5px;border-radius:6px;">
+          🛒 ${o.name || "Product"} - ₦${o.price || 0}
+        </div>
+      `;
     });
 
+    // 🎁 GIFT ORDERS
     giftSnap.forEach(d=>{
       const g = d.data();
-      ordersHTML += `<div>🎁 ${g.productName} - ₦${g.price}</div>`;
+
+      ordersHTML += `
+        <div style="padding:6px;background:#111;margin-top:5px;border-radius:6px;">
+          🎁 ${g.productName || "Gift"} - ₦${g.price || 0}
+        </div>
+      `;
     });
 
+    // 💰 TRANSACTIONS
+    txSnap.forEach(d=>{
+      const t = d.data();
+
+      txHTML += `
+        <div style="padding:6px;background:#111;margin-top:5px;border-radius:6px;">
+          💰 ₦${t.amount || 0} 
+          <span style="
+            color:${
+              t.status==="approved" ? "#2ecc71" :
+              t.status==="rejected" ? "#e74c3c" :
+              "#f39c12"
+            }">
+            (${t.status || "pending"})
+          </span>
+        </div>
+      `;
+    });
+
+    // EMPTY STATES
     if(!ordersHTML){
       ordersHTML = "<div style='color:gray;'>No orders</div>";
+    }
+
+    if(!txHTML){
+      txHTML = "<div style='color:gray;'>No transactions</div>";
     }
 
     // 🎯 DISPLAY
@@ -1303,11 +1375,17 @@ window.viewUser = async function(uid){
       <div><b>User ID:</b> ${uid}</div>
       <div><b>Email:</b> ${u.email || "-"}</div>
       <div><b>Wallet:</b> ₦${u.wallet || 0}</div>
+      <div><b>Role:</b> ${u.role || "user"}</div>
 
       <hr>
 
       <b>Orders:</b>
       ${ordersHTML}
+
+      <hr>
+
+      <b>Transactions:</b>
+      ${txHTML}
     `;
 
     document.getElementById("userModal").style.display = "block";
