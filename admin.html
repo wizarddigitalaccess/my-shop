@@ -673,6 +673,7 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
+  <button onclick='viewProductDetails(${JSON.stringify(product)})'>View</button>
   <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
   <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
 </div>
@@ -1608,6 +1609,34 @@ function viewOrderDetails(order) {
 
 function closeOrderModal(){
   document.getElementById("orderDetailsModal").style.display = "none";
+}
+
+function viewProductDetails(product){
+  const modal = document.getElementById("orderDetailsModal");
+
+  const details = product.accounts
+    ? product.accounts.map(a => a.details).join("\n\n")
+    : "No details";
+
+  modal.innerHTML = `
+    <div style="
+      background:#111;
+      padding:20px;
+      border-radius:10px;
+      width:90%;
+      max-width:400px;
+      color:white;
+    ">
+      <h2>Account Details</h2>
+
+      <pre style="white-space:pre-wrap">${details}</pre>
+
+      <br>
+      <button onclick="closeOrderModal()">Close</button>
+    </div>
+  `;
+
+  modal.style.display = "flex";
 }
 </script>
 
