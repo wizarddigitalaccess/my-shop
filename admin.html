@@ -293,13 +293,12 @@ email:pass"></textarea>
 </div>
 
 <script type="module">
-import { query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { 
-  getFirestore,collection,getDocs,doc,
-  updateDoc,deleteDoc,addDoc,getDoc,
-  onSnapshot, serverTimestamp
+  getFirestore, collection, getDocs, doc,
+  updateDoc, deleteDoc, addDoc, getDoc,
+  onSnapshot, serverTimestamp, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import {
@@ -491,24 +490,6 @@ async function loadUsers(){
   });
 }
 
-window.viewUser = async(id)=>{
-
-  const ref = doc(db,"users",id);
-  const snap = await getDoc(ref);
-
-  if(!snap.exists()) return;
-
-  const u = snap.data();
-
-  alert(`
-Email: ${u.email}
-Wallet: ₦${u.wallet || 0}
-User ID: ${id}
-Role: ${u.role || "user"}
-Created: ${u.createdAt?.toDate ? u.createdAt.toDate() : "-"}
-  `);
-};
-
 window.fund=async(id)=>{
  let amt=prompt("Amount");
  if(!amt) return;
@@ -666,9 +647,9 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-      onclick="editProd('${d.id}')"
-      <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
-    </div>
+  <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
+  <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
+  </div>
   </div>`;
  });
 }
