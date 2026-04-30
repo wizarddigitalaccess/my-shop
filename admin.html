@@ -677,7 +677,7 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-  <button class="btn-view" onclick="viewProductDetails('${encodeURIComponent(JSON.stringify(p))}')">View</button>
+  <button class="btn-view" onclick='viewProductDetails(${JSON.stringify(p)})'>View</button>
   <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
   <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
 </div>
@@ -1441,8 +1441,12 @@ window.viewUser = async function(uid){
   price: o.price,
   userEmail: o.userEmail || "",
   loginDetails: o.loginDetails || (o.accounts && o.accounts[0]?.details),
+  previewLink: o.previewLink,
+  receiver: o.receiver,
+  senders: o.senders,
+  note: o.note,
   createdAt: o.createdAt?.seconds ? o.createdAt.seconds * 1000 : null
-})})'
+})})
 style="
   display:flex;
   gap:10px;
@@ -1588,25 +1592,56 @@ function viewOrderDetails(order) {
       ? new Date(order.createdAt).toLocaleString()
       : "No date";
 
-    const html = `
+    let html = `
       <h2>Order Details</h2>
-
-      <p><b>Product:</b> ${order.name || "N/A"}</p>
+      <p><b>Product:</b> ${order.name || order.productName || "N/A"}</p>
       <p><b>Price:</b> ₦${order.price || 0}</p>
       <p><b>User:</b> ${order.userEmail || "N/A"}</p>
       <p><b>Date:</b> ${date}</p>
-
       <hr>
-
-      <h3>Login Details</h3>
-      <pre style="white-space:pre-wrap">
-${order.loginDetails || "No details"}
-      </pre>
     `;
 
-    const modal = document.getElementById("orderDetailsModal");
+    // 🛒 MAIN PRODUCT
+    if(order.loginDetails){
+      html += `
+        <h3>Login Details</h3>
+        <pre style="white-space:pre-wrap">
+${order.loginDetails}
+        </pre>
+
+        ${
+          order.previewLink
+          ? `<p><b>Preview:</b> <a href="${order.previewLink}" target="_blank">Open</a></p>`
+          : ""
+        }
+      `;
+    }
+
+    // 🎁 GIFT ORDER
+    if(order.receiver || order.senders){
+      const r = order.receiver || {};
+      const s = order.senders || {};
+
+      html += `
+        <h3>Receiver Details</h3>
+        <p>Name: ${r.name || "-"}</p>
+        <p>Phone: ${r.phone || "-"}</p>
+        <p>Address: ${r.street || ""}, ${r.city || ""}, ${r.country || ""}</p>
+        ${r.size ? `<p>Size: ${r.size}</p>` : ""}
+
+        <hr>
+
+        <h3>Sender Details</h3>
+        <p>Name: ${s.name || "-"}</p>
+        <p>Location: ${s.location || "-"}</p>
+
+        ${order.note ? `<hr><p><b>Note:</b> ${order.note}</p>` : ""}
+      `;
+    }
+
     document.getElementById("modalContent").innerHTML = html;
 
+    const modal = document.getElementById("orderDetailsModal");
     modal.style.display = "flex";
     modal.style.pointerEvents = "auto";
 
@@ -1614,27 +1649,42 @@ ${order.loginDetails || "No details"}
     console.error("Order view error:", e);
   }
 }
-
+  
 function closeOrderModal(){
   const modal = document.getElementById("orderDetailsModal");
   modal.style.display = "none";
   modal.style.pointerEvents = "none";
 }
 
-function viewProductDetails(encoded){
-  const product = JSON.parse(decodeURIComponent(encoded));
+function viewProductDetails(product){
+  try {
 
-  const details = product.accounts
-    ? product.accounts.map(a => a.details).join("\n\n")
-    : "No details";
+    const details = product.accounts
+      ? product.accounts.map(a => a.details).join("\n\n")
+      : "No details";
 
-  const html = `
-    <h2>Account Details</h2>
-    <pre style="white-space:pre-wrap">${details}</pre>
-  `;
+    const html = `
+      <h2>${product.name}</h2>
+      <p><b>Price:</b> ₦${product.price}</p>
 
-  document.getElementById("modalContent").innerHTML = html;
-  document.getElementById("orderDetailsModal").style.display = "flex";
+      <hr>
+
+      <h3>Accounts</h3>
+      <pre style="white-space:pre-wrap">${details}</pre>
+
+      ${
+        product.previewLink
+        ? `<p><b>Preview:</b> <a href="${product.previewLink}" target="_blank">Open</a></p>`
+        : ""
+      }
+    `;
+
+    document.getElementById("modalContent").innerHTML = html;
+    document.getElementById("orderDetailsModal").style.display = "flex";
+
+  } catch(e){
+    console.error("Product view error:", e);
+  }
 }
 </script>
 
