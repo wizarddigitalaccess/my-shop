@@ -495,11 +495,9 @@ async function buy(id){
       // 📉 UPDATE PRODUCT STOCK
       const newStock = updatedAccounts.length;
 
-await updateDoc(productRef, {
+transaction.update(productRef, {
   accounts: updatedAccounts,
   stock: newStock,
-
-  // 🔥 FORCE REMOVE PREVIEW AFTER ANY PURCHASE
   previewLink: ""
 });
 
@@ -515,7 +513,7 @@ transaction.set(orderRef,{
   name: productData.name || "",
   category: productData.category || "",
   price: productData.price || 0,
-  logo: productData.logo || p.logo || "",
+  logo: productData.logo || "",
 
   loginDetails: (account?.details || "").split("||").join("\n"),
 
