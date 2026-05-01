@@ -1132,8 +1132,8 @@ function loadTracking(){
 
  <!-- 🔥 NEW VIEW BUTTON -->
     <button class="btn-view" onclick="viewOrderDetailsById('${d.id}','gift')">
-      View
-    </button>
+  View
+</button>
 
   <div class="actions" style="margin-top:8px;">
     <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
@@ -1472,9 +1472,9 @@ ${o.loginDetails || "No data"}
 
   document.getElementById("modalContent").innerHTML = html;
 const modal = document.getElementById("orderDetailsModal");
-
 modal.style.display = "flex";
 modal.style.pointerEvents = "auto";
+modal.style.opacity = "1";
 modal.style.zIndex = "99999";
 
 // 🔥 FORCE FRONT + CLICKABLE
@@ -1841,12 +1841,12 @@ window.viewOrderDetailsById = async function(id, type){
     const data = snap.data();
 
     viewOrderDetails({
-      ...data,
-      type,
-      createdAt: data.createdAt?.seconds
-        ? data.createdAt.seconds * 1000
-        : null
-    });
+  ...data,
+  type,
+  createdAt: data.createdAt?.toDate
+    ? data.createdAt.toDate()
+    : null
+});
 
   }catch(e){
     console.error(e);
