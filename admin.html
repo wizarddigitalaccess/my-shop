@@ -1433,59 +1433,56 @@ ${o.loginDetails || "No data"}
   }
 
   // 🎁 GIFT
-  if(o.type === "gift"){
-    const r = o.receiver || {};
-    const s = o.senders || {};
+if(o.type === "gift"){
+  const r = o.receiver || {};
+  const s = o.sender || o.senders || {};
 
-    html += `
-      <hr>
-      <div><b>Gift:</b> ${o.productName}</div>
+  html += `
+  <hr>
+  <div><b>Gift:</b> ${o.productName}</div>
 
-      <div><b>Receiver:</b></div>
-      <div>Name: ${r.name || "-"}</div>
-      <div>Phone: ${r.phone || "-"}</div>
-      <div>House: ${r.house || "-"}</div>
-      <div>Street: ${r.street || "-"}</div>
-      <div>Street: ${r.city || "-"}</div>
-      <div>Street: ${r.state || "-"}</div>
-      <div>Street: ${r.zip || "-"}</div>
-      <div>Address: ${r.country || ""}</div>
+  <div><b>Receiver:</b></div>
+  <div>Name: ${r.name || "-"}</div>
+  <div>Phone: ${r.phone || "-"}</div>
 
-      ${r.size ? `<div>Size: ${r.size}</div>` : ""}
+  <div><b>Address:</b></div>
 
-      <hr>
-
-      <div><b>Sender:</b></div>
-      <div>Name: ${s.name || "-"}</div>
-      <div>Location: ${s.location || "-"}</div>
-
-      ${o.note ? `<hr><div><b>Note:</b> ${o.note}</div>` : ""}
-    `;
+  ${
+    r.address
+      ? `<div>${r.address}</div>`
+      : `
+        <div>House: ${r.house || "-"}</div>
+        <div>Street: ${r.street || "-"}</div>
+        <div>City: ${r.city || "-"}</div>
+        <div>State: ${r.state || "-"}</div>
+        <div>Zip: ${r.zip || "-"}</div>
+        <div>Country: ${r.country || "-"}</div>
+      `
   }
 
-  // 📅 DATE
-  html += `
-    <hr>
-    <div style="color:gray;font-size:12px;">
-      ${
-        o.createdAt && o.createdAt.toDate
-          ? o.createdAt.toDate().toLocaleString()
-          : "No date"
-      }
-    </div>
+  ${r.size ? `<div>Size: ${r.size}</div>` : ""}
+
+  <hr>
+
+  <div><b>Sender:</b></div>
+  <div>Name: ${s.name || "-"}</div>
+  <div>Location: ${s.location || "-"}</div>
+
+  ${o.note ? `<hr><div><b>Note:</b> ${o.note}</div>` : ""}
   `;
 
   document.getElementById("modalContent").innerHTML = html;
-const modal = document.getElementById("orderDetailsModal");
-modal.style.display = "flex";
-modal.style.pointerEvents = "auto";
-modal.style.opacity = "1";
-modal.style.zIndex = "99999";
 
-// 🔥 FORCE FRONT + CLICKABLE
-setTimeout(() => {
+  const modal = document.getElementById("orderDetailsModal");
+  modal.style.display = "flex";
+  modal.style.pointerEvents = "auto";
   modal.style.opacity = "1";
-}, 10);
+  modal.style.zIndex = "99999";
+
+  setTimeout(() => {
+    modal.style.opacity = "1";
+  }, 10);
+}
 };
 
 window.closeModal = function(){
@@ -1757,7 +1754,18 @@ ${details}
         <div><b>Receiver:</b></div>
         <div>Name: ${r.name || "-"}</div>
         <div>Phone: ${r.phone || "-"}</div>
-        <div>${r.city || ""}, ${r.country || ""}</div>
+        ${
+  r.address
+    ? `<div>${r.address}</div>`
+    : `
+      <div>House: ${r.house || "-"}</div>
+      <div>Street: ${r.street || "-"}</div>
+      <div>City: ${r.city || "-"}</div>
+      <div>State: ${r.state || "-"}</div>
+      <div>Zip: ${r.zip || "-"}</div>
+      <div>Country: ${r.country || "-"}</div>
+    `
+}
 
         ${r.size ? `<div>Size: ${r.size}</div>` : ""}
 
