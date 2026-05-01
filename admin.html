@@ -119,6 +119,8 @@ button {
 
 <div id="orderDetailsModal" style="
   display:none;
+  opacity:0;
+  transition:0.2s;
   position:fixed;
   inset:0;
   background:rgba(0,0,0,0.8);
@@ -1128,6 +1130,11 @@ function loadTracking(){
     📍 ${g.receiver?.city || ""}, ${g.receiver?.country || ""}
   </div>
 
+ <!-- 🔥 NEW VIEW BUTTON -->
+    <button class="btn-view" onclick="viewOrderDetailsById('${d.id}','gift')">
+      View
+    </button
+
   <div class="actions" style="margin-top:8px;">
     <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
     <button class="btn-status" onclick="updateStatus('${d.id}','processing')">Processing</button>
@@ -1715,25 +1722,43 @@ ${details}
 
     // 🎁 GIFT ORDER
     if(order.type === "gift"){
-      const r = order.receiver || {};
-      const s = order.senders || {};
+  const r = order.receiver || {};
+  const s = order.senders || {};
 
-      html += `
-        <h3>Receiver Details</h3>
-        <p>Name: ${r.name || "-"}</p>
-        <p>Phone: ${r.phone || "-"}</p>
-        <p>Address: ${r.house || ""} ${r.street || ""}, ${r.city || ""}, ${r.state || ""}, ${r.country || ""}</p>
-        ${r.size ? `<p>Size: ${r.size}</p>` : ""}
+  html += `
+    <h3 style="margin-bottom:8px;">🎁 Gift Details</h3>
 
-        <hr>
+    <div style="background:#111;padding:10px;border-radius:10px;margin-bottom:10px;">
+      <b>Product:</b> ${order.productName || "Gift"}
+    </div>
 
-        <h3>Sender Details</h3>
-        <p>Name: ${s.name || "-"}</p>
-        <p>Location: ${s.location || "-"}</p>
+    <div style="background:#111;padding:10px;border-radius:10px;margin-bottom:10px;">
+      <h4 style="margin:0 0 6px 0;">📦 Receiver</h4>
+      <div>Name: ${r.name || "-"}</div>
+      <div>Phone: ${r.phone || "-"}</div>
+      <div>Address: ${r.house || ""} ${r.street || ""}</div>
+      <div>${r.city || ""}, ${r.state || ""}, ${r.country || ""}</div>
+      ${r.size ? `<div>Size: ${r.size}</div>` : ""}
+    </div>
 
-        ${order.note ? `<hr><p><b>Note:</b> ${order.note}</p>` : ""}
-      `;
+    <div style="background:#111;padding:10px;border-radius:10px;margin-bottom:10px;">
+      <h4 style="margin:0 0 6px 0;">👤 Sender</h4>
+      <div>Name: ${s.name || "-"}</div>
+      <div>Location: ${s.location || "-"}</div>
+    </div>
+
+    ${
+      order.note
+      ? `
+      <div style="background:#111;padding:10px;border-radius:10px;">
+        <b>💬 Message</b><br>
+        ${order.note}
+      </div>
+      `
+      : ""
     }
+  `;
+}
 
     document.getElementById("modalContent").innerHTML = html;
 
