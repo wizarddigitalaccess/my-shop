@@ -1686,15 +1686,10 @@ window.unbanUser = async(uid)=>{
 
 async function viewOrderDetails(order) {
   try {
-    let date = "No date";
 
-if(order.createdAt){
-  if(order.createdAt.toDate){
-    date = order.createdAt.toDate().toLocaleString();
-  }else{
-    date = new Date(order.createdAt).toLocaleString();
-  }
-}
+    let date = order.createdAt?.toDate
+      ? order.createdAt.toDate().toLocaleString()
+      : "No date";
 
     let html = `
       <h2>Order Details</h2>
@@ -1706,92 +1701,81 @@ if(order.createdAt){
     `;
 
     // 🛒 NORMAL PRODUCT
-if(order.type === "normal"){
+    if(order.type === "normal"){
 
-  let details = order.loginDetails || "No details";
+      let details = order.loginDetails || "No details";
 
-  // fallback (if not stored in order)
-  if(!order.loginDetails && order.productId){
-    try{
-      const prodSnap = await getDoc(doc(db,"products",order.productId));
+      // fallback if missing
+      if(!order.loginDetails && order.productId){
+        try{
+          const prodSnap = await getDoc(doc(db,"products",order.productId));
 
-      if(prodSnap.exists()){
-        const p = prodSnap.data();
+          if(prodSnap.exists()){
+            const p = prodSnap.data();
 
-        details = p.accounts
-          ? p.accounts.map(a => a.details).join("\n\n")
-          : "No details";
-      }else{
-        details = "Product not found";
+            details = p.accounts
+              ? p.accounts.map(a => a.details).join("\n\n")
+              : "No details";
+          }else{
+            details = "Product not found";
+          }
+
+        }catch(e){
+          details = "Failed to load details";
+        }
       }
 
-    }catch(e){
-      details = "Failed to load details";
-    }
-  }
-
-  html += `
-    <h3>Login Details</h3>
-    <pre style="white-space:pre-wrap;background:#111;padding:10px;border-radius:8px;">
+      html += `
+        <h3>Login Details</h3>
+        <pre style="white-space:pre-wrap;background:#111;padding:10px;border-radius:8px;">
 ${details}
-    </pre>
+        </pre>
 
-    ${
-      order.previewLink
-      ? `<p><b>Preview:</b> <a href="${order.previewLink}" target="_blank">Open</a></p>`
-      : ""
+        ${
+          order.previewLink
+          ? `<p><b>Preview:</b> <a href="${order.previewLink}" target="_blank">Open</a></p>`
+          : ""
+        }
+      `;
     }
-  `;
-}
 
     // 🎁 GIFT ORDER
     if(order.type === "gift"){
-  const r = order.receiver || {};
-  const s = order.senders || {};
+      const r = order.receiver || {};
+      const s = order.senders || {};
 
-  html += `
-    <h3 style="margin-bottom:8px;">🎁 Gift Details</h3>
+      html += `
+        <h3>🎁 Gift Details</h3>
 
-    <div style="background:#111;padding:10px;border-radius:10px;margin-bottom:10px;">
-      <b>Product:</b> ${order.productName || "Gift"}
-    </div>
+        <div><b>Product:</b> ${order.productName || "Gift"}</div>
 
-    <div style="background:#111;padding:10px;border-radius:10px;margin-bottom:10px;">
-      <h4 style="margin:0 0 6px 0;">📦 Receiver</h4>
-      <div>Name: ${r.name || "-"}</div>
-      <div>Phone: ${r.phone || "-"}</div>
-      <div>Address: ${r.house || ""} ${r.street || ""}</div>
-      <div>${r.city || ""}, ${r.state || ""}, ${r.country || ""}</div>
-      ${r.size ? `<div>Size: ${r.size}</div>` : ""}
-    </div>
+        <div><b>Receiver:</b></div>
+        <div>Name: ${r.name || "-"}</div>
+        <div>Phone: ${r.phone || "-"}</div>
+        <div>${r.city || ""}, ${r.country || ""}</div>
 
-    <div style="background:#111;padding:10px;border-radius:10px;margin-bottom:10px;">
-      <h4 style="margin:0 0 6px 0;">👤 Sender</h4>
-      <div>Name: ${s.name || "-"}</div>
-      <div>Location: ${s.location || "-"}</div>
-    </div>
+        ${r.size ? `<div>Size: ${r.size}</div>` : ""}
 
-    ${
-      order.note
-      ? `
-      <div style="background:#111;padding:10px;border-radius:10px;">
-        <b>💬 Message</b><br>
-        ${order.note}
-      </div>
-      `
-      : ""
+        <hr>
+
+        <div><b>Sender:</b></div>
+        <div>Name: ${s.name || "-"}</div>
+        <div>Location: ${s.location || "-"}</div>
+
+        ${order.note ? `<hr><div><b>Note:</b> ${order.note}</div>` : ""}
+      `;
     }
-  `;
-}
 
     document.getElementById("modalContent").innerHTML = html;
 
     const modal = document.getElementById("orderDetailsModal");
     modal.style.display = "flex";
     modal.style.pointerEvents = "auto";
+    modal.style.opacity = "1";
 
   } catch (e) {
     console.error("Order view error:", e);
+    alert("Failed to open order");
   }
 }
   
