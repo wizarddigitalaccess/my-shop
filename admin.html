@@ -1686,9 +1686,15 @@ window.unbanUser = async(uid)=>{
 
 async function viewOrderDetails(order) {
   try {
-    const date = order.createdAt
-      ? new Date(order.createdAt).toLocaleString()
-      : "No date";
+    let date = "No date";
+
+if(order.createdAt){
+  if(order.createdAt.toDate){
+    date = order.createdAt.toDate().toLocaleString();
+  }else{
+    date = new Date(order.createdAt).toLocaleString();
+  }
+}
 
     let html = `
       <h2>Order Details</h2>
@@ -1700,40 +1706,43 @@ async function viewOrderDetails(order) {
     `;
 
     // 🛒 NORMAL PRODUCT
-    if(order.type === "normal"){
-      let details = "Loading...";
+if(order.type === "normal"){
 
-if(order.productId){
-  try{
-    const prodSnap = await getDoc(doc(db,"products",order.productId));
-    if(prodSnap.exists()){
-      const p = prodSnap.data();
-      details = p.accounts
-        ? p.accounts.map(a => a.details).join("\n\n")
-        : "No details";
-    }else{
-      details = "Product not found";
+  let details = order.loginDetails || "No details";
+
+  // fallback (if not stored in order)
+  if(!order.loginDetails && order.productId){
+    try{
+      const prodSnap = await getDoc(doc(db,"products",order.productId));
+
+      if(prodSnap.exists()){
+        const p = prodSnap.data();
+
+        details = p.accounts
+          ? p.accounts.map(a => a.details).join("\n\n")
+          : "No details";
+      }else{
+        details = "Product not found";
+      }
+
+    }catch(e){
+      details = "Failed to load details";
     }
-  }catch(e){
-    details = "Failed to load details";
   }
-}else{
-  details = "No product link";
-}
 
-      html += `
-        <h3>Login Details</h3>
-        <pre style="white-space:pre-wrap;background:#111;padding:10px;border-radius:8px;">
+  html += `
+    <h3>Login Details</h3>
+    <pre style="white-space:pre-wrap;background:#111;padding:10px;border-radius:8px;">
 ${details}
-        </pre>
+    </pre>
 
-        ${
-          order.previewLink
-          ? `<p><b>Preview:</b> <a href="${order.previewLink}" target="_blank">Open</a></p>`
-          : ""
-        }
-      `;
+    ${
+      order.previewLink
+      ? `<p><b>Preview:</b> <a href="${order.previewLink}" target="_blank">Open</a></p>`
+      : ""
     }
+  `;
+}
 
     // 🎁 GIFT ORDER
     if(order.type === "gift"){
@@ -1858,9 +1867,7 @@ window.viewOrderDetailsById = async function(id, type){
     viewOrderDetails({
   ...data,
   type,
-  createdAt: data.createdAt?.toDate
-    ? data.createdAt.toDate()
-    : null
+  createdAt: data.createdAt || null
 });
 
   }catch(e){
