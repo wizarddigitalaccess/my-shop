@@ -493,10 +493,15 @@ async function buy(id){
       });
 
       // 📉 UPDATE PRODUCT STOCK
-      transaction.update(productRef,{
-        accounts: updatedAccounts,
-        stock: updatedAccounts.length
-      });
+      const newStock = updatedAccounts.length;
+
+await updateDoc(productRef, {
+  accounts: updatedAccounts,
+  stock: newStock,
+
+  // 🔥 FORCE REMOVE PREVIEW AFTER ANY PURCHASE
+  previewLink: ""
+});
 
       // 🧾 CREATE ORDER (SAFE DELIVERY)
 const orderRef = doc(collection(db,"orders"));
