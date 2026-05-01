@@ -444,7 +444,7 @@ function loadProducts(){
 }
 
 function preview(p){
-  if(p.previewLink){
+  if(product.previewLink && !product.sold){
     window.open(p.previewLink, "_blank");
   }else{
     alert("No preview available");
@@ -498,7 +498,8 @@ async function buy(id){
 transaction.update(productRef, {
   accounts: updatedAccounts,
   stock: newStock,
-  previewLink: ""
+  previewLink: newStock === 0 ? "" : productData.previewLink,
+  sold: newStock === 0 ? true : false
 });
 
       // 🧾 CREATE ORDER (SAFE DELIVERY)

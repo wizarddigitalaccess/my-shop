@@ -463,13 +463,16 @@ if(!isAdminEmail || !isAdminRole){
 /* NAV */
 document.querySelectorAll(".nav button").forEach(btn=>{
  btn.onclick=()=>{
+
+  // 🔥 FORCE CLOSE ANY OPEN MODAL
   closeOrderModal();
+
   document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
 
   document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
   document.getElementById(btn.dataset.page).classList.remove("hidden");
- };
+};
 });
 
 document.getElementById("orderDetailsModal").onclick = function(e){
@@ -1811,7 +1814,8 @@ function closeOrderModal(){
 
   setTimeout(()=>{
     modal.style.display = "none";
-  }, 200);
+    document.getElementById("modalContent").innerHTML = ""; // 🔥 CLEAR CONTENT
+  },200);
 }
 
 window.viewProductDetails = async function(id){
@@ -1850,7 +1854,8 @@ window.viewProductDetails = async function(id){
 
     const modal = document.getElementById("orderDetailsModal");
     modal.style.display = "flex";
-    modal.style.zIndex = "99999";
+    modal.style.opacity = "1";
+    modal.style.pointerEvents = "auto";
 
   }catch(e){
     console.error(e);
