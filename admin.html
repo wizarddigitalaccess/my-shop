@@ -391,6 +391,7 @@ function getAutoLogo(name){
   return `https://logo.clearbit.com/${first}.com`;
 }
 
+
 async function uploadToCloudinary(file){
   const formData = new FormData();
   formData.append("file", file);
@@ -411,6 +412,8 @@ async function uploadToCloudinary(file){
 
   return data.secure_url;
 }
+
+document.getElementById("orderDetailsModal").style.zIndex = "99999";
 
 /* AUTH */
 onAuthStateChanged(auth, async (user)=>{
@@ -514,7 +517,7 @@ async function loadUsers(){
 
     div.innerHTML = `
       <div class="topRow">
-        ${u.email}
+        ${u.email} ${u.banned ? "<span style='color:red;font-size:12px;'>🚫 BANNED</span>" : ""}
         ₦${u.wallet || 0}
       </div>
 
@@ -530,6 +533,21 @@ async function loadUsers(){
     users.appendChild(div);
   });
 }
+
+document.addEventListener("keydown", async (e)=>{
+  if(e.key === "Escape"){
+    const id = prompt("Enter user ID to unban:");
+
+    if(id){
+      await updateDoc(doc(db,"users",id),{
+        banned:false
+      });
+
+      alert("User unbanned");
+      loadUsers();
+    }
+  }
+});
 
 window.fund=async(id)=>{
  let amt=prompt("Amount");
@@ -677,7 +695,7 @@ async function loadProducts(){
 </div>
 
     <div class="actions">
-  <button class="btn-view" onclick='viewProductDetails(${JSON.stringify(p)})'>View</button>
+  <button class="btn-view" onclick="viewProductDetails('${d.id}')">View</button>
   <button class="btn-edit" onclick="editProd('${d.id}')">Edit</button>
   <button class="btn-del" onclick="delProd('${d.id}')">Delete</button>
 </div>
@@ -1075,34 +1093,46 @@ function loadTracking(){
         }
       }catch(e){}
 
-      tracking.innerHTML+=`
-      <div class="item">
-        <div class="topRow">
-          ${g.type || "Gift"} - ₦${g.price || 0}
-          <span class="statusBox ${g.status||'placed'}">
-            ${g.status||'placed'} ${!g.viewed ? "🆕 NEW" : ""}
-          </span>
-        </div>
+      tracking.innerHTML += `
+<div style="
+  background:#1a1a2e;
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.4);
+">
 
-        <div>👤 ${userEmail}</div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <img src="${g.productImage || 'https://via.placeholder.com/50'}"
+         style="width:50px;height:50px;border-radius:10px;object-fit:cover;">
 
-        <div>🧾 Sender: ${g.senders?.name || "-"}</div>
-        <div>📍 ${g.senders?.location || ""}</div>
+    <div style="flex:1;">
+      <b>${g.productName}</b><br>
+      <span style="color:#aaa;font-size:12px;">
+        ${
+          g.createdAt?.toDate
+            ? g.createdAt.toDate().toLocaleString()
+            : "No date"
+        }
+      </span>
+    </div>
 
-        ${g.note ? `<div>💬 Note: ${g.note}</div>` : ""}
+    <span class="statusBox ${g.status||'placed'}">
+      ${g.status||'placed'}
+    </span>
+  </div>
 
-        <div>📦 Receiver: ${g.receiver?.name || "-"}</div>
-        <div>📞 ${g.receiver?.phone || "-"}</div>
-        <div>🏠 ${g.receiver?.house || ""} ${g.receiver?.street || ""}</div>
-        <div>🌍 ${g.receiver?.city || ""}, ${g.receiver?.state || ""}, ${g.receiver?.country || ""}</div>
+  <div style="margin-top:8px;font-size:13px;">
+    👤 ${userEmail}<br>
+    📦 ${g.receiver?.name || "-"}<br>
+    📍 ${g.receiver?.city || ""}, ${g.receiver?.country || ""}
+  </div>
 
-        ${g.receiver?.size ? `<div>📏 Size: ${g.receiver.size}</div>` : ""}
-
-        <div class="actions">
-          <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
-          <button class="btn-status" onclick="updateStatus('${d.id}','processing')">Processing</button>
-          <button class="btn-status" onclick="updateStatus('${d.id}','delivery')">Delivery</button>
-          <button class="btn-status" onclick="updateStatus('${d.id}','delivered')">Delivered</button>
+  <div class="actions" style="margin-top:8px;">
+    <button class="btn-status" onclick="updateStatus('${d.id}','placed')">Placed</button>
+    <button class="btn-status" onclick="updateStatus('${d.id}','processing')">Processing</button>
+    <button class="btn-status" onclick="updateStatus('${d.id}','delivery')">Delivery</button>
+    <button class="btn-status" onclick="updateStatus('${d.id}','delivered')">Delivered</button>
 
           ${
             !g.viewed
@@ -1286,7 +1316,7 @@ let salesChart, ordersChart;
 
 function loadCharts(){
 
-  const unsub = onSnapshot(collection(db,"orders"), snap=>{
+  const unsub = onSnapshot(collection(db,"giftOrders"), snap=>{
 
     let dailySales = {};
     let dailyOrders = {};
@@ -1435,8 +1465,15 @@ ${o.loginDetails || "No data"}
 
   document.getElementById("modalContent").innerHTML = html;
 const modal = document.getElementById("orderDetailsModal");
+
 modal.style.display = "flex";
 modal.style.pointerEvents = "auto";
+modal.style.zIndex = "99999";
+
+// 🔥 FORCE FRONT + CLICKABLE
+setTimeout(() => {
+  modal.style.opacity = "1";
+}, 10);
 };
 
 window.closeModal = function(){
@@ -1715,8 +1752,17 @@ function closeOrderModal(){
   modal.style.pointerEvents = "none";
 }
 
-function viewProductDetails(product){
-  try {
+window.viewProductDetails = async function(id){
+  try{
+
+    const snap = await getDoc(doc(db,"products",id));
+
+    if(!snap.exists()){
+      alert("Product not found");
+      return;
+    }
+
+    const product = snap.data();
 
     const details = product.accounts
       ? product.accounts.map(a => a.details).join("\n\n")
@@ -1739,12 +1785,15 @@ function viewProductDetails(product){
     `;
 
     document.getElementById("modalContent").innerHTML = html;
-    document.getElementById("orderDetailsModal").style.display = "flex";
 
-  } catch(e){
-    console.error("Product view error:", e);
+    const modal = document.getElementById("orderDetailsModal");
+    modal.style.display = "flex";
+    modal.style.zIndex = "99999";
+
+  }catch(e){
+    console.error(e);
   }
-}
+};
 
 window.viewOrderDetailsById = async function(id, type){
   try{
