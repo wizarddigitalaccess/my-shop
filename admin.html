@@ -1684,7 +1684,7 @@ window.unbanUser = async(uid)=>{
   alert("User unbanned");
 };
 
-function viewOrderDetails(order) {
+async function viewOrderDetails(order) {
   try {
     const date = order.createdAt
       ? new Date(order.createdAt).toLocaleString()
@@ -1701,10 +1701,25 @@ function viewOrderDetails(order) {
 
     // 🛒 NORMAL PRODUCT
     if(order.type === "normal"){
-      const details =
-        order.loginDetails ||
-        (order.accounts && order.accounts[0]?.details) ||
-        "No details available";
+      let details = "Loading...";
+
+if(order.productId){
+  try{
+    const prodSnap = await getDoc(doc(db,"products",order.productId));
+    if(prodSnap.exists()){
+      const p = prodSnap.data();
+      details = p.accounts
+        ? p.accounts.map(a => a.details).join("\n\n")
+        : "No details";
+    }else{
+      details = "Product not found";
+    }
+  }catch(e){
+    details = "Failed to load details";
+  }
+}else{
+  details = "No product link";
+}
 
       html += `
         <h3>Login Details</h3>
