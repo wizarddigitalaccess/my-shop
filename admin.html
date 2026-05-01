@@ -12,7 +12,8 @@ body { margin:0; font-family:Arial; background:#0f0f1a; color:white; display:non
 
 .header {
   padding:15px;
-  background:#1c1c2e;
+  background:linear-gradient(145deg,#1c1c2e,#151526);
+  box-shadow:0 0 20px rgba(0,0,0,0.6);
   display:flex;
   justify-content:space-between;
 }
@@ -537,9 +538,18 @@ async function loadUsers(){
 }
 
 document.addEventListener("keydown", async (e)=>{
-  if(e.key === "Escape"){
-    const id = prompt("Enter user ID to unban:");
 
+  if(e.key === "Escape"){
+
+    // ✅ CLOSE MODAL FIRST
+    const modal = document.getElementById("orderDetailsModal");
+    if(modal.style.display === "flex"){
+      closeOrderModal();
+      return;
+    }
+
+    // 🔓 fallback (your unban logic)
+    const id = prompt("Enter user ID to unban:");
     if(id){
       await updateDoc(doc(db,"users",id),{
         banned:false
@@ -1474,10 +1484,11 @@ if(o.type === "gift"){
   document.getElementById("modalContent").innerHTML = html;
 
   const modal = document.getElementById("orderDetailsModal");
-  modal.style.display = "flex";
-  modal.style.pointerEvents = "auto";
-  modal.style.opacity = "1";
-  modal.style.zIndex = "99999";
+
+modal.style.display = "flex";
+modal.style.opacity = "1";
+modal.style.pointerEvents = "auto";
+modal.style.zIndex = "99999";
 
   setTimeout(() => {
     modal.style.opacity = "1";
@@ -1794,8 +1805,13 @@ ${details}
   
 function closeOrderModal(){
   const modal = document.getElementById("orderDetailsModal");
-  modal.style.display = "none";
+
+  modal.style.opacity = "0";
   modal.style.pointerEvents = "none";
+
+  setTimeout(()=>{
+    modal.style.display = "none";
+  }, 200);
 }
 
 window.viewProductDetails = async function(id){
