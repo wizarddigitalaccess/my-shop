@@ -1444,7 +1444,12 @@ ${o.loginDetails || "No data"}
       <div><b>Receiver:</b></div>
       <div>Name: ${r.name || "-"}</div>
       <div>Phone: ${r.phone || "-"}</div>
-      <div>Address: ${r.street || ""}, ${r.city || ""}, ${r.country || ""}</div>
+      <div>House: ${r.house || "-"}</div>
+      <div>Street: ${r.street || "-"}</div>
+      <div>Street: ${r.city || "-"}</div>
+      <div>Street: ${r.state || "-"}</div>
+      <div>Street: ${r.zip || "-"}</div>
+      <div>Address: ${r.country || ""}</div>
 
       ${r.size ? `<div>Size: ${r.size}</div>` : ""}
 
