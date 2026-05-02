@@ -1,5 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
+
+<div id="viewModal" style="
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:-100%;
+  background:#0f0f1a;
+  border-top-left-radius:20px;
+  border-top-right-radius:20px;
+  padding:20px;
+  z-index:9999;
+  transition:0.35s;
+  max-height:80%;
+  overflow:auto;
+">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <b>Account Details</b>
+    <span onclick="closeModal()" style="cursor:pointer;font-size:20px;">✕</span>
+  </div>
+
+  <hr style="border-color:#333;margin:10px 0;">
+
+  <pre id="modalContent" class="blurred"></pre>
+
+<button onclick="toggleBlur()" style="
+  margin-top:10px;
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#333;
+  color:white;
+">
+  Show / Hide
+</button>
+
+  <button id="copyBtn" style="
+    margin-top:10px;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:#1877f2;
+    color:white;
+    font-weight:bold;
+  ">Copy</button>
+
+</div>
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -182,6 +232,11 @@ body {
 }
 
 .nav a.active { color:#1877f2; }
+
+.blurred {
+  filter: blur(6px);
+  user-select: none;
+}
 
 </style>
 </head>
@@ -584,6 +639,21 @@ document.addEventListener("click", (e) => {
     closeMenu();
   }
 });
+
+document.getElementById("copyBtn").onclick = () => {
+  const text = document.getElementById("modalContent").textContent;
+  navigator.clipboard.writeText(text);
+  alert("Copied");
+};
+
+window.openModal = (text) => {
+  document.getElementById("modalContent").textContent = text;
+  document.getElementById("viewModal").style.bottom = "0";
+};
+
+window.closeModal = () => {
+  document.getElementById("viewModal").style.bottom = "-100%";
+};
 </script>
 
 </body>

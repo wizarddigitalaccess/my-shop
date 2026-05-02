@@ -16,6 +16,7 @@ body {
 .blurred{
   filter: blur(6px);
   user-select: none;
+  transition: 0.25s ease;
 }
 
 /* LOADER */
@@ -319,9 +320,15 @@ function loadOrdersLive(uid){
 }
 
 window.toggleData = (btn)=>{
-  const box = btn.closest(".content").querySelector(".detailsBox");
+  const content = btn.closest(".content");
+  const box = content.querySelector(".detailsBox");
 
   if(!box) return;
+
+  // 🔥 FORCE repaint (fix first click bug)
+  box.style.display = "none";
+  box.offsetHeight; // trigger reflow
+  box.style.display = "block";
 
   if(box.classList.contains("blurred")){
     box.classList.remove("blurred");
