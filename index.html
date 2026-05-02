@@ -431,6 +431,10 @@ function loadProducts(){
     const buyBtn = document.createElement("button");
 buyBtn.textContent = "Buy";
 buyBtn.onclick = () => buy(p.id);
+if((p.stock || 0) === 0){
+  buyBtn.disabled = true;
+  buyBtn.style.opacity = "0.5";
+}
 
 // ✅ ONLY SHOW PREVIEW IF AVAILABLE
 if(p.previewLink && !p.sold && (p.stock || 0) > 0){
