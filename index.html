@@ -428,15 +428,19 @@ function loadProducts(){
     const row = document.createElement("div");
     row.className = "row";
 
-    const previewBtn = document.createElement("button");
-    previewBtn.textContent = "Preview";
-    previewBtn.onclick = () => preview(p);
-
     const buyBtn = document.createElement("button");
-    buyBtn.textContent = "Buy";
-    buyBtn.onclick = () => buy(p.id);
+buyBtn.textContent = "Buy";
+buyBtn.onclick = () => buy(p.id);
 
-    row.append(previewBtn, buyBtn);
+// ✅ ONLY SHOW PREVIEW IF AVAILABLE
+if(p.previewLink && !p.sold && (p.stock || 0) > 0){
+  const previewBtn = document.createElement("button");
+  previewBtn.textContent = "Preview";
+  previewBtn.onclick = () => preview(p);
+  row.append(previewBtn);
+}
+
+row.append(buyBtn);
     card.appendChild(row);
 
     productsDiv.appendChild(card);
@@ -444,7 +448,7 @@ function loadProducts(){
 }
 
 function preview(p){
-  if(product.previewLink && !product.sold){
+  if(p.previewLink && !p.sold && (p.stock || 0) > 0){
     window.open(p.previewLink, "_blank");
   }else{
     alert("No preview available");
