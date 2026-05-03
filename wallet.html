@@ -84,7 +84,30 @@ button {
 
 <div class="card">
 <h2>Balance</h2>
-₦<span id="balance">0</span>
+
+<div style="font-size:22px;">
+  ₦<span id="balance">0</span>
+</div>
+
+<div style="font-size:12px;opacity:0.7;">
+  <span id="coins">0</span> Coins
+</div>
+
+<div id="usdBox" style="font-size:11px;opacity:0.5;">
+  ≈ $0
+</div>
+
+<button onclick="toggleUSD()" style="
+  margin-top:8px;
+  background:#222;
+  border:none;
+  color:#aaa;
+  font-size:10px;
+  padding:5px 10px;
+  border-radius:6px;
+">
+  Toggle $
+</button>
 </div>
 
 <div class="card">
@@ -118,6 +141,11 @@ button {
 
 </div>
 
+</div>
+
+<div class="card">
+  <h3>Transactions</h3>
+  <div id="txList" style="margin-top:10px;"></div>
 </div>
 
 <div class="nav">
@@ -169,14 +197,84 @@ onAuthStateChanged(auth, (user)=>{
   const ref = doc(db,"users",user.uid);
 
   /* 💰 LIVE BALANCE */
-  onSnapshot(ref,(snap)=>{
-    if(snap.exists()){
-      balanceEl.innerText = snap.data().wallet || 0;
-    }
-  });
+  let showUSD = true;
+
+onSnapshot(ref, async (snap)=>{
+  if(!snap.exists()) return;
+
+  const data = snap.data();
+
+  const naira = Number(data.wallet || 0);
+  const coins = Number(data.coins || 0);
+
+  const usd = (naira / 1500).toFixed(2);
+
+  balanceEl.innerText = naira.toLocaleString();
+  document.getElementById("coins").innerText = coins.toLocaleString();
+
+  document.getElementById("usdBox").innerText = showUSD
+    ? `≈ $${usd}`
+    : "";
+});
 
   loader.style.display="none";
   appDiv.style.display="block";
+});
+
+
+import {
+  query, where, orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const q = query(
+  collection(db,"transactions"),
+  where("userId","==",user.uid),
+  orderBy("createdAt","desc")
+);
+
+onSnapshot(q, (snap)=>{
+  const list = document.getElementById("txList");
+  list.innerHTML = "";
+
+  if(snap.empty){
+    list.innerHTML = "<div style='opacity:0.6;'>No transactions yet</div>";
+    return;
+  }
+
+  snap.forEach(docSnap=>{
+    const t = docSnap.data();
+
+    const div = document.createElement("div");
+
+    const isCredit = t.type === "credit";
+
+    div.style.background = "#111";
+    div.style.padding = "10px";
+    div.style.borderRadius = "8px";
+    div.style.marginBottom = "8px";
+
+    const date = t.createdAt?.toDate?.() || new Date();
+
+    div.innerHTML = `
+      <div style="font-size:13px;">
+        ${t.description || "Transaction"}
+      </div>
+
+      <div style="font-size:11px;opacity:0.6;">
+        ${date.toLocaleString()}
+      </div>
+
+      <div style="
+        margin-top:5px;
+        font-weight:bold;
+        color:${isCredit ? '#4ade80' : '#ff4d4d'};
+      ">
+        ${isCredit ? "+" : "-"}₦${Number(t.amount || 0).toLocaleString()}
+      </div>
+    `;
+
+    list.appendChild(div);
+  });
 });
 
 /* 💳 SUBMIT PAYMENT */
@@ -235,12 +333,15 @@ window.submitPayment = async ()=>{
 
   try{
     await addDoc(collection(db,"transactions"),{
-      uid: user.uid,
-      amount: amt,
-      proof: proofBase64,
-      status: "pending",
-      createdAt: new Date()
-    });
+  userId: user.uid, // ✅ FIXED
+  type: "credit",
+  amount: amt,
+  coins: 0,
+  description: "Wallet funding (pending)",
+  proof: proofBase64,
+  status: "pending",
+  createdAt: new Date()
+});
 
     // reset UI
     document.getElementById("fundFlow").style.display = "none";
@@ -257,6 +358,10 @@ window.submitPayment = async ()=>{
   }catch(err){
     alert(err.message);
   }
+};
+
+window.toggleUSD = () => {
+  showUSD = !showUSD;
 };
 </script>
 
