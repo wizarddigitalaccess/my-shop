@@ -1,21 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<div id="viewModal" style="
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:-100%;
-  background:#0f0f1a;
-  border-top-left-radius:20px;
-  border-top-right-radius:20px;
-  padding:20px;
-  z-index:9999;
-  transition:0.35s;
-  max-height:80%;
-  overflow:auto;
-">
-
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <b>Account Details</b>
     <span onclick="closeModal()" style="cursor:pointer;font-size:20px;">✕</span>
@@ -261,6 +246,21 @@ body {
 
 <body>
 
+  <div id="viewModal" style="
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:-100%;
+  background:#0f0f1a;
+  border-top-left-radius:20px;
+  border-top-right-radius:20px;
+  padding:20px;
+  z-index:9999;
+  transition:0.35s;
+  max-height:80%;
+  overflow:auto;
+">
+
 <div id="loader">Loading...</div>
 
 <div id="app" style="display:none;">
@@ -411,7 +411,7 @@ onAuthStateChanged(auth, async (u)=>{
 const currency = await getCurrency();
 
 document.getElementById("walletBox").innerHTML = `
-  ${currency.symbol} ${user.coins || 0} ${currency.name}
+  ${currency.symbol} ${userSnap.data().coins || 0} ${currency.name}
 `;
 
 /* INIT */
@@ -549,15 +549,18 @@ if((p.stock || 0) === 0){
 }
 
 // ✅ ONLY SHOW PREVIEW IF AVAILABLE
+let previewBtn = null;
+
+// ✅ CREATE PREVIEW BUTTON IF AVAILABLE
 if(p.previewLink && !p.sold && (p.stock || 0) > 0){
-  const previewBtn = document.createElement("button");
+  previewBtn = document.createElement("button");
   previewBtn.textContent = "Preview";
   previewBtn.onclick = () => preview(p);
   row.append(previewBtn);
 }
 
-// Disable preview if sold
-if ((p.stock || 0) === 0 || p.sold) {
+// ✅ ONLY TOUCH previewBtn IF IT EXISTS
+if(previewBtn && ((p.stock || 0) === 0 || p.sold)){
   previewBtn.disabled = true;
   previewBtn.style.opacity = "0.4";
 }
