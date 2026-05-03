@@ -274,6 +274,14 @@ body {
   </div>
 </div>
 
+<div id="walletBox" style="
+  background:#1c1c2e;
+  padding:10px;
+  border-radius:10px;
+  margin:10px;
+  font-weight:bold;
+"></div>
+
 <div id="sideMenu" style="
   position:fixed;
   top:0;
@@ -357,6 +365,20 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+async function getCurrency(){
+  const snap = await getDoc(doc(db,"settings","currency"));
+
+  if(!snap.exists()){
+    return {
+      name: "Coins",
+      symbol: "🧙‍♂️WDC",
+      rate: 250
+    };
+  }
+
+  return snap.data();
+}
+
 let user, allProducts=[], currentCategory="all";
 
 const loader = document.getElementById("loader");
@@ -385,6 +407,12 @@ onAuthStateChanged(auth, async (u)=>{
   loader.style.display="none";
   appDiv.style.display="block";
 });
+
+const currency = await getCurrency();
+
+document.getElementById("walletBox").innerHTML = `
+  ${currency.symbol} ${user.coins || 0} ${currency.name}
+`;
 
 /* INIT */
 async function init(){
@@ -575,8 +603,14 @@ async function buy(id){
       const userData = userSnap.data();
       const productData = productSnap.data();
 
+      // 💎 GET SITE CURRENCY
+      const currency = await getCurrency();
+
+      // 💰 CONVERT PRICE → COINS
+      const priceInCoins = productData.price / currency.rate;
+
       // 💰 CHECK BALANCE
-      if((userData.wallet || 0) < productData.price){
+      if((userData.coins || 0) < priceInCoins){
         throw "Insufficient balance";
       }
 
@@ -593,8 +627,9 @@ async function buy(id){
 
       // 💳 UPDATE USER BALANCE
       transaction.update(userRef,{
-        wallet: (userData.wallet || 0) - productData.price
-      });
+  wallet: (userData.wallet || 0) - productData.price, // keep naira
+  coins: (userData.coins || 0) - priceInCoins         // deduct coins
+});
 
       // 📉 UPDATE PRODUCT STOCK
       const newStock = updatedAccounts.length;

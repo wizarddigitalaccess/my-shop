@@ -366,6 +366,8 @@ import {
 import {
   getStorage, ref, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+import { setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 /* ADMIN LOCK */
 const ADMIN_EMAIL="etee77366@gmail.com".toLowerCase();
 
@@ -537,6 +539,7 @@ function init(){
   loadTracking();
   loadAllOrders();
   loadPayments();
+  loadCurrencyStats();
 }
 
 /* USERS */
@@ -1293,22 +1296,35 @@ window.approvePayment = async(id, uid, amount)=>{
     const userRef = doc(db,"users",uid);
     const userSnap = await getDoc(userRef);
 
-    if(!userSnap.exists()) return;
+    if(!userSnap.exists()){
+      alert("User not found");
+      return;
+    }
 
-    const current = userSnap.data().wallet || 0;
+    const user = userSnap.data();
 
-    // add money
+    // 💎 GET CURRENCY
+    const currency = await getCurrency();
+
+    // 💰 CONVERT ₦ → COINS
+    const coins = Number(amount) / currency.rate;
+
+    // 🔄 UPDATE USER
     await updateDoc(userRef,{
-      wallet: current + Number(amount)
+      wallet: (user.wallet || 0) + Number(amount),
+      coins: (user.coins || 0) + coins
     });
 
-    // update transaction
+    // ✅ MARK TRANSACTION APPROVED
     await updateDoc(doc(db,"transactions",id),{
       status: "approved"
     });
 
+    alert("✅ Payment approved & coins added");
+
   }catch(err){
-    alert(err.message);
+    console.error(err);
+    alert("Error: " + err.message);
   }
 };
 
@@ -1943,6 +1959,41 @@ window.saveCurrency = async ()=>{
 
   alert("Currency saved");
 };
+
+window.saveCurrency = async () => {
+  const name = document.getElementById("siteCurrencyName").value;
+  const rate = Number(document.getElementById("siteCurrencyRate").value);
+
+  if(!name || !rate){
+    alert("Fill all fields");
+    return;
+  }
+
+  await setDoc(doc(db,"settings","currency"),{
+    name,
+    rate,
+    symbol: "🧙‍♂️WDC"
+  });
+
+  alert("Currency saved ✔️");
+};
+
+async function loadCurrencyStats(){
+  const snap = await getDoc(doc(db,"settings","currency"));
+
+  if(!snap.exists()){
+    walletStats.innerHTML = "No currency set";
+    return;
+  }
+
+  const c = snap.data();
+
+  walletStats.innerHTML = `
+    <div><b>Name:</b> ${c.name}</div>
+    <div><b>Rate:</b> ₦${c.rate} = 1 ${c.name}</div>
+    <div><b>Symbol:</b> ${c.symbol}</div>
+  `;
+}
 </script>
 
 </body>
