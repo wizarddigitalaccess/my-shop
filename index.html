@@ -423,29 +423,45 @@ onAuthStateChanged(auth, async (u) => {
   }
 
   // 💱 currency
-  const currency = await getCurrency();
+  // 💱 currency
+const currency = await getCurrency();
 
-  const naira = Number(userData.wallet || 0);
-  const coins = Number(userData.coins || 0);
+const naira = Number(userData.wallet || 0);
+const coins = Number(userData.coins || 0);
 
-  const dollarRate = 1500;
-  const usd = (naira / dollarRate).toFixed(2);
+const dollarRate = 1500;
+const usd = (naira / dollarRate).toFixed(2);
 
-  // 💰 UPDATE UI LIVE
-  animateBalance(naira);
+// 💰 animate change
+animateBalance(naira);
 
-  document.getElementById("walletBox").innerHTML = `
+// 💰 UPDATE UI
+document.getElementById("walletBox").innerHTML = `
+  <div style="display:flex;justify-content:space-between;align-items:center;">
     <div style="font-size:18px;">₦ ${naira.toLocaleString()}</div>
 
-    <div style="font-size:12px;opacity:0.8;">
-      ${currency.symbol} ${coins.toLocaleString()} ${currency.name}
-    </div>
+    <button onclick="toggleUSD()" style="
+      background:#222;
+      border:none;
+      color:#aaa;
+      font-size:10px;
+      padding:4px 8px;
+      border-radius:6px;
+      cursor:pointer;
+    ">
+      ${showUSD ? "Hide $" : "Show $"}
+    </button>
+  </div>
 
-    ${showUSD ? `
-      <div style="font-size:11px;opacity:0.6;">
-        ≈ $${usd} USD
-      </div>
-    ` : ""}
+  <div style="font-size:12px;opacity:0.8;">
+    ${currency.symbol} ${coins.toLocaleString()} ${currency.name}
+  </div>
+
+  ${showUSD ? `
+    <div style="font-size:11px;opacity:0.6;">
+      ≈ $${usd} USD
+    </div>
+  ` : ""}
   `;
 });
 
@@ -718,7 +734,7 @@ transaction.update(productRef, {
   sold: newStock === 0 ? true : false
 });
 
-      // 🧾 CREATE ORDER (SAFE DELIVERY)
+      // 🧾 CREATE ORDER
 const orderRef = doc(collection(db,"orders"));
 
 transaction.set(orderRef,{
@@ -733,12 +749,11 @@ transaction.set(orderRef,{
   logo: productData.logo || "",
 
   loginDetails: (account?.details || "").split("||").join("\n"),
-
   status: "delivered",
-
   createdAt: serverTimestamp()
 });
 
+// 💳 ADD TRANSACTION RECORD (NEW)
 const txRef = doc(collection(db, "transactions"));
 
 transaction.set(txRef, {
