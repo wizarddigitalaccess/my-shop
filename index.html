@@ -1,40 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <b>Account Details</b>
-    <span onclick="closeModal()" style="cursor:pointer;font-size:20px;">✕</span>
-  </div>
-
-  <hr style="border-color:#333;margin:10px 0;">
-
-  <pre id="modalContent" class="blurred"></pre>
-
-<button onclick="toggleBlur()" style="
-  margin-top:10px;
-  width:100%;
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#333;
-  color:white;
-">
-  Show / Hide
-</button>
-
-  <button id="copyBtn" style="
-    margin-top:10px;
-    width:100%;
-    padding:10px;
-    border:none;
-    border-radius:10px;
-    background:#1877f2;
-    color:white;
-    font-weight:bold;
-  ">Copy</button>
-
-</div>
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -260,6 +225,40 @@ body {
   max-height:80%;
   overflow:auto;
 ">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <b>Account Details</b>
+    <span onclick="closeModal()" style="cursor:pointer;font-size:20px;">✕</span>
+  </div>
+
+  <hr style="border-color:#333;margin:10px 0;">
+
+  <pre id="modalContent" class="blurred"></pre>
+
+  <button onclick="toggleBlur()" style="
+    margin-top:10px;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:#333;
+    color:white;
+  ">
+    Show / Hide
+  </button>
+
+  <button id="copyBtn" style="
+    margin-top:10px;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:#1877f2;
+    color:white;
+    font-weight:bold;
+  ">Copy</button>
+
+</div>
 
 <div id="loader">Loading...</div>
 
@@ -751,6 +750,11 @@ window.openModal = (text) => {
 window.closeModal = () => {
   document.getElementById("viewModal").style.bottom = "-100%";
 };
+
+function toggleBlur(){
+  const el = document.getElementById("modalContent");
+  el.classList.toggle("blurred");
+}
 </script>
 
 </body>
