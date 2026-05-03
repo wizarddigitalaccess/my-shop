@@ -88,15 +88,20 @@ button {
   left:0;
   width:100%;
   display:flex;
+  overflow-x:auto; /* ✅ allows scrolling */
   background:#111;
   z-index:999;
+  gap:5px;
+  padding:5px;
 }
 
 .nav button {
-  flex:1;
+  flex:0 0 auto; /* ❌ remove flex:1 */
+  min-width:80px; /* ✅ consistent size */
   padding:10px;
   background:#1c1c2e;
   color:gray;
+  border-radius:8px;
 }
 
 .nav button.active {
