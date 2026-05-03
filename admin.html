@@ -1315,6 +1315,15 @@ window.approvePayment = async(id, uid, amount)=>{
       coins: (user.coins || 0) + coins
     });
 
+    await addDoc(collection(db, "transactions"), {
+     userId: targetUserId,
+     type: "credit",
+     amount: amountAdded,
+     coins: amountAdded / currency.rate,
+     description: "Admin funding",
+    createdAt: serverTimestamp()
+  });
+
     // ✅ MARK TRANSACTION APPROVED
     await updateDoc(doc(db,"transactions",id),{
       status: "approved"

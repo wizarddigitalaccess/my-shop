@@ -273,6 +273,18 @@ body {
   </div>
 </div>
 
+<button onclick="toggleUSD()" style="
+  margin:10px;
+  font-size:10px;
+  background:#222;
+  color:#aaa;
+  border:none;
+  padding:5px 10px;
+  border-radius:6px;
+">
+Toggle USD
+</button>
+
 <div id="walletBox" style="
   background:#1c1c2e;
   padding:10px;
@@ -380,6 +392,8 @@ async function getCurrency(){
 }
 
 let user, allProducts=[], currentCategory="all";
+let lastBalance = 0;
+let showUSD = true;
 
 const loader = document.getElementById("loader");
 const appDiv = document.getElementById("app");
@@ -398,39 +412,42 @@ onAuthStateChanged(auth, async (u) => {
 
   // ✅ REALTIME LISTENER
   onSnapshot(userRef, async (snap) => {
-    if (!snap.exists()) return;
+  if (!snap.exists()) return;
 
-    const userData = snap.data();
+  const userData = snap.data();
 
-    // 🚫 Check ban here instead (safe)
-    if (userData.banned) {
-      alert("Account suspended");
-      location.href = "auth.html";
-      return;
-    }
+  if (userData.banned) {
+    alert("Account suspended");
+    location.href = "auth.html";
+    return;
+  }
 
-    // 💱 currency
-    const currency = await getCurrency();
+  // 💱 currency
+  const currency = await getCurrency();
 
-    const naira = Number(userData.wallet || 0);
-    const coins = Number(userData.coins || 0);
+  const naira = Number(userData.wallet || 0);
+  const coins = Number(userData.coins || 0);
 
-    const dollarRate = 1500;
-    const usd = (naira / dollarRate).toFixed(2);
+  const dollarRate = 1500;
+  const usd = (naira / dollarRate).toFixed(2);
 
-    // 💰 UPDATE UI LIVE
-    document.getElementById("walletBox").innerHTML = `
-      <div style="font-size:18px;">₦ ${naira.toLocaleString()}</div>
+  // 💰 UPDATE UI LIVE
+  animateBalance(naira);
 
-      <div style="font-size:12px;opacity:0.8;">
-        ${currency.symbol} ${coins.toLocaleString()} ${currency.name}
-      </div>
+  document.getElementById("walletBox").innerHTML = `
+    <div style="font-size:18px;">₦ ${naira.toLocaleString()}</div>
 
+    <div style="font-size:12px;opacity:0.8;">
+      ${currency.symbol} ${coins.toLocaleString()} ${currency.name}
+    </div>
+
+    ${showUSD ? `
       <div style="font-size:11px;opacity:0.6;">
         ≈ $${usd} USD
       </div>
-    `;
-  });
+    ` : ""}
+  `;
+});
 
   await init();
 
@@ -460,6 +477,34 @@ async function loadCategories(){
   });
 }
 
+function animateBalance(newBalance){
+  const diff = newBalance - lastBalance;
+
+  if(diff === 0) return;
+
+  const el = document.createElement("div");
+  el.textContent = (diff > 0 ? "+" : "") + diff.toLocaleString();
+
+  el.style.position = "fixed";
+  el.style.right = "20px";
+  el.style.top = "90px";
+  el.style.color = diff > 0 ? "#4ade80" : "#ff4d4d";
+  el.style.fontSize = "14px";
+  el.style.opacity = "1";
+  el.style.transition = "all 1s ease";
+
+  document.body.appendChild(el);
+
+  setTimeout(()=>{
+    el.style.transform = "translateY(-20px)";
+    el.style.opacity = "0";
+  },50);
+
+  setTimeout(()=> el.remove(),1000);
+
+  lastBalance = newBalance;
+}
+
 function createCat(label,value){
   const div=document.createElement("div");
   div.className="cat";
@@ -473,6 +518,11 @@ function createCat(label,value){
   };
 
   return div;
+}
+
+function toggleBlur(){
+  const el = document.getElementById("modalContent");
+  el.classList.toggle("blurred");
 }
 
 /* PRODUCTS */
@@ -689,8 +739,19 @@ transaction.set(orderRef,{
   createdAt: serverTimestamp()
 });
 
+const txRef = doc(collection(db, "transactions"));
+
+transaction.set(txRef, {
+  userId: user.uid,
+  type: "debit",
+  amount: productData.price,
+  coins: priceInCoins,
+  description: `Purchased ${productData.name}`,
+  createdAt: serverTimestamp()
 });
 
+
+});
     alert("✅ Purchase successful");
 location.href="orders.html";
 
@@ -758,10 +819,9 @@ window.closeModal = () => {
   document.getElementById("viewModal").style.bottom = "-100%";
 };
 
-function toggleBlur(){
-  const el = document.getElementById("modalContent");
-  el.classList.toggle("blurred");
-}
+window.toggleUSD = () => {
+  showUSD = !showUSD;
+};
 </script>
 
 </body>
