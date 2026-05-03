@@ -397,6 +397,30 @@ onAuthStateChanged(auth, async (u)=>{
   // ✅ NOW it's safe to use user.uid
   const userSnap = await getDoc(doc(db,"users",user.uid));
 
+  const userData = userSnap.data() || {};
+
+// 💱 Get currency settings
+const currency = await getCurrency();
+
+// 💰 Values
+const naira = Number(userData.wallet || 0);
+const coins = Number(userData.coins || 0);
+
+// 💵 OPTIONAL USD CONVERSION (simple static rate for now)
+const dollarRate = 1500; // 1 USD ≈ ₦1500 (you can make dynamic later)
+const usd = (naira / dollarRate).toFixed(2);
+
+// 🎯 DISPLAY (clean UI)
+document.getElementById("walletBox").innerHTML = `
+  <div>₦ ${naira.toLocaleString()}</div>
+  <div style="font-size:12px;opacity:0.7;">
+    ${currency.symbol} ${coins.toLocaleString()} ${currency.name}
+  </div>
+  <div style="font-size:11px;opacity:0.5;">
+    ≈ $${usd} USD
+  </div>
+`;
+
   if(userSnap.exists() && userSnap.data().banned){
     alert("Account suspended");
     return location.href="auth.html";
@@ -407,12 +431,6 @@ onAuthStateChanged(auth, async (u)=>{
   loader.style.display="none";
   appDiv.style.display="block";
 });
-
-const currency = await getCurrency();
-
-document.getElementById("walletBox").innerHTML = `
-  ${currency.symbol} ${userSnap.data().coins || 0} ${currency.name}
-`;
 
 /* INIT */
 async function init(){
