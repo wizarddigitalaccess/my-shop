@@ -168,13 +168,20 @@ body {
 }
 
 .card {
-  background:#1c1c2e;
-  padding:14px;
-  border-radius:14px;
+  background: linear-gradient(145deg, #1c1c2e, #141426);
+  padding:16px;
+  border-radius:18px;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
-  height:220px;
+  min-height:230px;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
 }
 
 .card-top {
@@ -206,12 +213,23 @@ body {
 
 .row button {
   flex:1;
-  padding:8px;
+  padding:9px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:#1877f2;
   color:white;
   cursor:pointer;
+  font-weight:600;
+  transition:0.2s;
+}
+
+.row button:hover {
+  opacity:0.85;
+  transform:scale(0.98);
+}
+
+.row button:disabled {
+  cursor:not-allowed;
 }
 
 /* NAV */
@@ -470,15 +488,26 @@ function loadProducts(){
     card.className = "card";
 
     card.innerHTML = `
-      <div class="card-top">
-        <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
-        <h4>${p.name}</h4>
-        <div class="price">₦${Number(p.price || 0).toLocaleString()}</div>
-        <div style="font-size:11px;color:gray;">
-          ${(p.stock || 0) > 0 ? "Available" : "Out of stock"}
-        </div>
-      </div>
-    `;
+  <div class="card-top">
+    <img src="${p.logo}" class="logo" onerror="this.src='fallback.png'">
+
+    <h4 style="margin:6px 0 4px;">${p.name}</h4>
+
+    <div class="price">₦${Number(p.price || 0).toLocaleString()}</div>
+
+    <div style="
+      margin-top:6px;
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:20px;
+      display:inline-block;
+      background:${(p.stock || 0) > 0 ? '#0f5132' : '#3a0000'};
+      color:${(p.stock || 0) > 0 ? '#4ade80' : '#ff4d4d'};
+    ">
+      ${(p.stock || 0) > 0 ? "Available" : "Sold Out"}
+    </div>
+  </div>
+`;
 
     const row = document.createElement("div");
     row.className = "row";
@@ -497,6 +526,18 @@ if(p.previewLink && !p.sold && (p.stock || 0) > 0){
   previewBtn.textContent = "Preview";
   previewBtn.onclick = () => preview(p);
   row.append(previewBtn);
+}
+
+// Disable preview if sold
+if ((p.stock || 0) === 0 || p.sold) {
+  previewBtn.disabled = true;
+  previewBtn.style.opacity = "0.4";
+}
+
+// Disable buy if no stock
+if ((p.stock || 0) === 0) {
+  buyBtn.disabled = true;
+  buyBtn.style.opacity = "0.5";
 }
 
 row.append(buyBtn);
