@@ -532,7 +532,7 @@ function init(){
   loadGiftProducts();
   loadGiftCategoryOptions();
   loadTracking();
-  loadAllOrders();
+  setTimeout(()=>loadAllOrders(), 500);
   loadPayments();
   loadCurrencyStats();
 }
@@ -714,6 +714,8 @@ const accounts = [{
   }
 };
 
+if(!products || !gProducts) return;
+
 async function loadProducts(){
  products.innerHTML="";
  const snap=await getDocs(collection(db,"products"));
@@ -839,6 +841,8 @@ window.addGiftCategory = async () => {
   }
 };
 
+if(!products || !gProducts) return;
+
 async function loadGiftCategories(){
  gCategories.innerHTML="";
  const snap=await getDocs(collection(db,"giftCategories"));
@@ -855,6 +859,8 @@ async function loadGiftCategories(){
   </div>`;
  });
 }
+
+if(!products || !gProducts) return;
 
 async function loadGiftCategoryOptions(){
   const select = document.getElementById("gCategory");
@@ -936,6 +942,8 @@ if(file){
   }
 };
 
+if(!products || !gProducts) return;
+
 async function loadGiftProducts(){
  gProducts.innerHTML="";
  const snap=await getDocs(collection(db,"giftProducts"));
@@ -981,109 +989,47 @@ function loadAllOrders(){
 
     const giftSnap = await getDocs(collection(db,"giftOrders"));
 
-    allOrders.innerHTML = ""; // ✅ CLEAR FIRST
+    let html = "";
 
     // 🛒 NORMAL ORDERS
     normalSnap.forEach(d=>{
       const o = d.data();
 
-      const div = document.createElement("div");
-
-      div.innerHTML = `
-      <div style="
-        display:flex;
-        gap:10px;
-        align-items:center;
-        background:#111;
-        padding:10px;
-        border-radius:10px;
-        margin-bottom:8px;
-      ">
-
-        <img src="${o.logo || 'https://via.placeholder.com/40'}"
-             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
-
+      html += `
+      <div style="display:flex;gap:10px;align-items:center;background:#111;padding:10px;border-radius:10px;margin-bottom:8px;">
+        <img src="${o.logo || 'https://via.placeholder.com/40'}" style="width:40px;height:40px;border-radius:6px;">
+        
         <div style="flex:1;">
-          <div style="font-weight:bold;">${o.name}</div>
-          <div style="font-size:12px;color:gray;">
-            ${o.category || "No category"}
-          </div>
-
-          <div style="font-size:11px;color:gray;margin-top:4px;">
-            ${
-              o.createdAt?.toDate
-                ? o.createdAt.toDate().toLocaleString()
-                : "No date"
-            }
-          </div>
+          <div><b>${o.name || "No name"}</b></div>
+          <div style="font-size:12px;color:gray;">${o.category || ""}</div>
         </div>
 
-        <div style="font-weight:bold;">
-          ₦${o.price}
-        </div>
+        <div>₦${o.price || 0}</div>
 
-        <button 
-          class="btn-view"
-          onclick="viewOrderDetailsById('${d.id}','normal')"
-        >
-          View
-        </button>
-
-      </div>
-      `;
-
-      allOrders.appendChild(div);
+        <button class="btn-view" onclick="viewOrderDetailsById('${d.id}','normal')">View</button>
+      </div>`;
     });
 
     // 🎁 GIFT ORDERS
     giftSnap.forEach(d=>{
       const g = d.data();
 
-      const div = document.createElement("div");
-
-      div.innerHTML = `
-      <div style="
-        display:flex;
-        gap:10px;
-        align-items:center;
-        background:#111;
-        padding:10px;
-        border-radius:10px;
-        margin-bottom:8px;
-      ">
-
-        <img src="${g.productImage || 'https://via.placeholder.com/40'}"
-             style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
-
+      html += `
+      <div style="display:flex;gap:10px;align-items:center;background:#111;padding:10px;border-radius:10px;margin-bottom:8px;">
+        <img src="${g.productImage || 'https://via.placeholder.com/40'}" style="width:40px;height:40px;border-radius:6px;">
+        
         <div style="flex:1;">
-          <div style="font-weight:bold;">${g.productName}</div>
+          <div><b>${g.productName || "Gift"}</b></div>
           <div style="font-size:12px;color:gray;">Gift Order</div>
-
-          <div style="font-size:11px;color:gray;margin-top:4px;">
-            ${
-              g.createdAt?.toDate
-                ? g.createdAt.toDate().toLocaleString()
-                : "No date"
-            }
-          </div>
         </div>
 
-        <div style="font-weight:bold;">
-          ₦${g.price}
-        </div>
+        <div>₦${g.price || 0}</div>
 
-        <button 
-          class="btn-view"
-          onclick="viewOrderDetailsById('${d.id}','gift')"
-        >
-          View
-        </button>
-
-      </div>
-      `;
-
-      allOrders.appendChild(div);
+        <button class="btn-view" onclick="viewOrderDetailsById('${d.id}','gift')">View</button>
+      </div>`;
     });
+
+    allOrders.innerHTML = html;
 
   });
 
