@@ -186,94 +186,47 @@ const loader = document.getElementById("loader");
 const appDiv = document.getElementById("app");
 const balanceEl = document.getElementById("balance");
 
+const COIN_RATE = 250;
+const USD_RATE = 1500;
+
+window.toCoins = (naira) => naira / COIN_RATE;
+window.toUSD = (naira) => naira / USD_RATE;
+
 /* 🔐 AUTH (FIXED STABLE) */
-onAuthStateChanged(auth, (user)=>{
-  if(!user){
-    loader.innerText = "Redirecting...";
-    setTimeout(()=>location.href="auth.html",500);
-    return;
-  }
+onAuthStateChanged(auth, (user) => {
 
-  const ref = doc(db,"users",user.uid);
+  if (!user) return;
 
-  /* 💰 LIVE BALANCE */
-  let showUSD = true;
+  const q = query(
+    collection(db,"transactions"),
+    where("userId","==",user.uid)
+  );
 
-onSnapshot(ref, async (snap)=>{
-  if(!snap.exists()) return;
+  onSnapshot(q, (snap)=>{
+    const list = document.getElementById("txList");
+    list.innerHTML = "";
 
-  const data = snap.data();
+    snap.forEach(docSnap=>{
+      const t = docSnap.data();
 
-  const naira = Number(data.wallet || 0);
-  const coins = Number(data.coins || 0);
+      const div = document.createElement("div");
+      div.style.background = "#111";
+      div.style.padding = "10px";
+      div.style.borderRadius = "8px";
+      div.style.marginBottom = "8px";
 
-  const usd = (naira / 1500).toFixed(2);
+      div.innerHTML = `
+        <div>${t.description}</div>
+        <div style="opacity:0.6;font-size:11px">
+          ${new Date().toLocaleString()}
+        </div>
+        <div style="color:${t.type==='credit'?'#4ade80':'#ff4d4d'}">
+          ₦${t.amount}
+        </div>
+      `;
 
-  balanceEl.innerText = naira.toLocaleString();
-  document.getElementById("coins").innerText = coins.toLocaleString();
-
-  document.getElementById("usdBox").innerText = showUSD
-    ? `≈ $${usd}`
-    : "";
-});
-
-  loader.style.display="none";
-  appDiv.style.display="block";
-});
-
-
-import {
-  query, where, orderBy
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const q = query(
-  collection(db,"transactions"),
-  where("userId","==",user.uid),
-  orderBy("createdAt","desc")
-);
-
-onSnapshot(q, (snap)=>{
-  const list = document.getElementById("txList");
-  list.innerHTML = "";
-
-  if(snap.empty){
-    list.innerHTML = "<div style='opacity:0.6;'>No transactions yet</div>";
-    return;
-  }
-
-  snap.forEach(docSnap=>{
-    const t = docSnap.data();
-
-    const div = document.createElement("div");
-
-    const isCredit = t.type === "credit";
-
-    div.style.background = "#111";
-    div.style.padding = "10px";
-    div.style.borderRadius = "8px";
-    div.style.marginBottom = "8px";
-
-    const date = t.createdAt?.toDate?.() || new Date();
-
-    div.innerHTML = `
-      <div style="font-size:13px;">
-        ${t.description || "Transaction"}
-      </div>
-
-      <div style="font-size:11px;opacity:0.6;">
-        ${date.toLocaleString()}
-      </div>
-
-      <div style="
-        margin-top:5px;
-        font-weight:bold;
-        color:${isCredit ? '#4ade80' : '#ff4d4d'};
-      ">
-        ${isCredit ? "+" : "-"}₦${Number(t.amount || 0).toLocaleString()}
-      </div>
-    `;
-
-    list.appendChild(div);
+      list.appendChild(div);
+    });
   });
 });
 

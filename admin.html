@@ -1224,47 +1224,30 @@ window.cancelOrder = async(id)=>{
   });
 };
 
-window.approvePayment = async(id, userId, amount)=>{
-  try{
-    const userRef = doc(db,"users",userId);
-    const userSnap = await getDoc(userRef);
+window.approvePayment = async (id, userId, amount) => {
+  try {
+    const userRef = doc(db, "users", userId);
 
-    if(!userSnap.exists()){
-      alert("User not found");
-      return;
-    }
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) throw "User not found";
 
-    const user = userSnap.data();
+    const user = snap.data();
 
-    const currency = await getCurrency();
+    const COIN_RATE = 250; // same rate as your system
 
-    const coins = Number(amount) / currency.rate;
-
-    await updateDoc(userRef,{
-      wallet: (user.wallet || 0) + Number(amount),
-      coins: (user.coins || 0) + coins
+    await updateDoc(userRef, {
+      wallet: (user.wallet || 0) + amount,
+      coins: (user.coins || 0) + (amount / COIN_RATE)
     });
 
-    // ✅ FIXED transaction log
-    await addDoc(collection(db, "transactions"), {
-  userId: uid,
-  type: "credit",
-  amount: amount,
-  coins: amount / currency.rate,
-  description: "Admin funding",
-  createdAt: serverTimestamp()
-});
-
-    await updateDoc(doc(db,"transactions",id),{
+    await updateDoc(doc(db, "transactions", id), {
       status: "approved"
     });
 
-    alert("✅ Payment approved");
+    alert("Payment approved ✔️ Wallet updated");
 
-  
-  }catch(err){
-    console.error(err);
-    alert("Error: " + err.message);
+  } catch (err) {
+    alert(err.message);
   }
 };
 

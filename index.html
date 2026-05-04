@@ -377,6 +377,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const COIN_RATE = 250;
+const USD_RATE = 1500;
+
 async function getCurrency(){
   const snap = await getDoc(doc(db,"settings","currency"));
 
@@ -541,6 +544,13 @@ function toggleBlur(){
   el.classList.toggle("blurred");
 }
 
+function formatPrice(naira){
+  return {
+    naira: naira,
+    coins: naira / COIN_RATE,
+    usd: naira / USD_RATE
+  };
+}
 /* PRODUCTS */
 async function loadProductsData(){
   allProducts=[];
@@ -602,6 +612,8 @@ function loadProducts(){
     if(currentCategory !== "all" && (p.category || "").toLowerCase() !== currentCategory.toLowerCase()) return;
     if(!p.name.toLowerCase().includes(search)) return;
 
+    const price = formatPrice(p.price || 0);
+
     const card = document.createElement("div");
     card.className = "card";
 
@@ -611,7 +623,11 @@ function loadProducts(){
 
     <h4 style="margin:6px 0 4px;">${p.name}</h4>
 
-    <div class="price">₦${Number(p.price || 0).toLocaleString()}</div>
+    <div class="price">
+  ₦${price.naira.toLocaleString()} <br>
+  🧙‍♂️WDC ${price.coins.toFixed(2)} <br>
+  $${price.usd.toFixed(2)}
+ </div>
 
     <div style="
       margin-top:6px;
