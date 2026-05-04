@@ -841,20 +841,26 @@ window.addGiftCategory = async () => {
 };
 
 async function loadGiftCategories(){
- gCategories.innerHTML="";
- const snap=await getDocs(collection(db,"giftCategories"));
+  if(!gCategories) return;
 
- snap.forEach(d=>{
-  const c=d.data();
-  gCategories.innerHTML+=`
-  <div class="item">
-    ${c.name}
-    <div class="actions">
-      <button class="btn-edit" onclick="editGCat('${d.id}','${c.name}')">Edit</button>
-      <button class="btn-del" onclick="delGCat('${d.id}')">Delete</button>
-    </div>
-  </div>`;
- });
+  gCategories.innerHTML="";
+
+  const snap = await getDocs(collection(db,"giftCategories"));
+
+  snap.forEach(d=>{
+    const c = d.data();
+
+    gCategories.innerHTML += `
+      <div class="item">
+        <div>${c.name || "No name"}</div>
+
+        <div class="actions">
+          <button onclick="editGCat('${d.id}','${c.name}')">Edit</button>
+          <button onclick="delGCat('${d.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  });
 }
 
 async function loadGiftCategoryOptions(){
@@ -938,29 +944,28 @@ if(file){
 };
 
 async function loadGiftProducts(){
- gProducts.innerHTML="";
- const snap=await getDocs(collection(db,"giftProducts"));
+  if(!gProducts) return;
 
- snap.forEach(d=>{
-  const p = {
-  name:"",
-  category:"",
-  price:0,
-  requiresSize:false,
-  image:"",
-  ...d.data()
-};
-  gProducts.innerHTML+=`
-  <div class="item">
-    ${p.image ? `<img src="${p.image}" style="width:50px;height:50px;border-radius:8px;">` : ""}
-    ${p.name} ₦${p.price}
-    ${p.requiresSize ? "<div class='tag'>Size</div>" : ""}
-    <div class="actions">
-      <button class="btn-edit" onclick="editGProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
-      <button class="btn-del" onclick="delGProd('${d.id}')">Delete</button>
-    </div>
-  </div>`;
- });
+  gProducts.innerHTML="";
+
+  const snap = await getDocs(collection(db,"giftProducts"));
+
+  snap.forEach(d=>{
+    const p = d.data();
+
+    gProducts.innerHTML += `
+      <div class="item">
+        ${p.image ? `<img src="${p.image}" style="width:50px;height:50px;border-radius:8px;">` : ""}
+        <div><b>${p.name || "No name"}</b></div>
+        <div>₦${p.price || 0}</div>
+
+        <div class="actions">
+          <button onclick="editGProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
+          <button onclick="delGProd('${d.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  });
 }
 
 window.editGProd=async(id,n,c,p)=>{
@@ -984,42 +989,30 @@ function loadAllOrders(){
 
     let html = "";
 
-    // 🛒 NORMAL ORDERS
+    // 🛒 NORMAL
     normalSnap.forEach(d=>{
       const o = d.data();
 
       html += `
-      <div style="display:flex;gap:10px;align-items:center;background:#111;padding:10px;border-radius:10px;margin-bottom:8px;">
-        <img src="${o.logo || 'https://via.placeholder.com/40'}" style="width:40px;height:40px;border-radius:6px;">
-        
-        <div style="flex:1;">
+        <div class="item">
           <div><b>${o.name || "No name"}</b></div>
-          <div style="font-size:12px;color:gray;">${o.category || ""}</div>
+          <div>₦${o.price || 0}</div>
+          <button onclick="viewOrderDetailsById('${d.id}','normal')">View</button>
         </div>
-
-        <div>₦${o.price || 0}</div>
-
-        <button class="btn-view" onclick="viewOrderDetailsById('${d.id}','normal')">View</button>
-      </div>`;
+      `;
     });
 
-    // 🎁 GIFT ORDERS
+    // 🎁 GIFT
     giftSnap.forEach(d=>{
       const g = d.data();
 
       html += `
-      <div style="display:flex;gap:10px;align-items:center;background:#111;padding:10px;border-radius:10px;margin-bottom:8px;">
-        <img src="${g.productImage || 'https://via.placeholder.com/40'}" style="width:40px;height:40px;border-radius:6px;">
-        
-        <div style="flex:1;">
+        <div class="item">
           <div><b>${g.productName || "Gift"}</b></div>
-          <div style="font-size:12px;color:gray;">Gift Order</div>
+          <div>₦${g.price || 0}</div>
+          <button onclick="viewOrderDetailsById('${d.id}','gift')">View</button>
         </div>
-
-        <div>₦${g.price || 0}</div>
-
-        <button class="btn-view" onclick="viewOrderDetailsById('${d.id}','gift')">View</button>
-      </div>`;
+      `;
     });
 
     allOrders.innerHTML = html;
