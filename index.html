@@ -702,8 +702,8 @@ async function buy(id){
       // 💰 CONVERT PRICE → COINS
       const priceInCoins = productData.price / currency.rate;
 
-      // 💰 CHECK BALANCE
-      if((userData.coins || 0) < priceInCoins){
+      /// 💰 CHECK BALANCE
+      if ((userData.wallet || 0) < productData.price) {
         throw "Insufficient balance";
       }
 

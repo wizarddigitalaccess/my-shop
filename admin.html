@@ -1309,13 +1309,13 @@ window.approvePayment = async(id, userId, amount)=>{
 
     // ✅ FIXED transaction log
     await addDoc(collection(db, "transactions"), {
-      userId: userId,
-      type: "credit",
-      amount: Number(amount),
-      coins: coins,
-      description: "Admin approved deposit",
-      createdAt: serverTimestamp()
-    });
+  userId: uid,
+  type: "credit",
+  amount: amount,
+  coins: amount / currency.rate,
+  description: "Admin funding",
+  createdAt: serverTimestamp()
+});
 
     await updateDoc(doc(db,"transactions",id),{
       status: "approved"
