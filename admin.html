@@ -390,6 +390,7 @@ const gProducts = document.getElementById("gProducts");
 const tracking = document.getElementById("tracking");
 const allOrders = document.getElementById("allOrders");
 const payments = document.getElementById("payments");
+const walletStats = document.getElementById("walletStats");
 
 const cardUsers = document.getElementById("cardUsers");
 const cardSales = document.getElementById("cardSales");
@@ -397,7 +398,6 @@ const cardDeposits = document.getElementById("cardDeposits");
 const cardOrders = document.getElementById("cardOrders");
 
 const logoutBtn = document.getElementById("logoutBtn");
-const walletStats = document.getElementById("walletStats");
 
 function getAutoLogo(name){
   const logoMap = {
@@ -521,7 +521,13 @@ function clearListeners(){
 }
 
 function init(){
-  clearListeners(); // ✅ prevent duplicate listeners
+
+  clearListeners();
+
+  if(!products || !gProducts){
+    console.error("DOM not ready");
+    return;
+  }
 
   loadDashboardLive(); // 🔥 upgraded (real-time)
   loadCharts();
