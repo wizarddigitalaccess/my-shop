@@ -316,11 +316,6 @@ style="
   <div id="payments"></div>
 </div>
 
-<div id="paymentsPage" class="card page hidden">
-  <h3>Wallet Payments</h3>
-  <div id="payments"></div>
-</div>
-
 <!-- WALLET -->
 <div id="walletPage" class="card page hidden">
   <h3>💰 Site Currency</h3>
@@ -1225,7 +1220,7 @@ function loadPayments(){
       let userEmail = "Unknown";
 
       try{
-        const u = await getDoc(doc(db,"users",t.uid));
+        const u = await getDoc(doc(db,"users",t.userId));
         if(u.exists()) userEmail = u.data().email;
       }catch(e){}
 
@@ -1291,9 +1286,9 @@ window.cancelOrder = async(id)=>{
   });
 };
 
-window.approvePayment = async(id, uid, amount)=>{
+window.approvePayment = async(id, userId, amount)=>{
   try{
-    const userRef = doc(db,"users",uid);
+    const userRef = doc(db,"users",userId);
     const userSnap = await getDoc(userRef);
 
     if(!userSnap.exists()){
@@ -1303,34 +1298,32 @@ window.approvePayment = async(id, uid, amount)=>{
 
     const user = userSnap.data();
 
-    // 💎 GET CURRENCY
     const currency = await getCurrency();
 
-    // 💰 CONVERT ₦ → COINS
     const coins = Number(amount) / currency.rate;
 
-    // 🔄 UPDATE USER
     await updateDoc(userRef,{
       wallet: (user.wallet || 0) + Number(amount),
       coins: (user.coins || 0) + coins
     });
 
+    // ✅ FIXED transaction log
     await addDoc(collection(db, "transactions"), {
-     userId: targetUserId,
-     type: "credit",
-     amount: amountAdded,
-     coins: amountAdded / currency.rate,
-     description: "Admin funding",
-    createdAt: serverTimestamp()
-  });
+      userId: userId,
+      type: "credit",
+      amount: Number(amount),
+      coins: coins,
+      description: "Admin approved deposit",
+      createdAt: serverTimestamp()
+    });
 
-    // ✅ MARK TRANSACTION APPROVED
     await updateDoc(doc(db,"transactions",id),{
       status: "approved"
     });
 
-    alert("✅ Payment approved & coins added");
+    alert("✅ Payment approved");
 
+  
   }catch(err){
     console.error(err);
     alert("Error: " + err.message);
@@ -1685,7 +1678,7 @@ window.viewUser = async function(uid){
 
     // 💰 TRANSACTIONS
     const txSnap = await getDocs(
-      query(collection(db,"transactions"), where("uid","==",uid))
+      query(collection(db,"transactions"), where("userId","==",uid))
     );
 
     txSnap.forEach(d=>{
@@ -2002,6 +1995,16 @@ async function loadCurrencyStats(){
     <div><b>Rate:</b> ₦${c.rate} = 1 ${c.name}</div>
     <div><b>Symbol:</b> ${c.symbol}</div>
   `;
+}
+
+async function getCurrency(){
+  const snap = await getDoc(doc(db,"settings","currency"));
+
+  if(!snap.exists()){
+    return { rate: 1 };
+  }
+
+  return snap.data();
 }
 </script>
 
