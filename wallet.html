@@ -5,6 +5,87 @@
 <title>Wallet</title>
 
 <style>
+.premium-wallet{
+  background:linear-gradient(145deg,#1d1d35,#131325);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:22px;
+  padding:24px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.35);
+}
+
+.wallet-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+}
+
+.wallet-label{
+  opacity:0.7;
+  font-size:13px;
+  margin-bottom:10px;
+}
+
+.wallet-main{
+  font-size:38px;
+  font-weight:800;
+  line-height:1;
+}
+
+.wallet-sub-row{
+  display:flex;
+  gap:10px;
+  margin-top:16px;
+  flex-wrap:wrap;
+}
+
+.coin-box,
+.usd-box{
+  background:#111827;
+  padding:8px 14px;
+  border-radius:12px;
+  font-size:13px;
+  border:1px solid rgba(255,255,255,0.06);
+}
+
+.eye-btn{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  background:#111827;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:20px;
+}
+
+.premium-convert{
+  background:linear-gradient(145deg,#1d1d35,#131325);
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.05);
+}
+
+.convert-grid{
+  display:grid;
+  gap:14px;
+  margin-top:18px;
+}
+
+.convert-box label{
+  display:block;
+  margin-bottom:8px;
+  font-size:13px;
+  opacity:0.7;
+}
+
+.convert-box input{
+  background:#0b1220;
+  border:1px solid rgba(255,255,255,0.06);
+  height:50px;
+  border-radius:14px;
+  font-size:16px;
+}
+
 body {
   margin:0;
   font-family:Arial;
@@ -82,32 +163,68 @@ button {
 <div id="app" style="display:none">
 <div class="container">
 
-<div class="card">
-<h2>Balance</h2>
+<div class="card premium-wallet">
 
-<div style="font-size:22px;">
-  ₦<span id="balance">0</span>
+  <div class="wallet-top">
+
+    <div>
+      <div class="wallet-label">Total Balance</div>
+
+      <div class="wallet-main">
+        ₦<span id="balance">0</span>
+      </div>
+
+      <div class="wallet-sub-row">
+
+        <div class="coin-box">
+          🪙 <span id="coins">0</span>
+        </div>
+
+        <div class="usd-box" id="usdBox">
+          ≈ $0
+        </div>
+
+      </div>
+    </div>
+
+    <div class="eye-btn" onclick="toggleBalance()">
+      <span id="eyeIcon">👁️</span>
+    </div>
+
+  </div>
+
 </div>
 
-<div style="font-size:12px;opacity:0.7;">
-  <span id="coins">0</span> Coins
-</div>
+<div class="card premium-convert">
 
-<div id="usdBox" style="font-size:11px;opacity:0.5;">
-  ≈ $0
-</div>
+  <div class="convert-header">
+    <div>
+      <h3 style="margin:0;">Currency Converter</h3>
+      <div style="opacity:0.7;font-size:12px;">
+        Convert Naira, Coins & USD instantly
+      </div>
+    </div>
+  </div>
 
-<button onclick="toggleUSD()" style="
-  margin-top:8px;
-  background:#222;
-  border:none;
-  color:#aaa;
-  font-size:10px;
-  padding:5px 10px;
-  border-radius:6px;
-">
-  Toggle $
-</button>
+  <div class="convert-grid">
+
+    <div class="convert-box">
+      <label>Naira (₦)</label>
+      <input id="nairaInput" type="number" placeholder="Enter amount">
+    </div>
+
+    <div class="convert-box">
+      <label>Coins (WC)</label>
+      <input id="coinInput" type="number" placeholder="Auto convert">
+    </div>
+
+    <div class="convert-box">
+      <label>USD ($)</label>
+      <input id="usdInput" type="number" placeholder="Auto convert">
+    </div>
+
+  </div>
+
 </div>
 
 <div class="card">
@@ -155,6 +272,46 @@ button {
   <a href="profile.html">Profile</a>
 </div>
 </div>
+
+/* PREMIUM CONVERTER */
+
+const nairaInput = document.getElementById("nairaInput");
+const coinInput = document.getElementById("coinInput");
+const usdInput = document.getElementById("usdInput");
+
+nairaInput.addEventListener("input", () => {
+
+  const val = Number(nairaInput.value || 0);
+
+  coinInput.value = (val / COIN_RATE).toFixed(2);
+
+  usdInput.value = (val / USD_RATE).toFixed(2);
+
+});
+
+coinInput.addEventListener("input", () => {
+
+  const val = Number(coinInput.value || 0);
+
+  const naira = val * COIN_RATE;
+
+  nairaInput.value = naira.toFixed(2);
+
+  usdInput.value = (naira / USD_RATE).toFixed(2);
+
+});
+
+usdInput.addEventListener("input", () => {
+
+  const val = Number(usdInput.value || 0);
+
+  const naira = val * USD_RATE;
+
+  nairaInput.value = naira.toFixed(2);
+
+  coinInput.value = (naira / COIN_RATE).toFixed(2);
+
+});
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -223,7 +380,18 @@ onAuthStateChanged(auth, (user) => {
       coins.toLocaleString();
 
     document.getElementById("usdBox").innerText =
-      showUSD ? `≈ $${usd}` : "";
+  showUSD ? `≈ $${usd}` : "";
+
+if(balanceHidden){
+
+  balanceEl.innerText = "******";
+
+  document.getElementById("coins").innerText =
+    "******";
+
+  document.getElementById("usdBox").innerText =
+    "******";
+}
 
   });
 
@@ -379,6 +547,15 @@ window.submitPayment = async ()=>{
   }catch(err){
     alert(err.message);
   }
+};
+
+window.toggleBalance = () => {
+
+  balanceHidden = !balanceHidden;
+
+  document.getElementById("eyeIcon").innerText =
+    balanceHidden ? "🙈" : "👁️";
+
 };
 
 window.toggleUSD = () => {

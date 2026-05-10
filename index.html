@@ -273,24 +273,14 @@ body {
   </div>
 </div>
 
-<button onclick="toggleUSD()" style="
-  margin:10px;
-  font-size:10px;
-  background:#222;
-  color:#aaa;
-  border:none;
-  padding:5px 10px;
-  border-radius:6px;
-">
-Toggle USD
-</button>
-
 <div id="walletBox" style="
-  background:#1c1c2e;
-  padding:10px;
-  border-radius:10px;
-  margin:10px;
+  background:linear-gradient(145deg,#1d1d35,#151526);
+  padding:18px;
+  border-radius:18px;
+  margin:12px;
   font-weight:bold;
+  border:1px solid rgba(255,255,255,0.05);
+  box-shadow:0 8px 25px rgba(0,0,0,0.35);
 "></div>
 
 <div id="sideMenu" style="
@@ -327,6 +317,28 @@ Toggle USD
   <div class="menu-item" onclick="goOrders(); closeMenu()">📦 Order History</div>
   <div class="menu-item" onclick="goTransactions(); closeMenu()">💰 Transactions</div>
 
+</div>
+
+<div class="menu-item"
+onclick="logoutUser()"
+style="
+  margin-top:20px;
+  background:#3a1010;
+  color:#ff8080;
+  text-align:center;
+  font-weight:bold;
+">
+  🚪 Logout
+</div>
+
+<div id="menuBalanceBox" style="
+  background:#1c1c2e;
+  padding:14px;
+  border-radius:14px;
+  margin-bottom:15px;
+  border:1px solid rgba(255,255,255,0.05);
+">
+  Loading balance...
 </div>
 
 <!-- ✅ OVERLAY MUST BE OUTSIDE -->
@@ -440,32 +452,119 @@ animateBalance(naira);
 
 // 💰 UPDATE UI
 document.getElementById("walletBox").innerHTML = `
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:18px;">₦ ${naira.toLocaleString()}</div>
 
-    <button onclick="toggleUSD()" style="
-      background:#222;
-      border:none;
-      color:#aaa;
-      font-size:10px;
-      padding:4px 8px;
-      border-radius:6px;
-      cursor:pointer;
-    ">
-      ${showUSD ? "Hide $" : "Show $"}
-    </button>
-  </div>
+<div style="
+display:flex;
+justify-content:space-between;
+align-items:flex-start;
+gap:10px;
+">
 
-  <div style="font-size:12px;opacity:0.8;">
-    ${currency.symbol} ${coins.toLocaleString()} ${currency.name}
-  </div>
+<div>
 
-  ${showUSD ? `
-    <div style="font-size:11px;opacity:0.6;">
-      ≈ $${usd} USD
-    </div>
-  ` : ""}
-  `;
+<div style="
+font-size:28px;
+font-weight:800;
+margin-bottom:8px;
+">
+${showUSD ? `₦${naira.toLocaleString()}` : "••••••"}
+</div>
+
+<div style="
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+font-size:14px;
+opacity:0.92;
+">
+
+<div style="
+background:#111827;
+padding:6px 12px;
+border-radius:999px;
+">
+${showUSD ? `${currency.symbol} ${coins.toFixed(2)}` : "••••"}
+</div>
+
+<div style="
+background:#111827;
+padding:6px 12px;
+border-radius:999px;
+color:#4ade80;
+">
+${showUSD ? `$${usd}` : "••••"}
+</div>
+
+</div>
+
+</div>
+
+<div>
+
+<button onclick="toggleUSD()" style="
+width:42px;
+height:42px;
+border:none;
+border-radius:12px;
+background:#222;
+color:white;
+font-size:18px;
+cursor:pointer;
+">
+${showUSD ? "👁️" : "🙈"}
+</button>
+
+<div style="
+font-size:11px;
+opacity:0.7;
+margin-top:5px;
+text-align:center;
+">
+${showUSD ? "Hide Balance" : "Show Balance"}
+</div>
+
+</div>
+
+</div>
+`;
+
+// MENU BALANCE
+document.getElementById("menuBalanceBox").innerHTML = `
+<div style="font-size:13px;opacity:0.7;margin-bottom:6px;">
+Wallet Balance
+</div>
+
+<div style="font-size:22px;font-weight:bold;">
+${showUSD ? `₦${naira.toLocaleString()}` : "••••••"}
+</div>
+
+<div style="
+margin-top:8px;
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+font-size:12px;
+">
+
+<div style="
+background:#111827;
+padding:5px 10px;
+border-radius:999px;
+">
+${showUSD ? `${currency.symbol} ${coins.toFixed(2)}` : "••••"}
+</div>
+
+<div style="
+background:#111827;
+padding:5px 10px;
+border-radius:999px;
+color:#4ade80;
+">
+${showUSD ? `$${usd}` : "••••"}
+</div>
+
+</div>
+`;
 });
 
   await init();
@@ -852,6 +951,33 @@ window.closeModal = () => {
 
 window.toggleUSD = () => {
   showUSD = !showUSD;
+
+  const walletRef = doc(db,"users",user.uid);
+
+  getDoc(walletRef).then(async(snap)=>{
+    if(!snap.exists()) return;
+
+    const userData = snap.data();
+    const currency = await getCurrency();
+
+    const naira = Number(userData.wallet || 0);
+    const coins = Number(userData.coins || 0);
+    const usd = (naira / 1500).toFixed(2);
+
+    document.getElementById("walletBox").innerHTML = "";
+    document.getElementById("menuBalanceBox").innerHTML = "";
+
+    // re-render instantly
+    onSnapshot(walletRef,()=>{});
+  });
+};
+
+window.logoutUser = async () => {
+  const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+
+  await signOut(auth);
+
+  location.href = "auth.html";
 };
 </script>
 
