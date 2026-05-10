@@ -326,11 +326,15 @@ const USD_RATE = 1500;
 let balanceHidden = false;
 let showUSD = true;
 
-const nairaInput = document.getElementById("nairaInput");
-const coinInput = document.getElementById("coinInput");
-const usdInput = document.getElementById("usdInput");
+const nairaInput = document.getElementById("nairaInput") || { value: 0 };
+const coinInput = document.getElementById("coinInput") || { value: 0 };
+const usdInput = document.getElementById("usdInput") || { value: 0 };
 
 let lock = false;
+
+window.addEventListener("error", (e) => {
+  console.log("JS ERROR:", e.message);
+});
 
 /* FROM NAIRA */
 function fromNaira(val){
@@ -368,17 +372,23 @@ function fromUsd(val){
 }
 
 /* EVENTS */
-nairaInput.addEventListener("input", () =>
-  fromNaira(Number(nairaInput.value || 0))
-);
+if (nairaInput.addEventListener) {
+  nairaInput.addEventListener("input", () =>
+    fromNaira(Number(nairaInput.value || 0))
+  );
+}
 
-coinInput.addEventListener("input", () =>
-  fromCoin(Number(coinInput.value || 0))
-);
+if (coinInput.addEventListener) {
+  coinInput.addEventListener("input", () =>
+    fromCoin(Number(coinInput.value || 0))
+  );
+}
 
-usdInput.addEventListener("input", () =>
-  fromUsd(Number(usdInput.value || 0))
-);
+if (usdInput.addEventListener) {
+  usdInput.addEventListener("input", () =>
+    fromUsd(Number(usdInput.value || 0))
+  );
+}
 
 window.toCoins = (naira) => naira / COIN_RATE;
 window.toUSD = (naira) => naira / USD_RATE;
@@ -386,15 +396,20 @@ window.toUSD = (naira) => naira / USD_RATE;
 /* 🔐 AUTH (FIXED STABLE) */
 onAuthStateChanged(auth, (user) => {
 
+  console.log("AUTH CHECK:", user); // DEBUG
+
   if(!user){
+    console.log("No user → redirecting");
     location.href = "auth.html";
     return;
   }
 
   /* 💰 LIVE USER DATA */
-  const userRef = doc(db,"users",user.uid);
+const userRef = doc(db,"users",user.uid);
 
-  onSnapshot(userRef,(snap)=>{
+onSnapshot(userRef,(snap)=>{
+
+  try {
 
     if(!snap.exists()) return;
 
@@ -410,20 +425,24 @@ onAuthStateChanged(auth, (user) => {
       coins.toLocaleString();
 
     document.getElementById("usdBox").innerText =
-  showUSD ? `≈ $${usd}` : "";
+      showUSD ? `≈ $${usd}` : "";
 
-if(balanceHidden){
+    if(balanceHidden){
 
-  balanceEl.innerText = "******";
+      balanceEl.innerText = "******";
 
-  document.getElementById("coins").innerText =
-    "******";
+      document.getElementById("coins").innerText =
+        "******";
 
-  document.getElementById("usdBox").innerText =
-    "******";
-}
+      document.getElementById("usdBox").innerText =
+        "******";
+    }
 
-  });
+  } catch(err){
+    console.log("Wallet error:", err);
+  }
+
+});
 
   /* 📜 TRANSACTIONS */
   const q = query(
