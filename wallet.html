@@ -207,6 +207,7 @@ button {
   </div>
 
   <div class="convert-grid">
+   <button onclick="convertNow()">Convert</button>
 
     <div class="convert-box">
       <label>Naira (₦)</label>
@@ -273,46 +274,6 @@ button {
 </div>
 </div>
 
-/* PREMIUM CONVERTER */
-
-const nairaInput = document.getElementById("nairaInput");
-const coinInput = document.getElementById("coinInput");
-const usdInput = document.getElementById("usdInput");
-
-nairaInput.addEventListener("input", () => {
-
-  const val = Number(nairaInput.value || 0);
-
-  coinInput.value = (val / COIN_RATE).toFixed(2);
-
-  usdInput.value = (val / USD_RATE).toFixed(2);
-
-});
-
-coinInput.addEventListener("input", () => {
-
-  const val = Number(coinInput.value || 0);
-
-  const naira = val * COIN_RATE;
-
-  nairaInput.value = naira.toFixed(2);
-
-  usdInput.value = (naira / USD_RATE).toFixed(2);
-
-});
-
-usdInput.addEventListener("input", () => {
-
-  const val = Number(usdInput.value || 0);
-
-  const naira = val * USD_RATE;
-
-  nairaInput.value = naira.toFixed(2);
-
-  coinInput.value = (naira / COIN_RATE).toFixed(2);
-
-});
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -345,10 +306,65 @@ const db = getFirestore(app);
 const loader = document.getElementById("loader");
 const appDiv = document.getElementById("app");
 const balanceEl = document.getElementById("balance");
-let showUSD = true;
 
 const COIN_RATE = 250;
 const USD_RATE = 1500;
+let balanceHidden = false;
+let showUSD = true;
+
+const nairaInput = document.getElementById("nairaInput");
+const coinInput = document.getElementById("coinInput");
+const usdInput = document.getElementById("usdInput");
+
+let lock = false;
+
+/* FROM NAIRA */
+function fromNaira(val){
+  if(lock) return;
+  lock = true;
+
+  coinInput.value = (val / COIN_RATE).toFixed(2);
+  usdInput.value = (val / USD_RATE).toFixed(2);
+
+  lock = false;
+}
+
+/* FROM COIN */
+function fromCoin(val){
+  if(lock) return;
+  lock = true;
+
+  const naira = val * COIN_RATE;
+  nairaInput.value = naira.toFixed(2);
+  usdInput.value = (naira / USD_RATE).toFixed(2);
+
+  lock = false;
+}
+
+/* FROM USD */
+function fromUsd(val){
+  if(lock) return;
+  lock = true;
+
+  const naira = val * USD_RATE;
+  nairaInput.value = naira.toFixed(2);
+  coinInput.value = (naira / COIN_RATE).toFixed(2);
+
+  lock = false;
+}
+
+/* EVENTS */
+nairaInput.addEventListener("input", () =>
+  fromNaira(Number(nairaInput.value || 0))
+);
+
+coinInput.addEventListener("input", () =>
+  fromCoin(Number(coinInput.value || 0))
+);
+
+usdInput.addEventListener("input", () =>
+  fromUsd(Number(usdInput.value || 0))
+);
 
 window.toCoins = (naira) => naira / COIN_RATE;
 window.toUSD = (naira) => naira / USD_RATE;
@@ -560,6 +576,10 @@ window.toggleBalance = () => {
 
 window.toggleUSD = () => {
   showUSD = !showUSD;
+};
+
+window.convertNow = () => {
+  alert("Conversion successful ✔️");
 };
 </script>
 
