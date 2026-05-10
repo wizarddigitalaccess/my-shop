@@ -332,8 +332,9 @@ style="
 <div id="settingsPage" class="card page hidden">
   <h3>⚙️ Settings</h3>
   <input id="siteCurrencyName" placeholder="Currency Name (e.g Coins)">
-  <input id="siteCurrencyRate" placeholder="Rate (₦ per coin)">
-  <button onclick="saveCurrency()">Save</button>
+<input id="siteCurrencyRate" placeholder="Rate (₦ per coin)">
+<input id="siteCurrencySymbol" placeholder="Symbol (e.g 🪙WC)">
+<button onclick="saveCurrency()">Save</button>
 </div>
 
 <!-- NAV -->
@@ -562,7 +563,7 @@ async function loadUsers(){
     div.innerHTML = `
       <div class="topRow">
         ${u.email} ${u.banned ? "<span style='color:red;font-size:12px;'>🚫 BANNED</span>" : ""}
-        ₦${u.wallet || 0}
+        ₦${u.wallet || 0} | 🪙${(u.coins || 0).toFixed(2)}
       </div>
 
       <div class="actions">
@@ -603,20 +604,70 @@ document.addEventListener("keydown", async (e)=>{
 });
 
 window.fund=async(id)=>{
- let amt=prompt("Amount");
- if(!amt) return;
- let ref=doc(db,"users",id);
- let u=(await getDoc(ref)).data();
- await updateDoc(ref,{wallet:(u.wallet||0)+Number(amt)});
+
+ let amt = Number(prompt("Amount"));
+
+ if(!amt || amt <= 0) return;
+
+ let ref = doc(db,"users",id);
+
+ let u = (await getDoc(ref)).data();
+
+ const currency = await getCurrency();
+
+ const rate = currency.rate || 250;
+
+ await updateDoc(ref,{
+   wallet:(u.wallet||0)+amt,
+   coins:(u.coins||0)+(amt/rate)
+ });
+
+ await addDoc(collection(db,"transactions"),{
+   userId:id,
+   type:"credit",
+   amount:amt,
+   coins:(amt/rate),
+   description:"Admin funded wallet",
+   status:"approved",
+   createdAt:serverTimestamp()
+ });
+
+ alert("Wallet funded ✔️");
+
  loadUsers();
 };
 
 window.deduct=async(id)=>{
- let amt=prompt("Amount");
- if(!amt) return;
- let ref=doc(db,"users",id);
- let u=(await getDoc(ref)).data();
- await updateDoc(ref,{wallet:(u.wallet||0)-Number(amt)});
+
+ let amt = Number(prompt("Amount"));
+
+ if(!amt || amt <= 0) return;
+
+ let ref = doc(db,"users",id);
+
+ let u = (await getDoc(ref)).data();
+
+ const currency = await getCurrency();
+
+ const rate = currency.rate || 250;
+
+ await updateDoc(ref,{
+   wallet:(u.wallet||0)-amt,
+   coins:(u.coins||0)-(amt/rate)
+ });
+
+ await addDoc(collection(db,"transactions"),{
+   userId:id,
+   type:"debit",
+   amount:amt,
+   coins:(amt/rate),
+   description:"Admin deducted wallet",
+   status:"approved",
+   createdAt:serverTimestamp()
+ });
+
+ alert("Wallet deducted ✔️");
+
  loadUsers();
 };
 
@@ -861,10 +912,9 @@ async function loadGiftCategories(){
         <div>${c.name || "No name"}</div>
 
         <div class="actions">
-          <button onclick="editGCat('${d.id}','${c.name}')">Edit</button>
-          <button onclick="delGCat('${d.id}')">Delete</button>
+          <button class="btn-edit" onclick="editGCat('${d.id}','${c.name}')">Edit</button>
+          <button class="btn-del" onclick="delGCat('${d.id}')">Delete</button>
         </div>
-      </div>
     `;
   });
 }
@@ -966,10 +1016,9 @@ async function loadGiftProducts(){
         <div>₦${p.price || 0}</div>
 
         <div class="actions">
-          <button onclick="editGProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
-          <button onclick="delGProd('${d.id}')">Delete</button>
+           <button class="btn-edit" onclick="editGProd('${d.id}','${p.name}','${p.category}','${p.price}')">Edit</button>
+           <button class="btn-del" onclick="delGProd('${d.id}')">Delete</button>
         </div>
-      </div>
     `;
   });
 }
@@ -1177,7 +1226,7 @@ function loadPayments(){
               : t.status==="rejected"
               ? `<div style="color:#e74c3c;">✖ Rejected</div>`
               : `
-                <button class="btn-fund" onclick="approvePayment('${d.id}','${t.uid}',${t.amount})">Approve</button>
+                <button class="btn-fund" onclick="approvePayment('${d.id}','${t.userId}',${t.amount})">Approve</button>
                 <button class="btn-del" onclick="rejectPayment('${d.id}')">Reject</button>
               `
           }
@@ -1225,23 +1274,29 @@ window.cancelOrder = async(id)=>{
 };
 
 window.approvePayment = async (id, userId, amount) => {
+
   try {
+
     const userRef = doc(db, "users", userId);
 
     const snap = await getDoc(userRef);
+
     if (!snap.exists()) throw "User not found";
 
     const user = snap.data();
 
-    const COIN_RATE = 250; // same rate as your system
+    const currency = await getCurrency();
+
+    const rate = currency.rate || 250;
 
     await updateDoc(userRef, {
       wallet: (user.wallet || 0) + amount,
-      coins: (user.coins || 0) + (amount / COIN_RATE)
+      coins: (user.coins || 0) + (amount / rate)
     });
 
     await updateDoc(doc(db, "transactions", id), {
-      status: "approved"
+      status: "approved",
+      approvedAt: serverTimestamp()
     });
 
     alert("Payment approved ✔️ Wallet updated");
@@ -1884,10 +1939,14 @@ window.saveCurrency = async ()=>{
 };
 
 window.saveCurrency = async () => {
+
   const name = document.getElementById("siteCurrencyName").value;
+
   const rate = Number(document.getElementById("siteCurrencyRate").value);
 
-  if(!name || !rate){
+  const symbol = document.getElementById("siteCurrencySymbol").value;
+
+  if(!name || !rate || !symbol){
     alert("Fill all fields");
     return;
   }
@@ -1895,10 +1954,12 @@ window.saveCurrency = async () => {
   await setDoc(doc(db,"settings","currency"),{
     name,
     rate,
-    symbol: "🪙WC"
+    symbol
   });
 
   alert("Currency saved ✔️");
+
+  loadCurrencyStats();
 };
 
 async function loadCurrencyStats(){
