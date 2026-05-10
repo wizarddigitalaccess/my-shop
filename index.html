@@ -264,24 +264,30 @@ body {
 
 <div id="app" style="display:none;">
 
-<div class="header">
-  <img id="siteLogo" class="site-logo" src="fallback.png">
-  <div class="title">Wizard Digital Access</div>
+<div class="header" style="flex-direction:column;align-items:flex-start;gap:4px;">
 
-  <div style="margin-left:auto;font-size:22px;cursor:pointer;" onclick="openMenu()">
-    ☰
+  <div style="display:flex;align-items:center;width:100%;">
+    <img id="siteLogo" class="site-logo" src="fallback.png">
+
+    <div style="display:flex;flex-direction:column;margin-left:10px;">
+      
+      <!-- SMALL BALANCE (ONLY ONE PLACE) -->
+      <div id="menuBalanceBox" style="
+        font-size:12px;
+        opacity:0.8;
+        margin-bottom:2px;
+      "></div>
+
+      <div class="title">Wizard Digital Access</div>
+
+    </div>
+
+    <div style="margin-left:auto;font-size:22px;cursor:pointer;" onclick="openMenu()">
+      ☰
+    </div>
   </div>
-</div>
 
-<div id="walletBox" style="
-  background:linear-gradient(145deg,#1d1d35,#151526);
-  padding:18px;
-  border-radius:18px;
-  margin:12px;
-  font-weight:bold;
-  border:1px solid rgba(255,255,255,0.05);
-  box-shadow:0 8px 25px rgba(0,0,0,0.35);
-"></div>
+</div>
 
 <div id="sideMenu" style="
   position:fixed;
@@ -317,28 +323,20 @@ body {
   <div class="menu-item" onclick="goOrders(); closeMenu()">📦 Order History</div>
   <div class="menu-item" onclick="goTransactions(); closeMenu()">💰 Transactions</div>
 
+
+  <div style="margin-top:20px;">
+  <div class="menu-item"
+  onclick="logoutUser()"
+  style="
+    background:#3a1010;
+    color:#ff8080;
+    text-align:center;
+    font-weight:bold;
+  ">
+    🚪 Logout
+  </div>
 </div>
 
-<div class="menu-item"
-onclick="logoutUser()"
-style="
-  margin-top:20px;
-  background:#3a1010;
-  color:#ff8080;
-  text-align:center;
-  font-weight:bold;
-">
-  🚪 Logout
-</div>
-
-<div id="menuBalanceBox" style="
-  background:#1c1c2e;
-  padding:14px;
-  border-radius:14px;
-  margin-bottom:15px;
-  border:1px solid rgba(255,255,255,0.05);
-">
-  Loading balance...
 </div>
 
 <!-- ✅ OVERLAY MUST BE OUTSIDE -->

@@ -206,25 +206,39 @@ button {
     </div>
   </div>
 
-  <div class="convert-grid">
-   <button onclick="convertNow()">Convert</button>
+  <div style="margin-top:10px;">
 
-    <div class="convert-box">
-      <label>Naira (₦)</label>
-      <input id="nairaInput" type="number" placeholder="Enter amount">
-    </div>
+  <label style="font-size:12px;opacity:0.7;">Convert Type</label>
 
-    <div class="convert-box">
-      <label>Coins (WC)</label>
-      <input id="coinInput" type="number" placeholder="Auto convert">
-    </div>
+  <select id="convertType" style="
+    width:100%;
+    padding:10px;
+    border-radius:10px;
+    background:#111;
+    color:white;
+    border:none;
+    margin-top:6px;
+  ">
+    <option value="naira_coin">Naira → Coin</option>
+    <option value="naira_usd">Naira → USD</option>
+    <option value="usd_naira">USD → Naira</option>
+    <option value="coin_naira">Coin → Naira</option>
+  </select>
 
-    <div class="convert-box">
-      <label>USD ($)</label>
-      <input id="usdInput" type="number" placeholder="Auto convert">
-    </div>
+  <button onclick="convertNow()" style="
+    margin-top:10px;
+    width:100%;
+    padding:10px;
+    border-radius:10px;
+    background:#1877f2;
+    color:white;
+    border:none;
+    font-weight:bold;
+  ">
+    Convert Now
+  </button>
 
-  </div>
+</div>
 
 </div>
 
@@ -579,7 +593,34 @@ window.toggleUSD = () => {
 };
 
 window.convertNow = () => {
-  alert("Conversion successful ✔️");
+
+  const type = document.getElementById("convertType").value;
+
+  const naira = Number(nairaInput.value || 0);
+  const coin = Number(coinInput.value || 0);
+  const usd = Number(usdInput.value || 0);
+
+  let result = "";
+
+  if(type === "naira_coin"){
+    result = naira / COIN_RATE;
+    alert(`🪙 Coins: ${result.toFixed(2)}`);
+  }
+
+  if(type === "naira_usd"){
+    result = naira / USD_RATE;
+    alert(`💵 USD: ${result.toFixed(2)}`);
+  }
+
+  if(type === "usd_naira"){
+    result = usd * USD_RATE;
+    alert(`₦ Naira: ${result.toFixed(2)}`);
+  }
+
+  if(type === "coin_naira"){
+    result = coin * COIN_RATE;
+    alert(`₦ Naira: ${result.toFixed(2)}`);
+  }
 };
 </script>
 
